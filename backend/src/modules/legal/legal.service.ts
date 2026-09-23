@@ -23,16 +23,15 @@ export class LegalService {
 
   public static async checkConsent(params: { userId?: string; sessionId?: string }) {
     if (!params.userId && !params.sessionId) {
-      return { hasConsentedCookies: false, hasAcceptedTerms: false };
+      return { hasConsentedCookies: false, hasAcceptedTerms: false, hasAcceptedPrivacy: false };
     }
 
+    const consentOwners = [
+      ...(params.userId ? [{ userId: params.userId }] : []),
+      ...(params.sessionId ? [{ sessionId: params.sessionId }] : []),
+    ];
     const consents = await prisma.userConsent.findMany({
-      where: {
-        OR: [
-          params.userId ? { userId: params.userId } : {},
-          params.sessionId ? { sessionId: params.sessionId } : {},
-        ],
-      },
+      where: { OR: consentOwners },
       orderBy: { acceptedAt: "desc" },
     });
 
@@ -42,10 +41,14 @@ export class LegalService {
     const hasAcceptedTerms = consents.some(
       (c) => c.consentType === "TERMS" && c.isAccepted
     );
+    const hasAcceptedPrivacy = consents.some(
+      (c) => c.consentType === "PRIVACY" && c.isAccepted
+    );
 
     return {
       hasConsentedCookies,
       hasAcceptedTerms,
+      hasAcceptedPrivacy,
       consents,
     };
   }

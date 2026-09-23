@@ -1,7 +1,46 @@
 import { prisma } from "../../lib/prisma";
-import { PaymentStatus, SubscriptionTier } from "@prisma/client";
+import { PaymentStatus, Prisma, Role, SubscriptionTier } from "@prisma/client";
 import { ENV } from "../../config/environment";
 import crypto from "crypto";
+import { AppError } from "../../common/errors/app-error";
+
+function sortObject(value: Record<string, unknown>) {
+  return Object.keys(value).sort().reduce<Record<string, unknown>>((result, key) => {
+    result[key] = value[key];
+    return result;
+  }, {});
+}
+
+function webhookValue(value: unknown) {
+  if (value === null || value === "null" || value === "undefined") return "";
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.map((item) =>
+      item && typeof item === "object" && !Array.isArray(item)
+        ? sortObject(item as Record<string, unknown>)
+        : item
+    ));
+  }
+  return String(value);
+}
+
+export function createWebhookSignature(data: Record<string, unknown>, checksumKey: string) {
+  const canonicalData = Object.keys(data)
+    .sort()
+    .filter((key) => data[key] !== undefined)
+    .map((key) => `${key}=${webhookValue(data[key])}`)
+    .join("&");
+  return crypto.createHmac("sha256", checksumKey).update(canonicalData).digest("hex");
+}
+
+export function verifyWebhookSignature(
+  data: Record<string, unknown>,
+  signature: string,
+  checksumKey = ENV.PAYOS.CHECKSUM_KEY
+) {
+  if (!checksumKey || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const expected = createWebhookSignature(data, checksumKey);
+  return crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signature, "hex"));
+}
 
 export interface PlanDetail {
   tier: SubscriptionTier;
@@ -109,24 +148,34 @@ export class PaymentsService {
   }
 
   public static async handleWebhook(payload: {
-    orderCode: number;
-    amount: number;
-    reference?: string;
-    code?: string;
-    signature?: string;
-    [key: string]: any;
+    data: Record<string, unknown> & {
+      orderCode: number;
+      amount: number;
+      reference?: string;
+    };
+    signature: string;
   }) {
+    if (!verifyWebhookSignature(payload.data, payload.signature)) {
+      throw new AppError("Chữ ký webhook PayOS không hợp lệ", 401);
+    }
+
     const payment = await prisma.payment.findUnique({
-      where: { orderCode: payload.orderCode },
+      where: { orderCode: payload.data.orderCode },
       include: { user: true },
     });
 
     if (!payment) {
-      throw new Error(`Không tìm thấy đơn thanh toán có mã: ${payload.orderCode}`);
+      throw new AppError(`Không tìm thấy đơn thanh toán có mã: ${payload.data.orderCode}`, 404);
     }
 
     if (payment.status === PaymentStatus.COMPLETED) {
       return { success: true, message: "Đơn hàng đã được thanh toán trước đó" };
+    }
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new AppError("Đơn thanh toán không còn ở trạng thái chờ", 409);
+    }
+    if (Number(payment.amount) !== payload.data.amount) {
+      throw new AppError("Số tiền webhook không khớp với đơn thanh toán", 400);
     }
 
     // Tính ngày hết hạn mới cho gói cước
@@ -146,8 +195,11 @@ export class PaymentsService {
         data: {
           status: PaymentStatus.COMPLETED,
           paidAt: now,
-          transactionRef: payload.reference || `TXN_${Date.now()}`,
-          rawWebhookData: payload,
+          transactionRef: payload.data.reference || `TXN_${Date.now()}`,
+          rawWebhookData: JSON.parse(JSON.stringify({
+            data: payload.data,
+            signature: payload.signature,
+          })) as Prisma.InputJsonValue,
         },
       }),
       prisma.user.update({
@@ -155,15 +207,6 @@ export class PaymentsService {
         data: {
           tier: payment.tier,
           tierExpiresAt: newExpiry,
-        },
-      }),
-      prisma.moderationLog.create({
-        data: {
-          adminId: payment.userId,
-          action: "PAYMENT_COMPLETED_UPGRADE_TIER",
-          targetType: "PAYMENT",
-          targetId: payment.id,
-          note: `User ${payment.user.email} nâng cấp thành công lên ${payment.tier} đến ${newExpiry.toISOString()}`,
         },
       }),
     ]);
@@ -181,21 +224,44 @@ export class PaymentsService {
     return prisma.payment.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        orderCode: true,
+        tier: true,
+        durationMonths: true,
+        amount: true,
+        currency: true,
+        paymentMethod: true,
+        status: true,
+        checkoutUrl: true,
+        transactionRef: true,
+        paidAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
-  public static async getPaymentDetail(orderCode: number) {
-    return prisma.payment.findUnique({
-      where: { orderCode },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            tier: true,
-            tierExpiresAt: true,
-          },
-        },
+  public static async getPaymentDetail(orderCode: number, requesterId: string, requesterRole: Role) {
+    return prisma.payment.findFirst({
+      where: {
+        orderCode,
+        ...(requesterRole === Role.ADMIN ? {} : { userId: requesterId }),
+      },
+      select: {
+        id: true,
+        orderCode: true,
+        tier: true,
+        durationMonths: true,
+        amount: true,
+        currency: true,
+        paymentMethod: true,
+        status: true,
+        checkoutUrl: true,
+        transactionRef: true,
+        paidAt: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }

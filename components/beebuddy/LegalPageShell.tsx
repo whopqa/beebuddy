@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
 import { privacyDoc, termsDoc, cookiesDoc, LegalDoc } from "@/lib/legalData";
+import { readCookiePreferences, saveCookiePreferences, type CookiePreferenceSelection } from "@/lib/cookie-consent";
 
 export type LegalDocType = "privacy" | "terms" | "cookies";
 
@@ -17,7 +18,7 @@ export default function LegalPageShell({ type, authenticated = false }: { type: 
   const doc = docMap[type];
 
   // Interactive state for Cookie Preferences page
-  const [cookieToggles, setCookieToggles] = useState({
+  const [cookieToggles, setCookieToggles] = useState<CookiePreferenceSelection>({
     essential: true,
     preference: false,
     analytics: false,
@@ -26,38 +27,45 @@ export default function LegalPageShell({ type, authenticated = false }: { type: 
   });
   const [savedNotice, setSavedNotice] = useState("");
 
+  useEffect(() => {
+    const saved = readCookiePreferences();
+    if (saved) setCookieToggles(saved);
+  }, []);
+
+  const persist = (next: typeof cookieToggles, notice: string) => {
+    setCookieToggles(next);
+    saveCookiePreferences(next);
+    setSavedNotice(notice);
+    setTimeout(() => setSavedNotice(""), 3000);
+  };
+
   const toggleCookie = (key: keyof typeof cookieToggles) => {
     if (key === "essential") return; // Always active
     setCookieToggles((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleAcceptAll = () => {
-    setCookieToggles({
+    persist({
       essential: true,
       preference: true,
       analytics: true,
       personalization: true,
       marketing: true,
-    });
-    setSavedNotice("All optional cookies accepted.");
-    setTimeout(() => setSavedNotice(""), 3000);
+    }, "All optional cookies accepted.");
   };
 
   const handleRejectOptional = () => {
-    setCookieToggles({
+    persist({
       essential: true,
       preference: false,
       analytics: false,
       personalization: false,
       marketing: false,
-    });
-    setSavedNotice("Optional cookies rejected. Only essential cookies will be used.");
-    setTimeout(() => setSavedNotice(""), 3000);
+    }, "Optional cookies rejected. Only essential cookies will be used.");
   };
 
   const handleSavePreferences = () => {
-    setSavedNotice("Your cookie preferences have been saved.");
-    setTimeout(() => setSavedNotice(""), 3000);
+    persist(cookieToggles, "Your cookie preferences have been saved.");
   };
 
   return (

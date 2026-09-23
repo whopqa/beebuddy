@@ -3,10 +3,22 @@ import { PaymentsService } from "./payments.service";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { SubscriptionTier } from "@prisma/client";
 import { z } from "zod";
+import { getErrorStatus } from "../../common/errors/app-error";
 
 const createCheckoutSchema = z.object({
   tier: z.enum([SubscriptionTier.VIP, SubscriptionTier.PRO]),
   durationMonths: z.number().int().min(1).max(12).optional(),
+});
+
+const webhookSchema = z.object({
+  code: z.string(),
+  success: z.boolean(),
+  signature: z.string().min(1),
+  data: z.object({
+    orderCode: z.coerce.number().int().positive(),
+    amount: z.coerce.number().positive(),
+    reference: z.string().optional(),
+  }).passthrough(),
 });
 
 export class PaymentsController {
@@ -40,23 +52,22 @@ export class PaymentsController {
 
   public static async handleWebhook(req: Request, res: Response) {
     try {
-      const payload = req.body;
-      const data = payload.data || payload;
-
-      if (!data.orderCode) {
-        return sendError(res, "Thiếu orderCode trong webhook data", 400);
+      const parsed = webhookSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, "Webhook PayOS không đúng định dạng", 400);
+      }
+      if (parsed.data.code !== "00" || !parsed.data.success) {
+        return sendError(res, "Giao dịch PayOS chưa thành công", 400);
       }
 
       const result = await PaymentsService.handleWebhook({
-        orderCode: Number(data.orderCode),
-        amount: Number(data.amount || 0),
-        reference: data.reference,
-        code: payload.code,
+        data: parsed.data.data,
+        signature: parsed.data.signature,
       });
 
       return sendSuccess(res, result, "Xử lý Webhook thành công");
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -76,7 +87,11 @@ export class PaymentsController {
         return sendError(res, "Mã đơn hàng không hợp lệ", 400);
       }
 
-      const payment = await PaymentsService.getPaymentDetail(orderCode);
+      const payment = await PaymentsService.getPaymentDetail(
+        orderCode,
+        req.user!.id,
+        req.user!.role
+      );
       if (!payment) {
         return sendError(res, "Không tìm thấy đơn thanh toán", 404);
       }

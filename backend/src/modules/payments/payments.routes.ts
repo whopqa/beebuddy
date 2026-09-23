@@ -7,7 +7,7 @@ const router = Router();
 // Public / User routes
 router.get("/plans", PaymentsController.getPlans);
 router.post("/webhook", PaymentsController.handleWebhook);
-router.get("/status/:orderCode", PaymentsController.getPaymentStatus);
+router.get("/status/:orderCode", authenticate, PaymentsController.getPaymentStatus);
 
 // Authenticated User routes
 router.post("/create-checkout", authenticate, PaymentsController.createCheckout);

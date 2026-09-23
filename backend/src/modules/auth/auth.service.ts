@@ -35,7 +35,16 @@ export class AuthService {
     password: string;
     fullName: string;
     role?: Role;
+    acceptTerms: boolean;
+    acceptPrivacy: boolean;
+    consentSessionId?: string;
+    ipAddress?: string;
+    userAgent?: string;
   }) {
+    if (!data.acceptTerms || !data.acceptPrivacy) {
+      throw new Error("Bạn phải đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư");
+    }
+
     const existing = await prisma.user.findUnique({
       where: { email: data.email.toLowerCase().trim() },
     });
@@ -60,6 +69,24 @@ export class AuthService {
         },
         settings: {
           create: {},
+        },
+        consents: {
+          create: [
+            {
+              consentType: "TERMS",
+              isAccepted: true,
+              sessionId: data.consentSessionId || null,
+              ipAddress: data.ipAddress,
+              userAgent: data.userAgent,
+            },
+            {
+              consentType: "PRIVACY",
+              isAccepted: true,
+              sessionId: data.consentSessionId || null,
+              ipAddress: data.ipAddress,
+              userAgent: data.userAgent,
+            },
+          ],
         },
       },
       include: {
