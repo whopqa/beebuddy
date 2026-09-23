@@ -1,74 +1,101 @@
 "use client";
 
-import { useState } from "react";
-import { X, Heart } from "lucide-react";
+import Link from "next/link";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { AlertCircle, Flag, LoaderCircle, X } from "lucide-react";
+import { postsApi, type PostComment } from "@/lib/posts-client";
 
-export type Comment = {
-  id: string;
-  name: string;
-  avatar: string;
-  time: string;
-  text: string;
-  likes: number;
-  liked?: boolean;
-};
-
-const initialComments: Comment[] = [
-  {
-    id: "1",
-    name: "Hannah Abbott",
-    avatar: "/assets/community/hannah_abbott.png",
-    time: "2h ago",
-    text: "This is absolutely incredible! Love the vibrant orange accents so much.",
-    likes: 12,
-  },
-  {
-    id: "2",
-    name: "Marcus Vance",
-    avatar: "/assets/community/marcus_vance.png",
-    time: "4h ago",
-    text: "Matches the design system exactly. Super clean, fast, and beautifully responsive.",
-    likes: 8,
-  },
-  {
-    id: "3",
-    name: "Clara Bennett",
-    avatar: "/assets/community/clara_bennett.png",
-    time: "1d ago",
-    text: "The rounded aesthetic on these modal overlays is extremely satisfying. Perfect execution!",
-    likes: 19,
-  },
-];
+function relativeTime(value: string) {
+  const elapsed = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(elapsed / 60_000));
+  if (minutes < 1) return "Vừa xong";
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+}
 
 export default function CommentsModal({
   isOpen,
+  postId,
+  isLoggedIn,
   onClose,
-  title = "Comments",
+  title = "Bình luận",
+  onApprovedComment,
 }: {
   isOpen: boolean;
+  postId: string | null;
+  isLoggedIn: boolean;
   onClose: () => void;
   title?: string;
+  onApprovedComment?: (postId: string) => void;
 }) {
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [comments, setComments] = useState<PostComment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen || !postId) return;
+    let active = true;
+    setLoading(true);
+    setError("");
+    setNotice("");
+    postsApi.comments(postId)
+      .then((data) => active && setComments(data))
+      .catch((err: Error) => active && setError(err.message))
+      .finally(() => active && setLoading(false));
+    closeButtonRef.current?.focus();
+    return () => { active = false; };
+  }, [isOpen, postId]);
 
-  const handlePost = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    const item: Comment = {
-      id: Date.now().toString(),
-      name: "You (BeeBuddy Member)",
-      avatar: "/assets/community/header_avatar.png",
-      time: "Just now",
-      text: newComment.trim(),
-      likes: 0,
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
     };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
-    setComments([...comments, item]);
-    setNewComment("");
+  if (!isOpen || !postId) return null;
+
+  const handlePost = async (event: FormEvent) => {
+    event.preventDefault();
+    const content = newComment.trim();
+    if (!content || submitting) return;
+
+    setSubmitting(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await postsApi.createComment(postId, content);
+      setComments((current) => [...current, result.comment]);
+      setNewComment("");
+      if (result.warning) setNotice(result.warning);
+      if (result.comment.status === "APPROVED") onApprovedComment?.(postId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể gửi bình luận");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReport = async (commentId: string) => {
+    const reason = window.prompt("Lý do báo cáo bình luận:", "Nội dung không phù hợp")?.trim();
+    if (!reason) return;
+    setError("");
+    try {
+      await postsApi.reportComment(commentId, reason);
+      setNotice("BeeBuddy đã nhận báo cáo và sẽ xem xét bình luận này.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể gửi báo cáo");
+    }
   };
 
   return (
@@ -79,19 +106,15 @@ export default function CommentsModal({
       aria-modal="true"
       aria-labelledby="modal-comments-title"
     >
-      <div
-        className="bb-comments-modal-card"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bb-comments-modal-card" onClick={(event) => event.stopPropagation()}>
         <div className="bb-comments-header-row">
-          <h3 id="modal-comments-title" className="bb-comments-title">
-            Comments
-          </h3>
+          <h3 id="modal-comments-title" className="bb-comments-title">{title}</h3>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             className="bb-comments-close-btn"
-            aria-label="Close comments"
+            aria-label="Đóng bình luận"
           >
             <X size={18} />
           </button>
@@ -99,43 +122,67 @@ export default function CommentsModal({
 
         <div className="bb-comments-divider" />
 
-        <div className="bb-comments-list-wrap">
-          {comments.map((c) => (
-            <div key={c.id} className="bb-comment-row">
+        <div className="bb-comments-list-wrap" aria-live="polite">
+          {loading ? (
+            <div className="bb-comments-state"><LoaderCircle className="bb-spin" size={22} />Đang tải bình luận...</div>
+          ) : error && comments.length === 0 ? (
+            <div className="bb-comments-state is-error"><AlertCircle size={20} />{error}</div>
+          ) : comments.length === 0 ? (
+            <div className="bb-comments-state">Chưa có bình luận. Hãy bắt đầu cuộc trò chuyện!</div>
+          ) : comments.map((comment) => (
+            <div key={comment.id} className="bb-comment-row">
               <img
-                src={c.avatar}
-                alt={c.name}
+                src={comment.author.avatarUrl || "/assets/home/avatar-01.png"}
+                alt={comment.author.fullName}
                 className="bb-comment-user-avatar"
               />
               <div className="bb-comment-content-wrap">
                 <div className="bb-comment-meta-row">
-                  <span className="bb-comment-user-name">{c.name}</span>
-                  <span className="bb-comment-timestamp">{c.time}</span>
+                  <span className="bb-comment-user-name">{comment.author.fullName}</span>
+                  <span className="bb-comment-timestamp">{relativeTime(comment.createdAt)}</span>
                 </div>
-                <p className="bb-comment-body-text">{c.text}</p>
+                <p className="bb-comment-body-text">{comment.content}</p>
+                <div className="bb-comment-footer-row">
+                  {comment.status === "FLAGGED" && (
+                    <span className="bb-comment-review-badge">Đang chờ kiểm duyệt</span>
+                  )}
+                  {isLoggedIn && (
+                    <button type="button" className="bb-comment-report-btn" onClick={() => handleReport(comment.id)}>
+                      <Flag size={12} /> Báo cáo
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
+        {(notice || (error && comments.length > 0)) && (
+          <p className={`bb-comments-notice ${error ? "is-error" : ""}`}>{error || notice}</p>
+        )}
+
         <div className="bb-comments-divider" />
 
-        <form onSubmit={handlePost} className="bb-comments-composer-row">
-          <input
-            type="text"
-            placeholder="Write a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="bb-comments-composer-input"
-          />
-          <button
-            type="submit"
-            className="bb-comments-post-btn"
-            disabled={!newComment.trim()}
-          >
-            post
-          </button>
-        </form>
+        {isLoggedIn ? (
+          <form onSubmit={handlePost} className="bb-comments-composer-row">
+            <input
+              type="text"
+              placeholder="Viết bình luận..."
+              value={newComment}
+              onChange={(event) => setNewComment(event.target.value)}
+              className="bb-comments-composer-input"
+              maxLength={1000}
+              disabled={submitting}
+            />
+            <button type="submit" className="bb-comments-post-btn" disabled={!newComment.trim() || submitting}>
+              {submitting ? "Đang gửi" : "Đăng"}
+            </button>
+          </form>
+        ) : (
+          <div className="bb-comments-login-prompt">
+            <Link href="/login">Đăng nhập</Link> để tham gia bình luận.
+          </div>
+        )}
       </div>
     </div>
   );

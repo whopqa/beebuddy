@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import FigmaHeader from "./FigmaHeader";
-import { hasDemoSession } from "@/lib/demo";
+import { webAuth } from "@/lib/auth-client";
 
 const homeAsset = (name: string) => `/assets/home/${name}`;
 
@@ -12,22 +12,12 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
   const [isAuth, setIsAuth] = useState(authenticated);
 
   useEffect(() => {
-    const syncAuth = () => {
-      if (typeof window !== "undefined") {
-        const p = new URLSearchParams(window.location.search);
-        if (p.get("guest") === "1") {
-          setIsAuth(false);
-        } else if (p.get("auth") === "1" || p.get("login") === "1") {
-          setIsAuth(true);
-        } else {
-          setIsAuth(authenticated || hasDemoSession());
-        }
-      }
-    };
-    syncAuth();
-    window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
-  }, [authenticated]);
+    let active = true;
+    webAuth.me()
+      .then(() => { if (active) setIsAuth(true); })
+      .catch(() => { if (active) setIsAuth(false); });
+    return () => { active = false; };
+  }, []);
 
   const reducedMotion = useReducedMotion() === true;
   const heroImages = ["hero-01.png", "hero-02.png", "hero-03.png", "hero-04.png", "hero-05.png"];

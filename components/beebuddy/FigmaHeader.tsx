@@ -3,30 +3,30 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bell, Search, Menu, X } from "lucide-react";
-import { clearDemoSession, hasDemoSession } from "@/lib/demo";
+import { webAuth } from "@/lib/auth-client";
+import type { WebUser } from "@/lib/auth-types";
 
 export default function FigmaHeader({ authenticated = false }: { authenticated?: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [isAuth, setIsAuth] = useState(authenticated);
+  const [user, setUser] = useState<WebUser | null>(null);
 
   useEffect(() => {
-    const syncAuth = () => {
-      if (typeof window !== "undefined") {
-        const p = new URLSearchParams(window.location.search);
-        if (p.get("guest") === "1") {
-          setIsAuth(false);
-        } else if (p.get("auth") === "1" || p.get("login") === "1") {
-          setIsAuth(true);
-        } else {
-          setIsAuth(authenticated || hasDemoSession());
-        }
-      }
-    };
-    syncAuth();
-    window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
-  }, [authenticated]);
+    let active = true;
+    webAuth.me()
+      .then((currentUser) => {
+        if (!active) return;
+        setUser(currentUser);
+        setIsAuth(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setUser(null);
+        setIsAuth(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const homePath = isAuth ? "/home" : "/";
 
@@ -123,8 +123,8 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
                 {accountOpen && (
                   <div className="bb-topbar-dropdown-menu" role="menu">
                     <div className="bb-dropdown-user-header">
-                      <strong>BeeBuddy Member</strong>
-                      <span>hello.beebuddy@gmail.com</span>
+                      <strong>{user?.profile?.fullName || "BeeBuddy Member"}</strong>
+                      <span>{user?.email || ""}</span>
                     </div>
                     <div className="bb-dropdown-divider" />
                     <AccountMenuItem href="/account" icon="account-user.svg" label="Account Info" close={() => setAccountOpen(false)} />
@@ -134,13 +134,16 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
                     <AccountMenuItem href="/settings" icon="account-settings.svg" label="Settings" close={() => setAccountOpen(false)} />
                     <div className="bb-dropdown-divider" />
                     <AccountMenuItem
-                      href="/?guest=1"
+                      href="/"
                       icon="account-logout.svg"
                       label="Log out"
                       close={() => {
-                        clearDemoSession();
-                        setIsAuth(false);
                         setAccountOpen(false);
+                        void webAuth.logout().finally(() => {
+                          setUser(null);
+                          setIsAuth(false);
+                          window.location.href = "/";
+                        });
                       }}
                     />
                   </div>
@@ -201,7 +204,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
             </div>
 
             <div className="bb-drawer-footer">
-              {!authenticated ? (
+              {!isAuth ? (
                 <div className="bb-drawer-auth-btns">
                   <Link href="/login" className="bb-drawer-signin" onClick={() => setDrawerOpen(false)}>Sign In</Link>
                   <Link href="/signup" className="bb-drawer-signup" onClick={() => setDrawerOpen(false)}>Create Account</Link>
@@ -209,7 +212,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
               ) : (
                 <div className="bb-drawer-user-info">
                   <img src="/assets/home/figma-buzzy.png" alt="" className="w-8 h-8 rounded-full" />
-                  <span>BeeBuddy Member</span>
+                  <span>{user?.profile?.fullName || "BeeBuddy Member"}</span>
                 </div>
               )}
             </div>

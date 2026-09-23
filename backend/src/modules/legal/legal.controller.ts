@@ -6,8 +6,8 @@ import { z } from "zod";
 const consentSchema = z.object({
   consentType: z.enum(["COOKIES", "PRIVACY", "TERMS"]),
   isAccepted: z.boolean().optional(),
-  sessionId: z.string().optional(),
-});
+  sessionId: z.string().min(8).max(100).optional(),
+}).strict();
 
 export class LegalController {
   public static async recordConsent(req: Request, res: Response) {

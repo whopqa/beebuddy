@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import FigmaHeader from "@/components/beebuddy/FigmaHeader";
 import SimpleFooter from "@/components/beebuddy/SimpleFooter";
-import { saveDemoSession } from "@/lib/demo";
+import { webAuth } from "@/lib/auth-client";
+import { accountApi } from "@/lib/account-client";
+import { getConsentSessionId } from "@/lib/cookie-consent";
 
 export type AuthMode = "login" | "signup" | "verify" | "forgot" | "change";
 
@@ -47,26 +49,58 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "", oldPassword: "" });
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const { title, subtitle, submit: submitLabel } = copy[mode];
 
+  useEffect(() => {
+    if (mode === "login" && new URLSearchParams(window.location.search).get("passwordChanged") === "1") {
+      setNotice("Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.");
+    }
+  }, [mode]);
+
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setNotice("");
     if (mode === "verify" && code.join("").length !== 6) return setError("Please enter the 6-digit verification code.");
     if (mode === "signup" && !form.name.trim()) return setError("Please enter your name.");
     if (mode !== "verify" && !form.email && mode !== "change") return setError("Please enter your email address.");
     if (["login", "signup"].includes(mode) && form.password.length < 6) return setError("Password must be at least 6 characters.");
     if (mode === "signup" && form.password !== form.confirm) return setError("Passwords do not match.");
+    if (mode === "signup" && !acceptTerms) return setError("Bạn cần đồng ý Điều khoản sử dụng để đăng ký.");
+    if (mode === "signup" && !acceptPrivacy) return setError("Bạn cần đồng ý Chính sách quyền riêng tư để đăng ký.");
     if (mode === "change" && (!form.oldPassword || form.password.length < 6)) return setError("Please complete both password fields.");
+    if (mode === "change" && form.oldPassword === form.password) return setError("New password must be different from the old password.");
     setLoading(true);
-    window.setTimeout(() => {
+    try {
+      if (mode === "login") {
+        const result = await webAuth.login(form.email.trim(), form.password);
+        router.replace(result.user.role === "ADMIN" ? "/admin" : "/home");
+        router.refresh();
+      } else if (mode === "signup") {
+        await webAuth.register(form.name.trim(), form.email.trim(), form.password, {
+          acceptTerms,
+          acceptPrivacy,
+          consentSessionId: getConsentSessionId(),
+        });
+        router.replace("/get-started");
+        router.refresh();
+      } else if (mode === "verify") {
+        setNotice("Xác minh email chưa được bật trong phiên bản hiện tại.");
+      } else if (mode === "forgot") {
+        router.push("/change-password");
+      } else if (mode === "change") {
+        await accountApi.changePassword(form.oldPassword, form.password);
+        await webAuth.logout();
+        window.location.href = "/login?passwordChanged=1";
+      } else {
+        router.push("/login");
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập");
+    } finally {
       setLoading(false);
-      if (mode === "login") { saveDemoSession({ email: form.email }); router.push("/home"); }
-      else if (mode === "signup") { saveDemoSession({ name: form.name, email: form.email, username: form.name.trim().toLowerCase().replace(/\s+/g, "") || "beebuddy" }); router.push("/verify-code"); }
-      else if (mode === "verify") { saveDemoSession(); router.push("/get-started"); }
-      else if (mode === "forgot") router.push("/change-password");
-      else router.push("/login");
-    }, 450);
+    }
   };
 
   const handleCode = (index: number, value: string) => {
@@ -89,7 +123,7 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
         <section className="auth-hero">
           <div
             className="auth-hero-image"
-            style={{ backgroundImage: "url(/assets/home/figma-puzzle.png)" }}
+            style={{ backgroundImage: "url(/assets/home/figma-puzzle.png)", backgroundPosition: "82% center" }}
           />
           <div className="auth-hero-copy">
             <h2>Explore the world with friends</h2>
@@ -164,6 +198,30 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
                     onChange={(v) => update("confirm", v)}
                     toggle={() => setShowPassword(!showPassword)}
                   />
+                  <div className="bb-signup-consents">
+                    <label className="bb-signup-consent-row">
+                      <input
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={(event) => setAcceptTerms(event.target.checked)}
+                        className="bb-figma-checkbox"
+                      />
+                      <span>
+                        Tôi đã đọc và đồng ý với <Link href="/terms" target="_blank">Điều khoản sử dụng</Link>.
+                      </span>
+                    </label>
+                    <label className="bb-signup-consent-row">
+                      <input
+                        type="checkbox"
+                        checked={acceptPrivacy}
+                        onChange={(event) => setAcceptPrivacy(event.target.checked)}
+                        className="bb-figma-checkbox"
+                      />
+                      <span>
+                        Tôi đồng ý với <Link href="/privacy" target="_blank">Chính sách quyền riêng tư</Link>.
+                      </span>
+                    </label>
+                  </div>
                 </>
               )}
 

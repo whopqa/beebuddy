@@ -4,16 +4,23 @@ import { sendError, sendSuccess } from "../../common/utils/response";
 import { z } from "zod";
 
 const updateProfileSchema = z.object({
-  fullName: z.string().min(1).optional(),
+  fullName: z.string().min(1).max(100).optional(),
   avatarUrl: z.string().url().or(z.literal("")).optional(),
   bio: z.string().max(500).optional(),
-  gender: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  location: z.string().optional(),
-  interests: z.array(z.string()).optional(),
-  habits: z.array(z.string()).optional(),
-  connectionGoal: z.string().optional(),
-});
+  gender: z.string().max(50).optional(),
+  dateOfBirth: z.string().date().optional(),
+  location: z.string().max(120).optional(),
+  interests: z.array(z.string().min(1).max(50)).max(20).optional(),
+  habits: z.array(z.string().min(1).max(50)).max(20).optional(),
+  connectionGoal: z.string().max(300).optional(),
+}).strict();
+
+const updateSettingsSchema = z.object({
+  profileVisibility: z.enum(["PUBLIC", "CONNECTIONS", "ONLY_ME"]).optional(),
+  emailNotification: z.boolean().optional(),
+  language: z.enum(["vi", "en"]).optional(),
+  theme: z.enum(["system", "light", "dark"]).optional(),
+}).strict();
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu hiện tại"),
@@ -73,7 +80,11 @@ export class AccountController {
 
   public static async updateSettings(req: Request, res: Response) {
     try {
-      const updated = await AccountService.updateSettings(req.user!.id, req.body);
+      const parsed = updateSettingsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, parsed.error.errors[0].message, 400);
+      }
+      const updated = await AccountService.updateSettings(req.user!.id, parsed.data);
       return sendSuccess(res, updated, "Cập nhật cài đặt thành công");
     } catch (err: any) {
       return sendError(res, err.message, 400);

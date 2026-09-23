@@ -7,6 +7,9 @@ const registerSchema = z.object({
   email: z.string().email("Email không đúng định dạng"),
   password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
   fullName: z.string().min(2, "Họ tên tối thiểu 2 ký tự"),
+  acceptTerms: z.boolean().refine(Boolean, "Bạn phải đồng ý Điều khoản sử dụng"),
+  acceptPrivacy: z.boolean().refine(Boolean, "Bạn phải đồng ý Chính sách quyền riêng tư"),
+  consentSessionId: z.string().min(8).max(100).optional(),
 });
 
 const loginSchema = z.object({
@@ -22,7 +25,11 @@ export class AuthController {
         return sendError(res, parsed.error.errors[0].message, 400);
       }
 
-      const result = await AuthService.register(parsed.data);
+      const result = await AuthService.register({
+        ...parsed.data,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
       return sendSuccess(res, result, "Đăng ký tài khoản thành công", 201);
     } catch (err: any) {
       return sendError(res, err.message, 400);

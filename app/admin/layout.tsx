@@ -15,6 +15,8 @@ import {
   X,
   Bell,
 } from "lucide-react";
+import { webAuth } from "@/lib/auth-client";
+import type { WebUser } from "@/lib/auth-types";
 
 const navItems = [
   {
@@ -43,15 +45,34 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [adminName, setAdminName] = useState("Quản Trị Viên");
+  const [admin, setAdmin] = useState<WebUser | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   useEffect(() => {
-    // Kiểm tra thông tin Admin trong localStorage nếu có
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("beebuddy_admin_name");
-      if (stored) setAdminName(stored);
-    }
-  }, []);
+    let active = true;
+    webAuth.me()
+      .then((currentUser) => {
+        if (!active) return;
+        if (currentUser.role !== "ADMIN") {
+          router.replace("/home");
+          return;
+        }
+        setAdmin(currentUser);
+        setCheckingRole(false);
+      })
+      .catch(() => {
+        if (active) router.replace("/login");
+      });
+    return () => { active = false; };
+  }, [router]);
+
+  if (checkingRole || !admin) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center text-sm font-semibold text-gray-600">
+        Đang kiểm tra quyền quản trị...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] flex flex-col md:flex-row">
@@ -142,17 +163,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 AD
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-bold text-gray-900 truncate">{adminName}</p>
-                <p className="text-[10px] text-gray-500 truncate">admin@beebuddy.vn</p>
+                <p className="text-xs font-bold text-gray-900 truncate">{admin.profile?.fullName || "Quản Trị Viên"}</p>
+                <p className="text-[10px] text-gray-500 truncate">{admin.email}</p>
               </div>
             </div>
             <button
               onClick={() => {
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("beebuddy_token");
-                  localStorage.removeItem("beebuddy_admin_name");
-                }
-                router.push("/login");
+                void webAuth.logout().finally(() => router.replace("/login"));
               }}
               title="Đăng xuất"
               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"

@@ -1,8 +1,62 @@
 import { prisma } from "../../lib/prisma";
 import { CommentStatus, PostVisibility } from "@prisma/client";
 import { BadwordsFilter } from "../../common/filters/badwords.filter";
+import { AppError } from "../../common/errors/app-error";
+import { buildVisiblePostWhere, canViewPost } from "../../common/policies/post-access.policy";
 
 export class PostsService {
+  private static async getConnectedUserIds(userId: string) {
+    const connections = await prisma.connection.findMany({
+      where: {
+        status: "ACCEPTED",
+        OR: [{ userId }, { targetId: userId }],
+      },
+      select: { userId: true, targetId: true },
+    });
+
+    return Array.from(
+      new Set(connections.map((connection) =>
+        connection.userId === userId ? connection.targetId : connection.userId
+      ))
+    );
+  }
+
+  private static async assertCanViewPost(postId: string, currentUserId?: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, authorId: true, visibility: true },
+    });
+
+    if (!post) {
+      throw new AppError("Bài viết không tồn tại hoặc đã bị xóa", 404);
+    }
+
+    let isConnected = false;
+    if (
+      currentUserId &&
+      currentUserId !== post.authorId &&
+      post.visibility === PostVisibility.CONNECTIONS
+    ) {
+      const connection = await prisma.connection.findFirst({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { userId: currentUserId, targetId: post.authorId },
+            { userId: post.authorId, targetId: currentUserId },
+          ],
+        },
+        select: { id: true },
+      });
+      isConnected = Boolean(connection);
+    }
+
+    if (!canViewPost({ ...post, currentUserId, isConnected })) {
+      throw new AppError("Bạn không có quyền xem bài viết này", 403);
+    }
+
+    return post;
+  }
+
   public static async getFeed(params: {
     userId?: string;
     page?: number;
@@ -12,30 +66,8 @@ export class PostsService {
     const limit = Math.min(50, params.limit || 10);
     const skip = (page - 1) * limit;
 
-    let whereClause: any = { visibility: PostVisibility.PUBLIC };
-
-    // Nếu người dùng đã đăng nhập, lấy bài viết PUBLIC + bài của những người đã kết nối (CONNECTIONS)
-    if (params.userId) {
-      const connections = await prisma.connection.findMany({
-        where: {
-          userId: params.userId,
-          status: "ACCEPTED",
-        },
-        select: { targetId: true },
-      });
-
-      const connectedUserIds = connections.map((c) => c.targetId);
-
-      whereClause = {
-        OR: [
-          { visibility: PostVisibility.PUBLIC },
-          {
-            authorId: { in: [params.userId, ...connectedUserIds] },
-            visibility: PostVisibility.CONNECTIONS,
-          },
-        ],
-      };
-    }
+    const connectedUserIds = params.userId ? await this.getConnectedUserIds(params.userId) : [];
+    const whereClause = buildVisiblePostWhere(params.userId, connectedUserIds);
 
     const [total, posts] = await Promise.all([
       prisma.post.count({ where: whereClause }),
@@ -97,6 +129,8 @@ export class PostsService {
   }
 
   public static async getComments(postId: string, currentUserId?: string) {
+    await this.assertCanViewPost(postId, currentUserId);
+
     const comments = await prisma.comment.findMany({
       where: {
         postId,
@@ -145,13 +179,7 @@ export class PostsService {
     authorId: string;
     content: string;
   }) {
-    const post = await prisma.post.findUnique({
-      where: { id: data.postId },
-    });
-
-    if (!post) {
-      throw new Error("Bài viết không tồn tại hoặc đã bị xóa");
-    }
+    await this.assertCanViewPost(data.postId, data.authorId);
 
     // 1. Chạy bộ lọc từ cấm (Badwords Filter)
     const filterResult = await BadwordsFilter.checkContent(data.content);
@@ -234,11 +262,14 @@ export class PostsService {
   }) {
     const comment = await prisma.comment.findUnique({
       where: { id: data.commentId },
+      select: { id: true, postId: true, authorId: true },
     });
 
     if (!comment) {
-      throw new Error("Không tìm thấy bình luận cần báo cáo");
+      throw new AppError("Không tìm thấy bình luận cần báo cáo", 404);
     }
+
+    await this.assertCanViewPost(comment.postId, data.reporterId);
 
     const report = await prisma.report.create({
       data: {

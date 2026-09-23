@@ -53,6 +53,18 @@ export class AccountService {
         habits: data.habits,
         connectionGoal: data.connectionGoal,
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            tier: true,
+            tierExpiresAt: true,
+            createdAt: true,
+          },
+        },
+      },
     });
 
     return updated;

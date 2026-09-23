@@ -2529,12 +2529,163 @@
   font-weight: 600;
   font-size: 11px;
 }
+.bb-post-public-badge.is-connections {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-color: #ddd6fe;
+}
 .bb-post-content-text {
   font-family: "Afacad Flux", sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: #374151;
   margin: 0 0 16px;
+}
+.bb-post-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+  border-radius: 14px;
+}
+.bb-post-media-grid.count-1 {
+  grid-template-columns: 1fr;
+}
+.bb-post-media-grid.count-3 > :first-child {
+  grid-row: span 2;
+}
+.bb-post-media {
+  width: 100%;
+  height: 210px;
+  display: block;
+  object-fit: cover;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+.bb-feed-state-card {
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  color: #6b7280;
+  font-family: "Afacad Flux", sans-serif;
+}
+.bb-feed-state-card p {
+  margin: 0;
+}
+.bb-feed-state-card.is-error {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fffafa;
+}
+.bb-feed-state-card button,
+.bb-feed-load-more-btn {
+  border: 0;
+  border-radius: 10px;
+  background: #ff7300;
+  color: #fff;
+  padding: 9px 18px;
+  font-family: "Afacad Flux", sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bb-feed-loader {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #fed7aa;
+  border-top-color: #ff7300;
+  border-radius: 50%;
+  animation: bbSpin 0.8s linear infinite;
+}
+.bb-feed-load-more-btn {
+  display: block;
+  margin: 20px auto 0;
+}
+.bb-feed-load-more-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.bb-real-search-bar .bb-search-input-box,
+.bb-explore-filter-bar .bb-search-explore-box {
+  width: 100%;
+  max-width: none;
+}
+.bb-directory-popular-tags {
+  margin: 0 0 22px;
+}
+.bb-search-preview-state {
+  min-height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  grid-column: 1 / -1;
+  padding: 24px;
+  border: 1px dashed #fed7aa;
+  border-radius: 16px;
+  background: #fffaf5;
+  color: #6b7280;
+  text-align: center;
+  font-family: "Afacad Flux", sans-serif;
+}
+.bb-search-preview-state.is-error {
+  border-color: #fecaca;
+  background: #fffafa;
+  color: #b91c1c;
+}
+.bb-search-result-summary {
+  margin: 0 0 14px;
+  color: #6b7280;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 13px;
+}
+.bb-search-result-summary strong {
+  color: #ff7300;
+}
+.bb-search-limit-notice {
+  margin: 14px 0 0;
+  color: #6b7280;
+  text-align: center;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 12px;
+}
+.bb-member-app-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.bb-plan-status-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: auto;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bb-plan-link-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.bb-plan-action-filled:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Locked Circle State */
@@ -2686,6 +2837,27 @@
   overflow-y: auto;
   padding-right: 4px;
 }
+.bb-comments-state {
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: #6b7280;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 13px;
+}
+.bb-comments-state.is-error,
+.bb-comments-notice.is-error {
+  color: #b91c1c;
+}
+.bb-spin {
+  animation: bbSpin 0.8s linear infinite;
+}
+@keyframes bbSpin {
+  to { transform: rotate(360deg); }
+}
 .bb-comment-row {
   display: flex;
   gap: 12px;
@@ -2724,6 +2896,47 @@
   line-height: 1.4;
   color: #4b5563;
   margin: 0 0 6px;
+}
+.bb-comment-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bb-comment-review-badge {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+}
+.bb-comment-report-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: #9ca3af;
+  padding: 0;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+}
+.bb-comment-report-btn:hover {
+  color: #dc2626;
+}
+.bb-comments-notice {
+  margin: 12px 0 0;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 9px 11px;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 12px;
 }
 .bb-comment-action-row {
   display: flex;
@@ -2786,6 +2999,42 @@
 .bb-comments-post-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.bb-comments-login-prompt {
+  padding: 6px 0;
+  text-align: center;
+  color: #6b7280;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 13px;
+}
+.bb-comments-login-prompt a {
+  color: #ff7300;
+  font-weight: 700;
+}
+
+.bb-signup-consents {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+.bb-signup-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.bb-signup-consent-row input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.bb-signup-consent-row a {
+  color: #d85f00;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 /* 5. FULL MOUNTAIN FOOTER (Node 515:3343) */
@@ -3137,6 +3386,28 @@
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+  .bb-post-header-row {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .bb-post-meta-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .bb-post-actions-bar {
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .bb-post-action-btn {
+    font-size: 11px;
+  }
+  .bb-post-media {
+    height: 150px;
+  }
+  .bb-comments-modal-card {
+    padding: 22px 18px;
+    border-radius: 22px;
   }
 }
 

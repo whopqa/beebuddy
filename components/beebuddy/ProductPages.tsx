@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   MessageSquare,
   Users,
   MapPin,
-  ChevronDown,
   Clock,
   Search,
   SlidersHorizontal,
@@ -23,12 +22,17 @@ import {
   Settings as SettingsIcon,
   Check,
   User as UserIcon,
+  Bell,
 } from "lucide-react";
 import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
 import SimpleFooter from "./SimpleFooter";
 import CommentsModal from "./CommentsModal";
-import { defaultDemoUser, readDemoUser, saveDemoUser, hasDemoSession, type DemoUser } from "@/lib/demo";
+import { webAuth } from "@/lib/auth-client";
+import { accountApi, type AccountProfile, type AccountSettings } from "@/lib/account-client";
+import { postsApi, type FeedPost } from "@/lib/posts-client";
+import { getSubscriptionPlans, type SubscriptionPlan } from "@/lib/payments-client";
+import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
 
 export type ProductView =
   | "get-started"
@@ -42,123 +46,15 @@ export type ProductView =
   | "help"
   | "notifications";
 
-const people = [
-  {
-    name: "Alex Rivera",
-    role: "UX Designer",
-    location: "Portland, OR",
-    text: "Looking for someone to grab coffee and talk design systems.",
-    tags: ["Design", "Coffee", "Hiking"],
-    avatar: "alex_rivera.png",
-    skills: ["Design", "UX"],
-    availability: "Available today",
-  },
-  {
-    name: "Jordan Lee",
-    role: "Community Manager",
-    location: "Austin, TX",
-    text: "Looking for a book club buddy or someone to try new restaurants with.",
-    tags: ["Book clubs", "Foodie", "Board games"],
-    avatar: "jordan_lee.png",
-    skills: ["Community", "Management"],
-    availability: "This week",
-  },
-  {
-    name: "Priya Nair",
-    role: "Product Designer",
-    location: "London, UK",
-    text: "Want to find a coding buddy for weekend projects and coffee chats.",
-    tags: ["Coding", "Coffee", "Photography"],
-    avatar: "priya_nair.png",
-    skills: ["Design", "Coding"],
-    availability: "Available today",
-  },
-  {
-    name: "Sam Kim",
-    role: "UX Researcher",
-    location: "Seoul, KR",
-    text: "Looking for a language exchange partner (Kor/Eng) and hiking buddies.",
-    tags: ["Hiking", "Language", "Coffee"],
-    avatar: "sam_kim.png",
-    skills: ["Research", "Language"],
-    availability: "This week",
-  },
-  {
-    name: "Elena Rossi",
-    role: "Content Creator",
-    location: "Milan, IT",
-    text: "Looking for someone to collaborate on a podcast or photography walk.",
-    tags: ["Podcasting", "Photography", "Writing"],
-    avatar: "elena_rossi.png",
-    skills: ["Content", "Photography"],
-    availability: "Available today",
-  },
-  {
-    name: "Marcus Chen",
-    role: "Software Engineer",
-    location: "San Francisco, CA",
-    text: "Looking for a study group for machine learning and a basketball buddy.",
-    tags: ["ML", "Basketball", "Coffee"],
-    avatar: "marcus_chen.png",
-    skills: ["Coding", "ML"],
-    availability: "This week",
-  },
-  {
-    name: "Sofia Patel",
-    role: "Student",
-    location: "Toronto, ON",
-    text: "Looking for a study buddy for exams and someone to try new cafes with.",
-    tags: ["Study", "Coffee", "Yoga"],
-    avatar: "sofia_patel.png",
-    skills: ["Research", "Study"],
-    availability: "Available today",
-  },
-  {
-    name: "Daniel Okoro",
-    role: "Product Manager",
-    location: "Lagos, NG",
-    text: "Looking for a walking buddy and someone to talk about books and product.",
-    tags: ["Walking", "Books", "Product"],
-    avatar: "daniel_okoro.png",
-    skills: ["Management", "Product"],
-    availability: "This week",
-  },
-];
-
-const exploreInterests = [
-  "Design",
-  "Coffee",
-  "Hiking",
-  "Photography",
-  "Coding",
-  "Music",
-  "Travel",
-  "Cooking",
-  "Gaming",
-  "Yoga",
-];
-
 export default function ProductPage({ view }: { view: ProductView }) {
   // Community uses full mountain footer per Figma 219:5235 / 481:1343
   const isCommunity = view === "community";
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
-    const syncAuth = () => {
-      if (typeof window !== "undefined") {
-        const p = new URLSearchParams(window.location.search);
-        if (p.get("guest") === "1") {
-          setIsLoggedIn(false);
-        } else if (p.get("auth") === "1" || p.get("login") === "1") {
-          setIsLoggedIn(true);
-        } else {
-          setIsLoggedIn(hasDemoSession());
-        }
-      }
-    };
-    syncAuth();
-    window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
+    let active = true;
+    webAuth.me().then(() => active && setIsLoggedIn(true)).catch(() => active && setIsLoggedIn(false));
+    return () => { active = false; };
   }, []);
 
   return (
@@ -177,7 +73,7 @@ function ProductContent({ view, isLoggedIn }: { view: ProductView; isLoggedIn: b
     case "start-your-journey":
       return <StartYourJourney />;
     case "community":
-      return <CommunityDirectory />;
+      return <CommunityDirectory isLoggedIn={isLoggedIn} />;
     case "settings":
       return <Settings isLoggedIn={isLoggedIn} />;
     case "account":
@@ -676,6 +572,45 @@ function NotificationItem({
    4. SETTINGS & PREFERENCES (Figma Frame 347:1286)
    ========================================================================== */
 function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+  const [settings, setSettings] = useState<AccountSettings>({
+    profileVisibility: "PUBLIC",
+    emailNotification: true,
+    language: "vi",
+    theme: "system",
+  });
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const authenticated = isLoggedIn || Boolean(profile);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([accountApi.settings(), accountApi.profile()])
+      .then(([nextSettings, nextProfile]) => {
+        if (!active) return;
+        setSettings(nextSettings);
+        setProfile(nextProfile);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [isLoggedIn]);
+
+  const saveSettings = async (next: AccountSettings) => {
+    setSettings(next);
+    if (!authenticated) return;
+    setSaving(true);
+    setNotice("");
+    try {
+      setSettings(await accountApi.updateSettings(next));
+      setNotice("Saved");
+      window.setTimeout(() => setNotice(""), 1800);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="bb-canvas bb-settings-canvas">
       {/* Floating social rail on left */}
@@ -695,7 +630,7 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
         <SettingsNavTabs active="settings" />
 
         {/* Top Guest Row matching Figma 347:1286 (only shown for guests) */}
-        {!isLoggedIn && (
+        {!authenticated && (
           <div className="bb-settings-guest-row">
             <div className="bb-guest-card-wrap">
               <img
@@ -732,6 +667,48 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
           </div>
         )}
 
+        {authenticated && profile && (
+          <div className="bb-profile-card bb-settings-account-summary">
+            <div className="bb-profile-card-header">
+              <div className="bb-profile-head-left">
+                <UserIcon size={18} className="text-[#ff7300]" />
+                <h2>Account Information</h2>
+              </div>
+              <Link href="/account/edit" className="bb-profile-edit-btn">Edit</Link>
+            </div>
+            <div className="bb-profile-identity-row">
+              <img src={profile.avatarUrl || "/assets/home/figma-buzzy.png"} alt={profile.fullName} className="bb-profile-avatar-circle" />
+              <div className="bb-profile-user-fields">
+                <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{profile.fullName}</strong></div>
+                <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{profile.user.email}</strong></div>
+                <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{profile.username || "Not set"}</strong></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {authenticated && (
+          <div className="bb-settings-preferences-box">
+            <div className="bb-pref-box-title-row">
+              <div className="bb-profile-head-left"><Bell size={18} className="text-[#ff7300]" /><h3>Notification Preferences</h3></div>
+              {saving && <span className="bb-settings-save-state">Saving...</span>}
+              {notice && !saving && <span className="bb-settings-save-state">{notice}</span>}
+            </div>
+            <div className="bb-pref-items-list">
+              <div className="bb-pref-item-row">
+                <div className="bb-pref-item-info"><strong>Email Notifications</strong><p>News, events and important account updates</p></div>
+                <label className="bb-figma-switch"><input type="checkbox" checked={settings.emailNotification} onChange={(event) => void saveSettings({ ...settings, emailNotification: event.target.checked })} /><span /></label>
+              </div>
+              <div className="bb-pref-item-row">
+                <div className="bb-pref-item-info"><strong>Profile Visibility</strong><p>Choose who can see your BeeBuddy profile</p></div>
+                <select className="bb-pref-select" value={settings.profileVisibility} onChange={(event) => void saveSettings({ ...settings, profileVisibility: event.target.value as AccountSettings["profileVisibility"] })}>
+                  <option value="PUBLIC">Everyone</option><option value="CONNECTIONS">Connections</option><option value="ONLY_ME">Only me</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Preferences Box */}
         <div className="bb-settings-preferences-box">
           <div className="bb-pref-box-title-row">
@@ -745,10 +722,9 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <strong>Language</strong>
                 <p>Select your preferred language</p>
               </div>
-              <select className="bb-pref-select" defaultValue="English">
-                <option value="English">English ⌄</option>
-                <option value="Spanish">Español</option>
-                <option value="French">Français</option>
+              <select className="bb-pref-select" value={settings.language} onChange={(event) => void saveSettings({ ...settings, language: event.target.value })}>
+                <option value="vi">Tiếng Việt</option>
+                <option value="en">English</option>
               </select>
             </div>
 
@@ -757,10 +733,10 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <strong>Appearance</strong>
                 <p>Choose your preferred theme</p>
               </div>
-              <select className="bb-pref-select" defaultValue="System">
-                <option value="System">System ⌄</option>
-                <option value="Light">Light</option>
-                <option value="Dark">Dark</option>
+              <select className="bb-pref-select" value={settings.theme} onChange={(event) => void saveSettings({ ...settings, theme: event.target.value })}>
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
               </select>
             </div>
 
@@ -805,13 +781,77 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 /* ==========================================================================
    5. ACCOUNT INFO (View: Figma 515:4234 / Edit: Figma 407:8037)
    ========================================================================== */
-function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boolean; editing?: boolean }) {
-  const [user, setUser] = useState<DemoUser>(readDemoUser());
+type AccountDraft = {
+  fullName: string;
+  avatarUrl: string;
+  bio: string;
+  gender: string;
+  dateOfBirth: string;
+  location: string;
+  interests: string;
+  habits: string;
+  connectionGoal: string;
+};
 
-  const handleSave = (e: FormEvent) => {
+const accountDraftFrom = (profile: AccountProfile): AccountDraft => ({
+  fullName: profile.fullName || "",
+  avatarUrl: profile.avatarUrl || "",
+  bio: profile.bio || "",
+  gender: profile.gender || "",
+  dateOfBirth: profile.dateOfBirth ? profile.dateOfBirth.slice(0, 10) : "",
+  location: profile.location || "",
+  interests: profile.interests.join(", "),
+  habits: profile.habits.join(", "),
+  connectionGoal: profile.connectionGoal || "",
+});
+
+function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boolean; editing?: boolean }) {
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [draft, setDraft] = useState<AccountDraft | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const authenticated = isLoggedIn || Boolean(profile);
+
+  useEffect(() => {
+    let active = true;
+    accountApi.profile()
+      .then((data) => {
+        if (!active) return;
+        setProfile(data);
+        setDraft(accountDraftFrom(data));
+      })
+      .catch((cause: Error) => active && setError(cause.message))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, []);
+
+  const updateDraft = (field: keyof AccountDraft, value: string) => setDraft((current) => current ? { ...current, [field]: value } : current);
+
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    saveDemoUser(user);
-    window.location.href = "/account";
+    if (!draft || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const split = (value: string) => Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean)));
+      const updated = await accountApi.updateProfile({
+        fullName: draft.fullName.trim(),
+        avatarUrl: draft.avatarUrl.trim(),
+        bio: draft.bio.trim(),
+        gender: draft.gender.trim(),
+        dateOfBirth: draft.dateOfBirth || undefined,
+        location: draft.location.trim(),
+        interests: split(draft.interests),
+        habits: split(draft.habits),
+        connectionGoal: draft.connectionGoal.trim(),
+      });
+      setProfile(updated);
+      window.location.href = "/account";
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save profile");
+      setSaving(false);
+    }
   };
 
   return (
@@ -833,7 +873,9 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
         <SettingsNavTabs active="account" />
 
         {/* Guest Banner Row matching Figma 395:3299 */}
-        {!isLoggedIn && !editing ? (
+        {loading ? (
+          <div className="bb-profile-card bb-account-loading">Loading account...</div>
+        ) : !authenticated && !editing ? (
           <div className="bb-settings-guest-row">
             <div className="bb-guest-card-wrap">
               <img
@@ -868,6 +910,8 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
               </Link>
             </div>
           </div>
+        ) : !profile || !draft ? (
+          <div className="bb-profile-card bb-account-loading"><p>{error || "Please sign in to manage your account."}</p><Link href="/login" className="bb-profile-edit-btn">Sign in</Link></div>
         ) : !editing ? (
           <div className="bb-account-view-stage">
             {/* White Profile Card */}
@@ -886,25 +930,25 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
               {/* User Bio Top Row */}
               <div className="bb-profile-identity-row">
                 <img
-                  src="/assets/home/figma-buzzy.png"
+                  src={profile.avatarUrl || "/assets/home/figma-buzzy.png"}
                   alt="Avatar"
                   className="bb-profile-avatar-circle"
                 />
                 <div className="bb-profile-user-fields">
                   <div className="bb-field-pair">
                     <span className="label">Full Name</span>
-                    <strong className="val">{user.name}</strong>
+                    <strong className="val">{profile.fullName}</strong>
                   </div>
                   <div className="bb-field-pair">
                     <span className="label">Email</span>
-                    <strong className="val text-[#ff7300]">{user.email}</strong>
+                    <strong className="val text-[#ff7300]">{profile.user.email}</strong>
                   </div>
                   <div className="bb-field-pair">
                     <span className="label">Username</span>
-                    <strong className="val">{user.username}</strong>
+                    <strong className="val">{profile.username || "Not set"}</strong>
                   </div>
                 </div>
-                <span className="bb-members-pill-badge">Members</span>
+                <span className="bb-members-pill-badge">{profile.user.tier}</span>
               </div>
 
               {/* Tags Grid */}
@@ -912,85 +956,52 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 <div>
                   <span className="bb-tag-group-title">BASIC INFO</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip">📅 08/12/1992</span>
-                    <span className="bb-info-chip">Non-binary</span>
-                    <span className="bb-info-chip">Product Designer</span>
+                    <span className="bb-info-chip">📅 {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString("vi-VN") : "Not set"}</span>
+                    <span className="bb-info-chip">{profile.gender || "Not set"}</span>
+                    <span className="bb-info-chip">{profile.location || "Location not set"}</span>
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">HOBBIES</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip green">Sketching</span>
-                    <span className="bb-info-chip green">Trail running</span>
-                    <span className="bb-info-chip green">Cooking</span>
+                    {(profile.habits.length ? profile.habits : ["Not set"]).map((habit) => <span key={habit} className="bb-info-chip green">{habit}</span>)}
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">INTERESTS</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip orange">Design</span>
-                    <span className="bb-info-chip orange">Coffee</span>
-                    <span className="bb-info-chip orange">Hiking</span>
+                    {(profile.interests.length ? profile.interests : ["Not set"]).map((interest) => <span key={interest} className="bb-info-chip orange">{interest}</span>)}
                   </div>
                 </div>
 
                 <div>
-                  <span className="bb-tag-group-title">SKILLS</span>
+                  <span className="bb-tag-group-title">CONNECTION GOAL</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip purple">UI/UX Design</span>
-                    <span className="bb-info-chip purple">Prototyping</span>
-                    <span className="bb-info-chip purple">User Research</span>
+                    <span className="bb-info-chip purple">{profile.connectionGoal || "Not set"}</span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="bb-tag-group-title">PERSONALITY & LIFESTYLE</span>
+                  <span className="bb-tag-group-title">LOCATION</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip blue">INTP</span>
-                    <span className="bb-info-chip blue">Minimalist & active</span>
+                    <span className="bb-info-chip blue">{profile.location || "Not set"}</span>
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">DAILY HABITS</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip yellow">Morning journaling</span>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="bb-tag-group-title">FAVORITE COLORS</span>
-                  <div className="bb-color-dots-row">
-                    <span className="bb-color-dot" style={{ background: "#f87171" }} />
-                    <span className="bb-color-dot" style={{ background: "#34d399" }} />
-                    <span className="bb-color-dot" style={{ background: "#c084fc" }} />
+                    {(profile.habits.length ? profile.habits : ["Not set"]).map((habit) => <span key={habit} className="bb-info-chip yellow">{habit}</span>)}
                   </div>
                 </div>
               </div>
 
               {/* Bio & Socials */}
               <div className="bb-profile-bio-block">
-                <p>Creative soul who loves design, nature, and a good espresso. ☕</p>
-                <div className="bb-profile-social-links">
-                  <a href="https://twitter.com" target="_blank" rel="noreferrer">
-                    🐦 @designlife
-                  </a>
-                  <a href="https://linkedin.com" target="_blank" rel="noreferrer">
-                    💼 linkedin.com/in/designlife
-                  </a>
-                </div>
-              </div>
-
-              {/* Gallery */}
-              <div className="bb-profile-gallery-block">
-                <span className="bb-gallery-title">Gallery</span>
-                <div className="bb-gallery-cards-row">
-                  <img src="/assets/buzzy/gallery_515_4462.png" alt="Gallery 1" className="bb-gallery-img" />
-                  <img src="/assets/buzzy/gallery_515_4463.png" alt="Gallery 2" className="bb-gallery-img" />
-                  <img src="/assets/buzzy/gallery_515_4464.png" alt="Gallery 3" className="bb-gallery-img" />
-                </div>
+                <p>{profile.bio || "Tell the BeeBuddy community something about yourself."}</p>
+                {profile.connectionGoal && <div className="bb-profile-social-links"><span>🎯 {profile.connectionGoal}</span></div>}
               </div>
 
               {/* Billing / Plan Card inside Profile */}
@@ -1001,12 +1012,12 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
                 <div className="bb-pbc-body">
                   <div className="bb-pbc-info">
-                    <strong>BeeBuddy Explorer <span className="bb-plan-chip">Pro Plan</span></strong>
+                    <strong>BeeBuddy Explorer <span className="bb-plan-chip">{profile.user.tier} Plan</span></strong>
                     <p>Access to premium features, exclusive events and more!</p>
                   </div>
                   <div className="bb-pbc-renewal">
                     <small>Next Renewal</small>
-                    <strong>May 28, 2027</strong>
+                    <strong>{profile.user.tierExpiresAt ? new Date(profile.user.tierExpiresAt).toLocaleDateString("vi-VN") : "No renewal date"}</strong>
                     <small>Billing Cycle: <strong>Yearly</strong></small>
                   </div>
                   <Link href="/billing" className="bb-pbc-manage-btn">Manage Plan</Link>
@@ -1015,9 +1026,9 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
 
               {/* Bottom Actions */}
               <div className="bb-profile-bottom-actions">
-                <Link href="/" className="bb-profile-logout-btn">
+                <button type="button" className="bb-profile-logout-btn" onClick={() => void webAuth.logout().then(() => { window.location.href = "/"; })}>
                   <span>↳ Log out</span>
-                </Link>
+                </button>
                 <button
                   type="button"
                   className="bb-profile-invite-btn"
@@ -1040,11 +1051,11 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
               </div>
               <div className="bb-profile-identity-row">
-                <img src="/assets/home/figma-buzzy.png" alt="" className="bb-profile-avatar-circle" />
+                <img src={draft.avatarUrl || "/assets/home/figma-buzzy.png"} alt="" className="bb-profile-avatar-circle" />
                 <div className="bb-profile-user-fields">
-                  <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{user.name}</strong></div>
-                  <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{user.email}</strong></div>
-                  <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{user.username}</strong></div>
+                  <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{draft.fullName}</strong></div>
+                  <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{profile.user.email}</strong></div>
+                  <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{profile.username || "Not set"}</strong></div>
                 </div>
               </div>
             </div>
@@ -1066,31 +1077,27 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Date of Birth</strong><p>Your birthdate (MM/DD/YYYY)</p></div>
-                  <span className="bb-edit-val-underlined">08/12/1992</span>
+                  <input className="bb-edit-val-underlined" type="date" value={draft.dateOfBirth} onChange={(event) => updateDraft("dateOfBirth", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Gender</strong><p>Select your gender identity</p></div>
-                  <span className="bb-edit-val-underlined">Non-binary</span>
+                  <input className="bb-edit-val-underlined" value={draft.gender} onChange={(event) => updateDraft("gender", event.target.value)} placeholder="Your gender" />
                 </div>
                 <div className="bb-edit-row">
-                  <div><strong>Occupation</strong><p>Your current role or profession</p></div>
-                  <span className="bb-edit-val-underlined">Product Designer</span>
+                  <div><strong>Location</strong><p>Your current city or area</p></div>
+                  <input className="bb-edit-val-underlined" value={draft.location} onChange={(event) => updateDraft("location", event.target.value)} placeholder="Your location" />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Interests</strong><p>Topics you enjoy talking about</p></div>
-                  <span className="bb-edit-val-underlined">Design, Coffee, Hiking</span>
+                  <input className="bb-edit-val-underlined" value={draft.interests} onChange={(event) => updateDraft("interests", event.target.value)} placeholder="Design, Coffee, Hiking" />
                 </div>
                 <div className="bb-edit-row">
-                  <div><strong>Favorite Colors</strong><p>Colors that match your vibe</p></div>
-                  <div className="bb-color-dots-row">
-                    <span className="bb-color-dot" style={{ background: "#ff8500" }} />
-                    <span className="bb-color-dot" style={{ background: "#f59e0b" }} />
-                    <span className="bb-color-dot" style={{ background: "#eab308" }} />
-                  </div>
+                  <div><strong>Avatar URL</strong><p>Link to your profile picture</p></div>
+                  <input className="bb-edit-val-underlined" type="url" value={draft.avatarUrl} onChange={(event) => updateDraft("avatarUrl", event.target.value)} placeholder="https://..." />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Habits</strong><p>Daily routines and rituals</p></div>
-                  <span className="bb-edit-val-underlined">Morning journaling</span>
+                  <input className="bb-edit-val-underlined" value={draft.habits} onChange={(event) => updateDraft("habits", event.target.value)} placeholder="Morning journaling" />
                 </div>
               </div>
             </div>
@@ -1107,12 +1114,10 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
               <div className="bb-edit-detail-list">
                 <div className="bb-detail-item">
                   <div className="bb-detail-item-label">
-                    <strong>About Me</strong>
-                    <small>A brief intro about yourself</small>
+                    <strong>Full Name</strong>
+                    <small>Your name shown across BeeBuddy</small>
                   </div>
-                  <span className="bb-detail-item-val">
-                    Hello! I&apos;m a creative mind passionate about design and meaningful connections. Always looking for inspiration and good conversations.
-                  </span>
+                  <input className="bb-detail-item-val bb-edit-text-input" required value={draft.fullName} onChange={(event) => updateDraft("fullName", event.target.value)} />
                 </div>
 
                 <div className="bb-detail-item">
@@ -1120,70 +1125,25 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                     <strong>Self-Description / Bio</strong>
                     <small>A short bio that appears on your profile</small>
                   </div>
-                  <span className="bb-detail-item-val">
-                    Creative soul who loves design, nature, and a good espresso.
-                  </span>
+                  <textarea className="bb-detail-item-val bb-edit-text-input" rows={3} maxLength={500} value={draft.bio} onChange={(event) => updateDraft("bio", event.target.value)} />
                 </div>
 
                 <div className="bb-detail-item">
                   <div className="bb-detail-item-label">
-                    <strong>Personality Type</strong>
-                    <small>Your personality style (e.g., INTP, ENFJ)</small>
+                    <strong>Connection Goal</strong>
+                    <small>What kind of connection are you looking for?</small>
                   </div>
-                  <span className="bb-detail-item-val">INTP</span>
+                  <textarea className="bb-detail-item-val bb-edit-text-input" rows={2} maxLength={300} value={draft.connectionGoal} onChange={(event) => updateDraft("connectionGoal", event.target.value)} />
                 </div>
 
-                <div className="bb-detail-item">
-                  <div className="bb-detail-item-label">
-                    <strong>Lifestyle</strong>
-                    <small>Your daily habits and living style</small>
-                  </div>
-                  <span className="bb-detail-item-val">Minimalist & active</span>
-                </div>
-
-                <div className="bb-detail-item">
-                  <div className="bb-detail-item-label">
-                    <strong>Hobbies</strong>
-                    <small>Activities you enjoy in your free time</small>
-                  </div>
-                  <span className="bb-detail-item-val">Sketching, trail running, cooking</span>
-                </div>
-
-                <div className="bb-detail-item">
-                  <div className="bb-detail-item-label">
-                    <strong>Skills</strong>
-                    <small>Abilities you&apos;re proficient in</small>
-                  </div>
-                  <span className="bb-detail-item-val">UI/UX Design, Prototyping, User Research</span>
-                </div>
-
-                <div className="bb-detail-item">
-                  <div className="bb-detail-item-label">
-                    <strong>Social Links</strong>
-                    <small>Connect your profiles (e.g., Twitter, Instagram)</small>
-                  </div>
-                  <span className="bb-detail-item-val">@designlife on Twitter, linkedin.com/in/designlife</span>
-                </div>
-
-                {/* Gallery with dashed plus card */}
-                <div className="bb-edit-gallery-section">
-                  <span className="label">Gallery</span>
-                  <div className="bb-gallery-cards-row">
-                    <img src="/assets/buzzy/gallery_515_4462.png" alt="" className="bb-gallery-img" />
-                    <img src="/assets/buzzy/gallery_515_4463.png" alt="" className="bb-gallery-img" />
-                    <img src="/assets/buzzy/gallery_515_4464.png" alt="" className="bb-gallery-img" />
-                    <div className="bb-gallery-add-card">
-                      <span>+</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Form Actions */}
               <div className="bb-edit-actions-row">
                 <Link href="/account" className="bb-edit-cancel-btn">✕ Cancel</Link>
-                <button type="submit" className="bb-edit-save-btn">✓ Save Changes</button>
+                <button type="submit" className="bb-edit-save-btn" disabled={saving}>{saving ? "Saving..." : "✓ Save Changes"}</button>
               </div>
+              {error && <p className="form-error" role="alert">{error}</p>}
             </div>
           </form>
         )}
@@ -1196,6 +1156,112 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
    6. BILLING & PLANS (Figma Frames 381:289, 407:9189, 407:8501, 566:7784)
    ========================================================================== */
 function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [currentTier, setCurrentTier] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      getSubscriptionPlans(),
+      isLoggedIn ? webAuth.me().catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([nextPlans, user]) => {
+        if (!active) return;
+        setPlans(nextPlans);
+        setCurrentTier(user?.tier || null);
+      })
+      .catch((cause: Error) => active && setError(cause.message))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [isLoggedIn]);
+
+  const price = (value: number) =>
+    value === 0 ? "Miễn phí" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+  const planIcons: Record<SubscriptionPlan["tier"], string> = { FREE: "⭐", VIP: "🧭", PRO: "🛡️" };
+
+  return (
+    <main className="bb-canvas bb-billing-canvas">
+      <div className="bb-billing-page-content">
+        <SettingsNavTabs active="billing" />
+        <div className="bb-billing-overview-stage">
+          <div className="bb-billing-head-row">
+            <div>
+              <h1 className="bb-billing-main-title">Các gói BeeBuddy</h1>
+              <p className="bb-billing-subhead">
+                Chọn cấp độ phù hợp với hành trình kết nối của bạn. Quyền lợi và giá dưới đây được tải trực tiếp từ hệ thống BeeBuddy.
+              </p>
+              <div className="bb-billing-security-note">
+                <Shield size={14} className="text-gray-400" />
+                <span>Giá niêm yết bằng VND cho một tháng. Thanh toán trực tuyến sẽ được kích hoạt trong W5.</span>
+              </div>
+            </div>
+            <Link href="/help" className="bb-billing-help-btn">❓ Trợ giúp</Link>
+          </div>
+
+          {loading && <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng giá...</div>}
+          {error && !loading && (
+            <div className="bb-feed-state-card is-error">
+              <p>{error}</p>
+              <button type="button" onClick={() => window.location.reload()}>Thử lại</button>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="bb-billing-grid-and-photo">
+              <div className="bb-plans-2x2-grid">
+                {plans.map((plan) => {
+                  const isCurrent = currentTier === plan.tier || (!isLoggedIn && plan.tier === "FREE");
+                  return (
+                    <article key={plan.tier} className={`bb-figma-plan-card ${plan.tier === "VIP" ? "is-popular" : ""}`}>
+                      <div className="bb-plan-card-top">
+                        <span className="bb-plan-icon">{planIcons[plan.tier]}</span>
+                        <div>
+                          <h3>{plan.name}</h3>
+                          <small>{plan.tier === "FREE" ? "Bắt đầu hành trình" : plan.tier === "VIP" ? "Kết nối nhiều hơn" : "Trải nghiệm đầy đủ"}</small>
+                        </div>
+                        {plan.tier === "VIP" && <span className="bb-popular-chip">⭐ Phổ biến</span>}
+                      </div>
+                      <div className="bb-plan-price-row">
+                        <strong>{price(plan.priceVND)}</strong>
+                        {plan.priceVND > 0 && <span>/ {plan.durationMonths} tháng</span>}
+                      </div>
+                      <p className="bb-plan-short-desc">Gói {plan.tier} dành cho thành viên BeeBuddy.</p>
+                      <ul className="bb-plan-checklist">
+                        {plan.features.map((feature) => <li key={feature}><span className="dot" />{feature}</li>)}
+                      </ul>
+                      {isCurrent ? (
+                        <span className="bb-plan-status-label">✓ Gói hiện tại</span>
+                      ) : isLoggedIn ? (
+                        <button type="button" className="bb-plan-action-filled orange" disabled title="Thanh toán sẽ được hoàn thiện ở W5">
+                          Thanh toán sắp mở
+                        </button>
+                      ) : (
+                        <Link href="/login" className="bb-plan-action-filled orange bb-plan-link-action">Đăng nhập để nâng cấp →</Link>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="bb-billing-photo-card">
+                <img
+                  src="/assets/buzzy/billing_friends_photo.png"
+                  alt="Bạn bè cùng khám phá BeeBuddy"
+                  className="bb-billing-friends-img"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// Giữ lại bản thiết kế checkout để nối PayOS ở W5; không render trong W4.
+function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [subView, setSubView] = useState<"overview" | "compare" | "manage" | "checkout">("overview");
   const [selectedPlan, setSelectedPlan] = useState("Explorer");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "apple">("card");
@@ -2423,54 +2489,149 @@ function HelpSupport({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 /* ==========================================================================
    9. COMMUNITY MEMBERS DIRECTORY & EXPLORE (Figma Frames 219:5235, 481:1343)
    ========================================================================== */
-function CommunityDirectory() {
+function formatRelativeTime(value: string) {
+  const elapsed = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(elapsed / 60_000));
+  if (minutes < 1) return "Vừa xong";
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+}
+
+function SearchPreviewGrid({
+  result,
+  loading,
+  error,
+  gridClassName,
+  cardClassName,
+}: {
+  result: SearchPreviewResult | null;
+  loading: boolean;
+  error: string;
+  gridClassName: string;
+  cardClassName: string;
+}) {
+  if (loading) return <div className="bb-search-preview-state"><span className="bb-feed-loader" />Đang tìm trong cộng đồng...</div>;
+  if (error) return <div className="bb-search-preview-state is-error">{error}</div>;
+  if (!result) return <div className="bb-search-preview-state">Nhập một sở thích hoặc thói quen để tìm người có điểm chung.</div>;
+  if (result.totalMatches === 0) return <div className="bb-search-preview-state">Chưa tìm thấy hồ sơ phù hợp với “{result.query}”.</div>;
+
+  return (
+    <>
+      <div className="bb-search-result-summary" role="status">
+        Tìm thấy <strong>{result.totalMatches}</strong> người phù hợp · Đang hiển thị <strong>{result.previewUsers.length}</strong>/{Math.min(3, result.totalMatches)} hồ sơ giới hạn
+      </div>
+      <div className={gridClassName}>
+        {result.previewUsers.map((member) => (
+          <article key={member.id} className={cardClassName}>
+            <div className="bb-member-top-row">
+              <div className="bb-member-avatar-ring">
+                <img
+                  src={member.avatarUrl || "/assets/home/avatar-01.png"}
+                  alt={member.maskedName}
+                  className="bb-member-avatar-img"
+                />
+              </div>
+              <div className="bb-member-meta">
+                <h3 className="bb-member-name">{member.maskedName}</h3>
+                <p className="bb-member-role">Hồ sơ xem trước</p>
+              </div>
+            </div>
+            <div className="bb-member-location-row"><MapPin size={14} className="bb-pin-icon" /><span>{member.location}</span></div>
+            <p className="bb-member-bio">{member.connectionGoal}</p>
+            <div className="bb-member-tags-row">
+              {member.matchingInterests.map((tag) => <span key={tag} className="bb-member-interest-chip">{tag}</span>)}
+            </div>
+            <Link href="/get-started" className="bb-member-connect-btn bb-member-app-cta">Tiếp tục trên ứng dụng</Link>
+          </article>
+        ))}
+      </div>
+      <p className="bb-search-limit-notice">{result.limitNotice}</p>
+    </>
+  );
+}
+
+function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [viewMode, setViewMode] = useState<"directory" | "explore">("directory");
   const [searchQuery, setSearchQuery] = useState("");
-  const [skillFilter, setSkillFilter] = useState("Skills");
-  const [availFilter, setAvailFilter] = useState("Availability");
-  const [interestFilter, setInterestFilter] = useState("Interests");
-  const [activeExploreTag, setActiveExploreTag] = useState("Design");
-  const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
-  const [likedPosts, setLikedPosts] = useState<string[]>(["post-elena"]);
+  const [popularInterests, setPopularInterests] = useState<string[]>([]);
+  const [searchResult, setSearchResult] = useState<SearchPreviewResult | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
+  const [feedPage, setFeedPage] = useState(1);
+  const [feedTotalPages, setFeedTotalPages] = useState(1);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState("");
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeCommentsTitle, setActiveCommentsTitle] = useState("Comments");
-  const [openDropdown, setOpenDropdown] = useState<"skills" | "avail" | "interests" | null>(null);
 
-  const toggleConnect = (name: string) => {
-    setConnectedUsers((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
-  };
-
-  const toggleLike = (postId: string) => {
-    setLikedPosts((prev) =>
-      prev.includes(postId) ? prev.filter((p) => p !== postId) : [...prev, postId]
-    );
-  };
-
-  const openComments = (title: string = "Comments") => {
+  const openComments = (postId: string, title: string = "Comments") => {
+    setActivePostId(postId);
     setActiveCommentsTitle(title);
     setIsCommentsOpen(true);
   };
 
-  const filteredMembers = useMemo(() => {
-    return people.filter((member) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchQuery =
-        !q ||
-        member.name.toLowerCase().includes(q) ||
-        member.role.toLowerCase().includes(q) ||
-        member.location.toLowerCase().includes(q) ||
-        member.tags.some((t) => t.toLowerCase().includes(q)) ||
-        member.text.toLowerCase().includes(q);
+  const loadFeed = async (page: number, append = false) => {
+    setFeedLoading(true);
+    setFeedError("");
+    try {
+      const feed = await postsApi.feed(page, 6);
+      setFeedPosts((current) => append ? [...current, ...feed.posts] : feed.posts);
+      setFeedPage(feed.page);
+      setFeedTotalPages(feed.totalPages);
+    } catch (error) {
+      setFeedError(error instanceof Error ? error.message : "Không thể tải bảng tin");
+    } finally {
+      setFeedLoading(false);
+    }
+  };
 
-      const matchSkill = skillFilter === "Skills" || member.skills.includes(skillFilter);
-      const matchAvail = availFilter === "Availability" || member.availability === availFilter;
-      const matchInterest = interestFilter === "Interests" || member.tags.includes(interestFilter);
+  useEffect(() => {
+    if (viewMode === "explore") void loadFeed(1);
+  }, [viewMode, isLoggedIn]);
 
-      return matchQuery && matchSkill && matchAvail && matchInterest;
-    });
-  }, [searchQuery, skillFilter, availFilter, interestFilter]);
+  useEffect(() => {
+    let active = true;
+    searchApi.popular()
+      .then((items) => active && setPopularInterests(items))
+      .catch(() => active && setPopularInterests([]));
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchResult(null);
+      setSearchError("");
+      setSearchLoading(false);
+      return;
+    }
+
+    let active = true;
+    setSearchLoading(true);
+    setSearchError("");
+    const timer = window.setTimeout(() => {
+      searchApi.preview(query)
+        .then((result) => active && setSearchResult(result))
+        .catch((cause: Error) => active && setSearchError(cause.message))
+        .finally(() => active && setSearchLoading(false));
+    }, 350);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const onApprovedComment = (postId: string) => {
+    setFeedPosts((current) => current.map((post) =>
+      post.id === postId ? { ...post, commentsCount: post.commentsCount + 1 } : post
+    ));
+  };
 
   return (
     <div className="bb-figma-community-page">
@@ -2497,7 +2658,9 @@ function CommunityDirectory() {
               <div className="bb-find-people-info">
                 <h2 className="bb-find-people-title">Find your people</h2>
                 <p className="bb-find-people-stats">
-                  2,400+ members • 120+ shared activities this week
+                  {searchResult
+                    ? `${searchResult.totalMatches} người phù hợp • hiển thị tối đa 3 hồ sơ`
+                    : "Tìm theo sở thích hoặc thói quen từ cộng đồng BeeBuddy"}
                 </p>
               </div>
               <button
@@ -2510,161 +2673,50 @@ function CommunityDirectory() {
               </button>
             </div>
 
-            <div className="bb-figma-filter-bar">
-              {/* Skills */}
-              <div className="bb-filter-dropdown-wrap">
-                <button
-                  type="button"
-                  className={`bb-filter-pill-btn ${skillFilter !== "Skills" ? "is-selected" : ""}`}
-                  onClick={() => setOpenDropdown(openDropdown === "skills" ? null : "skills")}
-                >
-                  <MapPin size={14} className="text-gray-500" />
-                  <span>{skillFilter}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-                {openDropdown === "skills" && (
-                  <div className="bb-filter-popup-menu">
-                    {["Skills", "Design", "UX", "Coding", "Research", "Management", "Content", "ML"].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        className={skillFilter === s ? "active" : ""}
-                        onClick={() => { setSkillFilter(s); setOpenDropdown(null); }}
-                      >
-                        {s === "Skills" ? "All Skills" : s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Availability */}
-              <div className="bb-filter-dropdown-wrap">
-                <button
-                  type="button"
-                  className={`bb-filter-pill-btn ${availFilter !== "Availability" ? "is-selected" : ""}`}
-                  onClick={() => setOpenDropdown(openDropdown === "avail" ? null : "avail")}
-                >
-                  <Clock size={14} className="text-gray-500" />
-                  <span>{availFilter}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-                {openDropdown === "avail" && (
-                  <div className="bb-filter-popup-menu">
-                    {["Availability", "Available today", "This week"].map((a) => (
-                      <button
-                        key={a}
-                        type="button"
-                        className={availFilter === a ? "active" : ""}
-                        onClick={() => { setAvailFilter(a); setOpenDropdown(null); }}
-                      >
-                        {a === "Availability" ? "Any Availability" : a}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Interests */}
-              <div className="bb-filter-dropdown-wrap">
-                <button
-                  type="button"
-                  className={`bb-filter-pill-btn ${interestFilter !== "Interests" ? "is-selected" : ""}`}
-                  onClick={() => setOpenDropdown(openDropdown === "interests" ? null : "interests")}
-                >
-                  <span>{interestFilter}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-                {openDropdown === "interests" && (
-                  <div className="bb-filter-popup-menu">
-                    {["Interests", "Coffee", "Hiking", "Design", "Photography", "Coding", "Yoga", "Books"].map((i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className={interestFilter === i ? "active" : ""}
-                        onClick={() => { setInterestFilter(i); setOpenDropdown(null); }}
-                      >
-                        {i === "Interests" ? "All Interests" : i}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Search Box */}
+            <div className="bb-figma-filter-bar bb-real-search-bar">
               <div className="bb-search-input-box">
                 <Search size={16} className="bb-search-box-icon" />
                 <input
                   type="text"
-                  placeholder="Search members..."
+                  placeholder="Ví dụ: Coding, Chạy bộ, Đọc sách..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bb-search-box-input"
+                  maxLength={80}
                 />
                 <div className="bb-search-box-divider" />
                 <button
                   type="button"
                   className="bb-search-box-sliders-btn"
-                  aria-label="Reset filters"
-                  onClick={() => {
-                    setSkillFilter("Skills");
-                    setAvailFilter("Availability");
-                    setInterestFilter("Interests");
-                    setSearchQuery("");
-                  }}
-                  title="Reset filters"
+                  aria-label="Xóa tìm kiếm"
+                  onClick={() => setSearchQuery("")}
+                  title="Xóa tìm kiếm"
                 >
                   <SlidersHorizontal size={16} />
                 </button>
               </div>
             </div>
 
-            {/* 8 Member Cards */}
-            <div className="bb-figma-member-grid">
-              {filteredMembers.map((member) => {
-                const isConnected = connectedUsers.includes(member.name);
-                return (
-                  <article key={member.name} className="bb-figma-member-card">
-                    <div className="bb-member-top-row">
-                      <div className="bb-member-avatar-ring">
-                        <img
-                          src={`/assets/community/${member.avatar}`}
-                          alt={member.name}
-                          className="bb-member-avatar-img"
-                        />
-                      </div>
-                      <div className="bb-member-meta">
-                        <h3 className="bb-member-name">{member.name}</h3>
-                        <p className="bb-member-role">{member.role}</p>
-                      </div>
-                    </div>
-
-                    <div className="bb-member-location-row">
-                      <MapPin size={14} className="bb-pin-icon" />
-                      <span>{member.location}</span>
-                    </div>
-
-                    <p className="bb-member-bio">{member.text}</p>
-
-                    <div className="bb-member-tags-row">
-                      {member.tags.map((tag) => (
-                        <span key={tag} className="bb-member-interest-chip">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`bb-member-connect-btn ${isConnected ? "is-connected" : ""}`}
-                      onClick={() => toggleConnect(member.name)}
-                    >
-                      {isConnected ? "Connected ✓" : "Connect"}
-                    </button>
-                  </article>
-                );
-              })}
+            <div className="bb-discover-tag-chips bb-directory-popular-tags">
+              {popularInterests.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`bb-explore-tag-chip ${searchQuery.toLocaleLowerCase("vi-VN") === tag.toLocaleLowerCase("vi-VN") ? "is-active" : ""}`}
+                  onClick={() => setSearchQuery(tag)}
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
+
+            <SearchPreviewGrid
+              result={searchResult}
+              loading={searchLoading}
+              error={searchError}
+              gridClassName="bb-figma-member-grid"
+              cardClassName="bb-figma-member-card"
+            />
 
             {/* Growth banner */}
             <div className="bb-growth-message-card">
@@ -2709,16 +2761,13 @@ function CommunityDirectory() {
                 <Search size={16} className="bb-search-box-icon" />
                 <input
                   type="text"
-                  placeholder="Search members..."
+                  placeholder="Tìm theo sở thích hoặc thói quen..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bb-search-box-input"
+                  maxLength={80}
                 />
               </div>
-
-              <div className="bb-filter-pill-btn"><span>Interests</span><ChevronDown size={14} className="text-gray-400" /></div>
-              <div className="bb-filter-pill-btn"><span>Skills</span><ChevronDown size={14} className="text-gray-400" /></div>
-              <div className="bb-filter-pill-btn"><span>Availability</span><ChevronDown size={14} className="text-gray-400" /></div>
             </div>
 
             {/* Discover Friends by Interest */}
@@ -2727,57 +2776,37 @@ function CommunityDirectory() {
                 <h2 className="bb-discover-title">Discover Friends by Interest</h2>
                 <div className="bb-discover-search-tag">
                   <Search size={14} className="text-gray-400" />
-                  <input type="text" placeholder="Search or add tags..." className="bb-discover-tag-input" />
+                  <input
+                    type="text"
+                    placeholder="Tìm thói quen..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="bb-discover-tag-input"
+                    maxLength={80}
+                  />
                 </div>
               </div>
 
               <div className="bb-discover-tag-chips">
-                {exploreInterests.map((tag) => (
+                {popularInterests.map((tag) => (
                   <button
                     key={tag}
                     type="button"
-                    className={`bb-explore-tag-chip ${activeExploreTag === tag ? "is-active" : ""}`}
-                    onClick={() => setActiveExploreTag(tag)}
+                    className={`bb-explore-tag-chip ${searchQuery.toLocaleLowerCase("vi-VN") === tag.toLocaleLowerCase("vi-VN") ? "is-active" : ""}`}
+                    onClick={() => setSearchQuery(tag)}
                   >
                     {tag}
                   </button>
                 ))}
               </div>
 
-              <div className="bb-explore-friends-grid">
-                {[
-                  { name: "Alex Rivera", role: "UX Designer", location: "Portland, OR", bio: "Looking for someone to grab coffee and talk design systems.", tags: ["Design", "Coffee", "Hiking"], avatar: "alex_rivera.png" },
-                  { name: "Jordan Lee", role: "Creative Writer", location: "Austin, TX", bio: "Always down for a weekend hiking trip and notebook brain storming.", tags: ["Coffee", "Hiking", "Yoga"], avatar: "jordan_lee.png" },
-                  { name: "Marcus Chen", role: "Software Developer", location: "San Francisco, CA", bio: "Looking for design enthusiasts who also enjoy trail running.", tags: ["Design", "Coding", "Hiking"], avatar: "marcus_chen.png" },
-                ].map((friend) => {
-                  const isConnected = connectedUsers.includes(friend.name);
-                  return (
-                    <div key={friend.name} className="bb-explore-friend-card">
-                      <div className="bb-member-top-row">
-                        <div className="bb-member-avatar-ring">
-                          <img src={`/assets/community/${friend.avatar}`} alt={friend.name} className="bb-member-avatar-img" />
-                        </div>
-                        <div className="bb-member-meta">
-                          <h4 className="bb-member-name">{friend.name}</h4>
-                          <p className="bb-member-role">{friend.role}</p>
-                        </div>
-                      </div>
-                      <div className="bb-member-location-row"><MapPin size={13} className="bb-pin-icon" /><span>{friend.location}</span></div>
-                      <p className="bb-member-bio">{friend.bio}</p>
-                      <div className="bb-member-tags-row">
-                        {friend.tags.map((t) => <span key={t} className="bb-member-interest-chip">{t}</span>)}
-                      </div>
-                      <button
-                        type="button"
-                        className={`bb-member-connect-btn ${isConnected ? "is-connected" : ""}`}
-                        onClick={() => toggleConnect(friend.name)}
-                      >
-                        {isConnected ? "Connected ✓" : "Connect"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+              <SearchPreviewGrid
+                result={searchResult}
+                loading={searchLoading}
+                error={searchError}
+                gridClassName="bb-explore-friends-grid"
+                cardClassName="bb-explore-friend-card"
+              />
             </section>
 
             {/* What's Buzzing Feed */}
@@ -2785,85 +2814,98 @@ function CommunityDirectory() {
               <h2 className="bb-buzzing-section-title">What&apos;s Buzzing</h2>
 
               <div className="bb-buzzing-posts-list">
-                {/* Post 1: Elena */}
-                <article className="bb-buzzing-post-card">
-                  <div className="bb-post-header-row">
-                    <div className="bb-post-author-group">
-                      <img src="/assets/community/elena_rossi.png" alt="Elena Rossi" className="bb-post-author-avatar" />
-                      <div>
-                        <h4 className="bb-post-author-name">Elena Rossi</h4>
-                        <p className="bb-post-author-role">Content Creator</p>
-                      </div>
-                    </div>
-                    <div className="bb-post-meta-right">
-                      <Clock size={14} className="text-gray-400" />
-                      <span className="bb-post-time">2 hours ago</span>
-                      <span className="bb-post-public-badge"><Globe size={12} /><span>Public</span></span>
-                    </div>
-                  </div>
-                  <p className="bb-post-content-text">
-                    Is anyone planning on hitting the Forest Park trails this Saturday morning? Grab a coffee afterwards and talk about new photography setups! Let&apos;s get a small group going
-                  </p>
-                  <div className="bb-member-tags-row">
-                    {["Hiking", "Coffee", "Photography"].map((t) => <span key={t} className="bb-member-interest-chip">{t}</span>)}
-                  </div>
-                  <div className="bb-post-actions-bar">
-                    <button type="button" className={`bb-post-action-btn ${likedPosts.includes("post-elena") ? "is-liked" : ""}`} onClick={() => toggleLike("post-elena")}>
-                      <Heart size={16} className={likedPosts.includes("post-elena") ? "fill-current text-[#ff7300]" : ""} />
-                      <span>{likedPosts.includes("post-elena") ? "25 Likes" : "24 Likes"}</span>
-                    </button>
-                    <button type="button" className="bb-post-action-btn" onClick={() => openComments("Comments on Elena's Post")}>
-                      <MessageSquare size={16} /><span>Comments</span>
-                    </button>
-                    <button type="button" className="bb-post-action-btn" onClick={() => alert("Post link copied!")}>
-                      <Share2 size={16} /><span>Share</span>
-                    </button>
-                  </div>
-                </article>
+                {feedLoading && feedPosts.length === 0 && (
+                  <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng tin...</div>
+                )}
 
-                {/* Post 2: Priya (with locked circle-only overlay) */}
-                <article className="bb-buzzing-post-card">
-                  <div className="bb-post-header-row">
-                    <div className="bb-post-author-group">
-                      <img src="/assets/community/priya_nair.png" alt="Priya Nair" className="bb-post-author-avatar" />
-                      <div>
-                        <h4 className="bb-post-author-name">Priya Nair</h4>
-                        <p className="bb-post-author-role">Product Designer</p>
+                {feedError && feedPosts.length === 0 && (
+                  <div className="bb-feed-state-card is-error">
+                    <p>{feedError}</p>
+                    <button type="button" onClick={() => void loadFeed(1)}>Thử lại</button>
+                  </div>
+                )}
+
+                {!feedLoading && !feedError && feedPosts.length === 0 && (
+                  <div className="bb-feed-state-card">
+                    <strong>Chưa có bài viết công khai</strong>
+                    <p>Các bài viết phù hợp với quyền xem của bạn sẽ xuất hiện tại đây.</p>
+                  </div>
+                )}
+
+                {feedPosts.map((post) => (
+                  <article key={post.id} className="bb-buzzing-post-card">
+                    <div className="bb-post-header-row">
+                      <div className="bb-post-author-group">
+                        <img
+                          src={post.author.avatarUrl || "/assets/home/avatar-01.png"}
+                          alt={post.author.fullName}
+                          className="bb-post-author-avatar"
+                        />
+                        <div>
+                          <h4 className="bb-post-author-name">{post.author.fullName}</h4>
+                          <p className="bb-post-author-role">@{post.author.username}</p>
+                        </div>
+                      </div>
+                      <div className="bb-post-meta-right">
+                        <Clock size={14} className="text-gray-400" />
+                        <span className="bb-post-time">{formatRelativeTime(post.createdAt)}</span>
+                        <span className={`bb-post-public-badge ${post.visibility === "CONNECTIONS" ? "is-connections" : ""}`}>
+                          {post.visibility === "CONNECTIONS" ? <Users size={12} /> : <Globe size={12} />}
+                          <span>{post.visibility === "CONNECTIONS" ? "Connections" : "Public"}</span>
+                        </span>
                       </div>
                     </div>
-                    <div className="bb-post-meta-right">
-                      <Clock size={14} className="text-gray-400" />
-                      <span className="bb-post-time">5 hours ago</span>
-                      <span className="bb-post-public-badge"><Globe size={12} /><span>Public</span></span>
+
+                    <p className="bb-post-content-text">{post.content}</p>
+
+                    {post.mediaUrls.length > 0 && (
+                      <div className={`bb-post-media-grid count-${Math.min(post.mediaUrls.length, 3)}`}>
+                        {post.mediaUrls.slice(0, 3).map((url) =>
+                          /\.(mp4|webm|ogg)(\?.*)?$/i.test(url) ? (
+                            <video key={url} src={url} controls preload="metadata" className="bb-post-media" />
+                          ) : (
+                            <img key={url} src={url} alt="Nội dung đính kèm bài viết" className="bb-post-media" />
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    <div className="bb-post-actions-bar">
+                      <span className="bb-post-action-btn" aria-label={`${post.likesCount} lượt thích`}>
+                        <Heart size={16} /><span>{post.likesCount} lượt thích</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="bb-post-action-btn"
+                        onClick={() => openComments(post.id, `Bình luận bài viết của ${post.author.fullName}`)}
+                      >
+                        <MessageSquare size={16} /><span>{post.commentsCount} bình luận</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="bb-post-action-btn"
+                        onClick={async () => {
+                          await navigator.clipboard?.writeText?.(`${window.location.origin}/community?post=${post.id}`);
+                          alert("Đã sao chép liên kết bài viết!");
+                        }}
+                      >
+                        <Share2 size={16} /><span>Chia sẻ</span>
+                      </button>
                     </div>
-                  </div>
-                  <p className="bb-post-content-text">
-                    Just completed a minimalist redesign of our community&apos;s local coffee shop landing page. Would love to get some peer reviews from fellow designers around Portland over a hot brew!
-                  </p>
-                  <div className="bb-member-tags-row">
-                    {["Design", "Coffee", "Coding"].map((t) => <span key={t} className="bb-member-interest-chip">{t}</span>)}
-                  </div>
-                  <div className="bb-locked-circle-box">
-                    <div className="bb-locked-badge"><Lock size={12} /><span>Circle Only</span></div>
-                    <p className="bb-locked-copy">Only connections can view this post</p>
-                    <button type="button" className={`bb-locked-connect-btn ${connectedUsers.includes("Priya Nair") ? "is-connected" : ""}`} onClick={() => toggleConnect("Priya Nair")}>
-                      {connectedUsers.includes("Priya Nair") ? "Connected ✓" : "Connect"}
-                    </button>
-                  </div>
-                  <div className="bb-post-actions-bar">
-                    <button type="button" className={`bb-post-action-btn ${likedPosts.includes("post-priya") ? "is-liked" : ""}`} onClick={() => toggleLike("post-priya")}>
-                      <Heart size={16} className={likedPosts.includes("post-priya") ? "fill-current text-[#ff7300]" : ""} />
-                      <span>{likedPosts.includes("post-priya") ? "43 Likes" : "42 Likes"}</span>
-                    </button>
-                    <button type="button" className="bb-post-action-btn" onClick={() => openComments("Comments on Priya's Post")}>
-                      <MessageSquare size={16} /><span>Comments</span>
-                    </button>
-                    <button type="button" className="bb-post-action-btn" onClick={() => alert("Post link copied!")}>
-                      <Share2 size={16} /><span>Share</span>
-                    </button>
-                  </div>
-                </article>
+                  </article>
+                ))}
               </div>
+
+              {feedPosts.length > 0 && feedPage < feedTotalPages && (
+                <button
+                  type="button"
+                  className="bb-feed-load-more-btn"
+                  disabled={feedLoading}
+                  onClick={() => void loadFeed(feedPage + 1, true)}
+                >
+                  {feedLoading ? "Đang tải..." : "Xem thêm bài viết"}
+                </button>
+              )}
             </section>
 
             <div className="bb-growth-message-card bb-explore-growth-card">
@@ -2878,8 +2920,11 @@ function CommunityDirectory() {
 
       <CommentsModal
         isOpen={isCommentsOpen}
+        postId={activePostId}
+        isLoggedIn={isLoggedIn}
         onClose={() => setIsCommentsOpen(false)}
         title={activeCommentsTitle}
+        onApprovedComment={onApprovedComment}
       />
     </div>
   );

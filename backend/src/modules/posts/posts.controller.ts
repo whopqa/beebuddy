@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PostsService } from "./posts.service";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { z } from "zod";
+import { getErrorStatus } from "../../common/errors/app-error";
 
 const createCommentSchema = z.object({
   content: z.string().min(1, "Nội dung bình luận không được rỗng").max(1000, "Tối đa 1000 ký tự"),
@@ -21,7 +22,7 @@ export class PostsController {
       const feed = await PostsService.getFeed({ userId, page, limit });
       return sendSuccess(res, feed);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -33,7 +34,7 @@ export class PostsController {
       const comments = await PostsService.getComments(postId, currentUserId);
       return sendSuccess(res, comments);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -53,7 +54,7 @@ export class PostsController {
 
       return sendSuccess(res, result, "Gửi bình luận thành công", 201);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -73,7 +74,7 @@ export class PostsController {
 
       return sendSuccess(res, report, "Báo cáo bình luận thành công");
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 }

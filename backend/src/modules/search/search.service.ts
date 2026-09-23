@@ -12,7 +12,7 @@ export class SearchService {
   }
 
   public static async searchInterestsPreview(query: string) {
-    const cleanedQuery = (query || "").trim().toLowerCase();
+    const cleanedQuery = (query || "").trim().toLocaleLowerCase("vi-VN").slice(0, 80);
     if (!cleanedQuery) {
       return {
         query: "",
@@ -22,15 +22,10 @@ export class SearchService {
       };
     }
 
-    // Tìm profiles có interests hoặc habits chứa query (hoặc bio chứa query)
-    const matchingProfiles = await prisma.profile.findMany({
-      where: {
-        OR: [
-          { interests: { has: cleanedQuery } },
-          { habits: { has: cleanedQuery } },
-          { bio: { contains: cleanedQuery, mode: "insensitive" } },
-        ],
-      },
+    // PostgreSQL array `has` so khớp phân biệt hoa/thường. Profile hiện có thể
+    // chứa cả "Coding" và "coding", vì vậy MVP đọc các trường tìm kiếm tối thiểu
+    // rồi chuẩn hóa tại service để kết quả Web nhất quán với dữ liệu cũ.
+    const profiles = await prisma.profile.findMany({
       select: {
         id: true,
         fullName: true,
@@ -38,9 +33,19 @@ export class SearchService {
         location: true,
         interests: true,
         habits: true,
+        bio: true,
         connectionGoal: true,
       },
     });
+
+    const matches = (value: string) =>
+      value.toLocaleLowerCase("vi-VN").includes(cleanedQuery);
+    const matchingProfiles = profiles.filter((profile) =>
+      profile.interests.some(matches) ||
+      profile.habits.some(matches) ||
+      Boolean(profile.bio && matches(profile.bio)) ||
+      Boolean(profile.connectionGoal && matches(profile.connectionGoal))
+    );
 
     const totalMatches = matchingProfiles.length;
     // Giới hạn hiển thị trên Web chỉ tối đa 3 người với thông tin được che (masked)
