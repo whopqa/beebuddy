@@ -28,7 +28,11 @@ export async function GET() {
     if ((!meResponse || meResponse.status === 401) && refreshToken) {
       const refreshResponse = await fetch(`${backendApiUrl()}/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-Platform": "web",
+        },
         body: JSON.stringify({ refreshToken }),
         cache: "no-store",
       });

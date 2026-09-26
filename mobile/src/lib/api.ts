@@ -55,6 +55,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, tok
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        "X-Platform": "mobile",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
@@ -91,6 +92,11 @@ export const authApi = {
   me: (accessToken: string) => apiRequest<User>("/auth/me", {}, accessToken),
   refresh: (refreshToken: string) =>
     apiRequest<Tokens>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken }),
+    }),
+  logout: (refreshToken: string) =>
+    apiRequest<{ loggedOut: boolean }>("/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
     }),

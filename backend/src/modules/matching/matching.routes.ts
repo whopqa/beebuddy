@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { authenticate } from "../../common/middlewares/auth.middleware";
+import { MatchingController } from "./matching.controller";
+const router = Router(); router.use(authenticate);
+router.get("/preferences", MatchingController.preference);
+router.put("/preferences", MatchingController.setPreference);
+router.get("/recommendations", MatchingController.list);
+router.post("/recommendations/refresh", MatchingController.refresh);
+router.post("/recommendations/:recommendationId/feedback", MatchingController.feedback);
+export const matchingRoutes = router;

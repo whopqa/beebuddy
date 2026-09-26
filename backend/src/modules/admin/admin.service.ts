@@ -1,5 +1,14 @@
 import { prisma } from "../../lib/prisma";
-import { CommentStatus, PaymentStatus, Role, SubscriptionTier } from "@prisma/client";
+import {
+  CommentStatus,
+  ConnectionStatus,
+  AuditActorType,
+  PaymentStatus,
+  ReportStatus,
+  Role,
+  SubscriptionTier,
+  UserRestrictionType,
+} from "@prisma/client";
 
 export class AdminService {
   // 1. Dashboard Metrics
@@ -24,7 +33,7 @@ export class AdminService {
         _sum: { amount: true },
         _count: true,
       }),
-      prisma.report.count({ where: { status: "PENDING" } }),
+      prisma.report.count({ where: { status: ReportStatus.OPEN } }),
       prisma.comment.count({ where: { status: CommentStatus.FLAGGED } }),
     ]);
 
@@ -99,7 +108,8 @@ export class AdminService {
             select: {
               posts: true,
               comments: true,
-              connectionsFrom: true,
+              requestsSent: { where: { status: ConnectionStatus.ACCEPTED } },
+              requestsReceived: { where: { status: ConnectionStatus.ACCEPTED } },
               payments: true,
             },
           },
@@ -129,7 +139,7 @@ export class AdminService {
         stats: {
           postsCount: u._count.posts,
           commentsCount: u._count.comments,
-          connectionsCount: u._count.connectionsFrom,
+          connectionsCount: u._count.requestsSent + u._count.requestsReceived,
           paymentsCount: u._count.payments,
         },
       })),
@@ -141,40 +151,63 @@ export class AdminService {
     if (!user) throw new Error("Không tìm thấy người dùng");
     if (user.role === Role.ADMIN) throw new Error("Không thể khóa tài khoản Admin");
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { isBanned: true, banReason: reason },
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { isBanned: true, banReason: reason },
+      });
+      await tx.userRestriction.create({
+        data: {
+          userId,
+          type: UserRestrictionType.BAN,
+          reasonCode: "ADMIN_BAN",
+          note: reason,
+          createdByUserId: adminId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.ADMIN,
+          actorUserId: adminId,
+          action: "BAN_USER",
+          targetType: "USER",
+          targetId: userId,
+          afterData: { isBanned: true, reason },
+        },
+      });
+      await tx.moderationLog.create({
+        data: { adminId, action: "BAN_USER", targetType: "USER", targetId: userId, note: reason },
+      });
+      return updated;
     });
-
-    await prisma.moderationLog.create({
-      data: {
-        adminId,
-        action: "BAN_USER",
-        targetType: "USER",
-        targetId: userId,
-        note: reason,
-      },
-    });
-
-    return updated;
   }
 
   public static async unbanUser(adminId: string, userId: string) {
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { isBanned: false, banReason: null },
+    return prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { isBanned: false, banReason: null },
+      });
+      await tx.userRestriction.updateMany({
+        where: { userId, type: UserRestrictionType.BAN, revokedAt: null },
+        data: { revokedAt: now, revokedByUserId: adminId },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.ADMIN,
+          actorUserId: adminId,
+          action: "UNBAN_USER",
+          targetType: "USER",
+          targetId: userId,
+          afterData: { isBanned: false },
+        },
+      });
+      await tx.moderationLog.create({
+        data: { adminId, action: "UNBAN_USER", targetType: "USER", targetId: userId },
+      });
+      return updated;
     });
-
-    await prisma.moderationLog.create({
-      data: {
-        adminId,
-        action: "UNBAN_USER",
-        targetType: "USER",
-        targetId: userId,
-      },
-    });
-
-    return updated;
   }
 
   public static async updateUserTier(
@@ -316,8 +349,8 @@ export class AdminService {
 
     // Cập nhật tất cả reports liên quan thành RESOLVED
     await prisma.report.updateMany({
-      where: { commentId, status: "PENDING" },
-      data: { status: "RESOLVED" },
+      where: { commentId, status: ReportStatus.OPEN },
+      data: { status: ReportStatus.RESOLVED, resolvedAt: new Date() },
     });
 
     await prisma.moderationLog.create({

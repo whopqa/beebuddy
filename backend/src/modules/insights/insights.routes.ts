@@ -1,0 +1,2 @@
+import { Router } from "express"; import { adminGuard, authenticate, optionalAuth } from "../../common/middlewares/auth.middleware"; import { InsightsController } from "./insights.controller";
+const router=Router();router.post("/events",optionalAuth,InsightsController.track);router.get("/moderation/scans",authenticate,adminGuard,InsightsController.scans);router.post("/moderation/scans/:scanId/result",authenticate,adminGuard,InsightsController.result);router.post("/analytics/aggregate",authenticate,adminGuard,InsightsController.aggregate);export const insightsRoutes=router;

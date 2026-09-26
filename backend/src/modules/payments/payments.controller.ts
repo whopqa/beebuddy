@@ -24,7 +24,7 @@ const webhookSchema = z.object({
 export class PaymentsController {
   public static async getPlans(req: Request, res: Response) {
     try {
-      const plans = PaymentsService.getPlans();
+      const plans = await PaymentsService.getPlans();
       return sendSuccess(res, plans);
     } catch (err: any) {
       return sendError(res, err.message, 400);

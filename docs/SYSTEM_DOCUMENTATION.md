@@ -5,6 +5,10 @@
 > **Kiến trúc:** Monorepo (Next.js 14 Web Frontend + Dedicated Node.js Express REST API + PostgreSQL with Prisma ORM)  
 > **Ngày lập:** 2026-09-22
 
+> **Lưu ý về database:** Phần schema trong tài liệu này mô tả baseline MVP hiện tại. Thiết kế đích cho các chức năng Mobile, Community, Chat, entitlement và Mascot nằm tại [`DATABASE_V2_SPEC.md`](./DATABASE_V2_SPEC.md). Mọi thay đổi schema tiếp theo phải đối chiếu đặc tả V2 trước khi tạo migration.
+
+> **Cập nhật 25/09/2026:** Database/backend foundation P0, P1 và P2 đã có migration. P2 bổ sung media message/call metadata, matching, wellbeing/Mascot memory, AI moderation adapter và privacy-safe analytics. Xem trạng thái migration và constraint chi tiết trong `DATABASE_V2_SPEC.md`.
+
 ---
 
 ## MỤC LỤC
@@ -175,10 +179,10 @@ erDiagram
 Schema hiện tại đã được thiết kế sẵn sàng để cắm thêm các tính năng của **Mobile App Core** mà **không làm thay đổi hay gãy dữ liệu hiện tại**:
 
 1. **Mở rộng Nhóm & Cộng đồng (Groups & Communities):**
-   - Thêm model `Community`, `CommunityMember` và `Group`, `GroupMember`.
+   - Đã có `Community`, `CommunityMember`, invite/join request; group chat được mô hình hóa bằng `Conversation(type=GROUP)` và `ConversationMember`.
    - Kiểm tra logic: User có `tier == FREE` giới hạn tạo 1 nhóm; `tier == VIP` tối đa 5 nhóm; `tier == PRO` không giới hạn tạo cộng đồng.
 2. **Mở rộng Nhắn tin thời gian thực (Real-time Chat):**
-   - Thêm model `Conversation`, `Message` (hỗ trợ `TEXT`, `IMAGE`, `VOICE`). Tách rời hoàn toàn khỏi Post/Comment.
+   - Đã có `Conversation`, `ConversationMember`, `Message`, attachment/reaction/read receipt. P1 mở API TEXT; IMAGE/VOICE dùng cùng schema nhưng thuộc pha trải nghiệm tiếp theo.
 3. **Mở rộng AI Mascot Chatbot:**
    - Thêm model `MascotMessage` ghi nhận lịch sử tương tác giữa người dùng và trợ lý ảo thông minh.
 

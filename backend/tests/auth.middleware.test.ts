@@ -9,12 +9,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function signedToken(role = Role.USER) {
+function signedToken(role = Role.USER, sessionId?: string) {
   return jwt.sign({
     id: "user-1",
     email: "member@beebuddy.vn",
     role,
     tier: SubscriptionTier.FREE,
+    sessionId,
   }, ENV.JWT.SECRET, { algorithm: "HS256" });
 }
 
@@ -65,5 +66,27 @@ describe("authenticate middleware", () => {
 
     expect(request).toHaveProperty("user.role", Role.USER);
     expect(next).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an access token after its session is revoked", async () => {
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue({
+      id: "user-1",
+      email: "member@beebuddy.vn",
+      role: Role.USER,
+      tier: SubscriptionTier.FREE,
+      isBanned: false,
+    } as never);
+    vi.spyOn(prisma.userSession, "findFirst").mockResolvedValue(null);
+
+    const request = {
+      headers: { authorization: `Bearer ${signedToken(Role.USER, "session-1")}` },
+    };
+    const response = responseDouble();
+    const next = vi.fn();
+
+    await authenticate(request as never, response as never, next);
+
+    expect(response.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
   });
 });

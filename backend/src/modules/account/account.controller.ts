@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AccountService } from "./account.service";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { z } from "zod";
+import { ProfileAudience, ProfileSection } from "@prisma/client";
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(1).max(100).optional(),
@@ -20,6 +21,18 @@ const updateSettingsSchema = z.object({
   emailNotification: z.boolean().optional(),
   language: z.enum(["vi", "en"]).optional(),
   theme: z.enum(["system", "light", "dark"]).optional(),
+}).strict();
+
+const updateProfilePrivacySchema = z.object({
+  rules: z.array(z.object({
+    section: z.nativeEnum(ProfileSection),
+    audience: z.nativeEnum(ProfileAudience),
+  }).strict()).min(1).max(9).superRefine((rules, ctx) => {
+    const sections = new Set(rules.map((rule) => rule.section));
+    if (sections.size !== rules.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mỗi phần hồ sơ chỉ được khai báo một lần" });
+    }
+  }),
 }).strict();
 
 const changePasswordSchema = z.object({
@@ -64,6 +77,28 @@ export class AccountController {
         parsed.data.newPassword
       );
       return sendSuccess(res, null, "Đổi mật khẩu thành công");
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async getProfilePrivacy(req: Request, res: Response) {
+    try {
+      const rules = await AccountService.getProfilePrivacy(req.user!.id);
+      return sendSuccess(res, rules);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async updateProfilePrivacy(req: Request, res: Response) {
+    try {
+      const parsed = updateProfilePrivacySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, parsed.error.errors[0].message, 400);
+      }
+      const rules = await AccountService.updateProfilePrivacy(req.user!.id, parsed.data.rules);
+      return sendSuccess(res, rules, "Cập nhật quyền riêng tư hồ sơ thành công");
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }

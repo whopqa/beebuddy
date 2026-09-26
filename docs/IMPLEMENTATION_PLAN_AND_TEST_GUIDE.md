@@ -27,8 +27,8 @@ Bản bàn giao phải có thể chạy ngoài môi trường phát triển:
 | P0 | Feed, tạo bài text/ảnh, bình luận, report, moderation | Bắt buộc |
 | P0 | Kết nối bạn bè, community cơ bản, chat chữ 1-1 | Bắt buộc |
 | P0 | Admin dữ liệu thật, PayOS sandbox/production, deploy, APK | Bắt buộc |
-| P1 | Push notification cho tin nhắn/kết nối | Làm nếu P0 ổn định trước 10/10 |
-| P1 | Group chat chữ | Làm nếu còn thời gian sau chat 1-1 |
+| P1 | Push notification cho tin nhắn/kết nối | Database, preferences, token encryption và outbox đã xong; còn adapter provider |
+| P1 | Group chat chữ | Database và REST API đã xong; còn realtime transport/UI |
 | P2 | Voice message, gọi thoại/video | Sau 15/10; cần dịch vụ realtime/media và kiểm thử mạng |
 | P2 | Mascot AI thật | Sau 15/10; trước mắt chỉ để UI/feature flag |
 | P2 | Google/Apple login và in-app purchase | Sau 15/10; email/password và PayOS web là luồng chính |
@@ -42,7 +42,7 @@ Nếu nhóm bắt buộc cả P2 trong ngày 15/10 thì cần thêm người chu
 | Backend | Express, Prisma; auth, account, feed/comment, search, legal, payment, admin routes; migration baseline và test framework | Chưa có create post/like; checkout payment vẫn là VietQR minh họa; chưa có chat/community/notification/media |
 | Web | Landing, auth, account và W3 feed/comment dùng API thật; billing và admin đã có giao diện | Danh bạ/tìm kiếm Community (W4), billing và admin vẫn còn dữ liệu hard-code/chưa nối API thật |
 | Mobile | Expo Router; register/login; SecureStore; public/member feed; account; cấu hình APK | Chưa bám đủ Figma; chưa có profile edit, post, comment, connection, community, chat, notification |
-| Database | 11 model nền tảng, seed mẫu và migration baseline | `SELECTED` chưa có bảng người nhận; chưa có PostLike, media metadata, community, conversation/message |
+| Database | P0 M1–M6: identity, profile, social graph, content, billing, moderation/audit/legal; seed idempotent | Field legacy chờ cleanup sau một release; chưa có community, conversation/message |
 | Deployment | Có `.env.example` và mô tả định hướng | Chưa có DB/API/Web production URL, CORS production, health/readiness, logging, backup, APK đã ký |
 
 ### Các điểm phải sửa trước khi gọi là production
@@ -50,9 +50,14 @@ Nếu nhóm bắt buộc cả P2 trong ngày 15/10 thì cần thêm người chu
 1. Webhook đã xác thực HMAC SHA256, số tiền/order và idempotency; vẫn phải test lại bằng PayOS sandbox trước khi bật production.
 2. Server đã kiểm tra env và từ chối secret mẫu ở production; deployment vẫn phải cấp secret thực tế.
 3. Web hiển thị admin metrics/user/payment giả; phải thay bằng API và bảo vệ route theo role.
-4. Refresh token chưa có cơ chế thu hồi; cần bảng/session hoặc token rotation trước production.
-5. Đã có migration baseline; mọi thay đổi schema tiếp theo phải tạo migration mới, không dùng `prisma db push` cho production.
-6. Đã có test nền cho env, auth, quyền post và chữ ký payment; cần mở rộng integration/E2E trong các đợt W3–W8.
+4. Refresh token đã có `UserSession`, hash-at-rest, rotation/reuse prevention và revoke khi logout/đổi mật khẩu trong migration `v2_identity_sessions`; cần tiếp tục theo dõi session cleanup và kiểm thử đa thiết bị trước production.
+5. Profile taxonomy và 9 rule privacy mặc định đã được backfill bằng `v2_profile_taxonomy_privacy`; field legacy còn được dual-write cho tới migration cleanup.
+6. Social graph đã có canonical pair, Follow và Block bằng `v2_social_graph`; field `userId/targetId` legacy còn giữ trong cửa sổ dual-write.
+7. Content đã có lifecycle, audience detail, media, reaction và comment reply bằng `v2_content_audience_media_reactions`; `likesCount` legacy chỉ còn field tương thích và đã reset 0.
+8. Billing đã có Plan/Feature/Subscription/EntitlementGrant và webhook event idempotent bằng `v2_billing_entitlements`; `User.tier` chỉ còn compatibility cache.
+9. Moderation/audit/legal đã có typed Report, case/decision, restriction, AuditLog append-only, versioned legal consent và data request bằng `v2_moderation_audit_legal`.
+10. Đã có migration baseline; mọi thay đổi schema tiếp theo phải tạo migration mới, không dùng `prisma db push` cho production.
+11. Đã có test nền cho env, auth, account taxonomy/privacy, quyền post/social graph, billing và legal constraints; cần mở rộng integration/E2E trong các đợt W3–W8.
 
 ## 3. Nguyên tắc triển khai
 
@@ -236,7 +241,7 @@ Kết quả tự động khi bàn giao: Web build PASS; backend build PASS; `7` 
 - Thêm Conversation, ConversationMember, Message và MessageRead.
 - Chỉ connection được mở chat 1-1; phân trang lịch sử.
 - Dùng WebSocket/Socket.IO trên backend deploy hỗ trợ kết nối lâu dài.
-- Tin nhắn TEXT trước; ảnh/voice/group chat là P1/P2.
+- Tin nhắn TEXT và group chat đã có trong P1; ảnh/voice/call là P2.
 
 | ID | Cách tự test | Kết quả mong đợi |
 |---|---|---|

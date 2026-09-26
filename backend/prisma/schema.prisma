@@ -24,64 +24,744 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   CANCELLED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
 }
 
 enum PostVisibility {
   PUBLIC
   CONNECTIONS
   SELECTED
+  CUSTOM
   PRIVATE
 }
 
 enum CommentStatus {
+  PENDING
   APPROVED
   FLAGGED
   HIDDEN
+  REMOVED
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+enum OneTimeTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ProfileSection {
+  BASIC
+  BIO
+  AGE
+  OCCUPATION
+  INTERESTS
+  HABITS
+  PLACES
+  GOALS
+  INTRO_MEDIA
+}
+
+enum ProfileAudience {
+  PUBLIC
+  CONNECTIONS
+  ONLY_ME
+}
+
+enum UserPlaceRelation {
+  HOME
+  CURRENT
+  FREQUENT
+  FAVORITE
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  REMOVED
+}
+
+enum CommentPolicy {
+  EVERYONE
+  CONNECTIONS
+  MENTIONED
+  DISABLED
+}
+
+enum MediaProcessingStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+  DELETED
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  SUPPORT
+  CELEBRATE
+  CURIOUS
+}
+
+enum ShareDestination {
+  PROFILE
+  COMMUNITY
+  EXTERNAL
+}
+
+enum BillingPeriod {
+  NONE
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionSource {
+  PAYOS
+  IN_APP
+  ADMIN
+  PROMOTION
+}
+
+enum PaymentProvider {
+  PAYOS
+  GOOGLE_PLAY
+  APPLE
+  MANUAL
+}
+
+enum EntitlementSourceType {
+  SUBSCRIPTION
+  PROMOTION
+  ADMIN
+  BETA
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum ReportSource {
+  USER
+  RULE
+  AI
+  SYSTEM
+}
+
+enum ReportStatus {
+  OPEN
+  TRIAGED
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationCaseStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+  WORKER
+}
+
+enum UserRestrictionType {
+  WARNING
+  SUSPENSION
+  BAN
+  FEATURE_RESTRICTION
+}
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  COOKIE_POLICY
+  MARKETING
+}
+
+enum ConsentDecision {
+  ACCEPTED
+  REJECTED
+  CUSTOMIZED
+  REVOKED
+}
+
+enum UserDataRequestType {
+  EXPORT
+  DELETE
+  CORRECT
+}
+
+enum UserDataRequestStatus {
+  REQUESTED
+  VERIFIED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum CommunityVisibility {
+  PUBLIC
+  PRIVATE
+  INVITE_ONLY
+}
+
+enum CommunityStatus {
+  ACTIVE
+  ARCHIVED
+  SUSPENDED
+  DELETED
+}
+
+enum CommunityJoinPolicy {
+  OPEN
+  APPROVAL
+  INVITE_ONLY
+}
+
+enum CommunityMemberRole {
+  OWNER
+  MODERATOR
+  MEMBER
+}
+
+enum CommunityMemberStatus {
+  INVITED
+  ACTIVE
+  LEFT
+  REMOVED
+  BANNED
+}
+
+enum CommunityJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum CommunityInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  AI
+}
+
+enum ConversationMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ConversationMemberStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+enum MessageSenderType {
+  USER
+  SYSTEM
+  ASSISTANT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  VOICE
+  FILE
+  SYSTEM
+}
+
+enum NotificationType {
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  COMMUNITY_INVITE
+  COMMUNITY_JOIN_APPROVED
+  MESSAGE
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  EMAIL
+}
+
+enum PushPlatform {
+  WEB
+  IOS
+  ANDROID
+}
+
+enum OutboxEventType {
+  NOTIFICATION_CREATED
+  PUSH_DISPATCH
+  AI_MODERATION_REQUESTED
+  ANALYTICS_EVENT_RECORDED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  DEAD
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  DECLINED
+  MISSED
+  FAILED
+}
+
+enum CallParticipantRole {
+  HOST
+  PARTICIPANT
+}
+
+enum CallParticipantStatus {
+  INVITED
+  JOINED
+  LEFT
+  DECLINED
+  MISSED
+}
+
+enum MatchRecommendationStatus {
+  PENDING
+  VIEWED
+  ACCEPTED
+  DISMISSED
+  EXPIRED
+}
+
+enum MatchFeedbackType {
+  LIKE
+  PASS
+  BLOCK
+  REPORT
+  CONNECT
+}
+
+enum MoodValue {
+  VERY_LOW
+  LOW
+  NEUTRAL
+  GOOD
+  GREAT
+}
+
+enum HabitRoutineFrequency {
+  DAILY
+  WEEKLY
+  CUSTOM
+}
+
+enum HabitCompletionSource {
+  USER
+  SYSTEM
+  IMPORT
+}
+
+enum MascotSuggestionType {
+  CHECK_IN
+  HABIT
+  SOCIAL
+  CONTENT
+}
+
+enum MascotSuggestionStatus {
+  PENDING
+  SEEN
+  ACCEPTED
+  DISMISSED
+  EXPIRED
+}
+
+enum MascotMemoryCategory {
+  PREFERENCE
+  GOAL
+  WELLBEING
+  CONTEXT
+}
+
+enum MascotMemorySourceType {
+  USER_EXPLICIT
+  CONVERSATION
+  MOOD_CHECK_IN
+  HABIT
+}
+
+enum AiExecutionStatus {
+  SUCCESS
+  FAILED
+  BLOCKED
+}
+
+enum ModerationScanStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 model User {
-  id               String           @id @default(uuid())
-  email            String           @unique
-  passwordHash     String?
-  role             Role             @default(USER)
-  tier             SubscriptionTier @default(FREE)
-  tierExpiresAt    DateTime?
-  isVerified       Boolean          @default(false)
-  isBanned         Boolean          @default(false)
-  banReason        String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  email         String           @unique
+  passwordHash  String?
+  role          Role             @default(USER)
+  tier          SubscriptionTier @default(FREE)
+  tierExpiresAt DateTime?
+  isVerified    Boolean          @default(false)
+  isBanned      Boolean          @default(false)
+  banReason     String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
-  profile          Profile?
-  settings         UserSetting?
-  consents         UserConsent[]
-  payments         Payment[]
-  posts            Post[]
-  comments         Comment[]
-  moderationLogs   ModerationLog[]  @relation("AdminModerationLogs")
-  reportsReported  Report[]         @relation("ReportReporter")
-  reportsTargeted  Report[]         @relation("ReportTargetUser")
-  connectionsFrom  Connection[]     @relation("UserConnections")
-  connectionsTo    Connection[]     @relation("ConnectedUsers")
+  profile                   Profile?
+  settings                  UserSetting?
+  consents                  UserConsent[]
+  payments                  Payment[]
+  posts                     Post[]
+  comments                  Comment[]
+  moderationLogs            ModerationLog[]          @relation("AdminModerationLogs")
+  reportsReported           Report[]                 @relation("ReportReporter")
+  reportsTargeted           Report[]                 @relation("ReportTargetUser")
+  connectionsFrom           Connection[]             @relation("UserConnections")
+  connectionsTo             Connection[]             @relation("ConnectedUsers")
+  requestsSent              Connection[]             @relation("ConnectionRequester")
+  requestsReceived          Connection[]             @relation("ConnectionAddressee")
+  following                 Follow[]                 @relation("Following")
+  followers                 Follow[]                 @relation("Followers")
+  blocksCreated             UserBlock[]              @relation("Blocker")
+  blocksReceived            UserBlock[]              @relation("Blocked")
+  authIdentities            AuthIdentity[]
+  sessions                  UserSession[]
+  oneTimeTokens             OneTimeToken[]
+  userInterests             UserInterest[]
+  userHabits                UserHabit[]
+  userPlaces                UserPlace[]
+  connectionGoals           UserConnectionGoal[]
+  visibilityRules           ProfileVisibilityRule[]
+  mediaAssets               MediaAsset[]
+  postAudienceGrants        PostAudienceUser[]
+  postExclusions            PostExcludedUser[]
+  audienceLists             AudienceList[]
+  audienceMemberships       AudienceListMember[]
+  postReactions             PostReaction[]
+  commentReactions          CommentReaction[]
+  postBookmarks             PostBookmark[]
+  postShares                PostShare[]
+  subscriptions             Subscription[]
+  entitlementGrants         EntitlementGrant[]
+  moderationCasesAssigned   ModerationCase[]         @relation("ModerationAssignee")
+  moderationDecisions       ModerationDecision[]
+  auditLogsActed            AuditLog[]               @relation("AuditActor")
+  restrictions              UserRestriction[]        @relation("RestrictedUser")
+  restrictionsCreated       UserRestriction[]        @relation("RestrictionCreator")
+  restrictionsRevoked       UserRestriction[]        @relation("RestrictionRevoker")
+  dataRequests              UserDataRequest[]
+  communitiesOwned          Community[]              @relation("CommunityOwner")
+  communityMemberships      CommunityMember[]
+  communityJoinRequests     CommunityJoinRequest[]   @relation("CommunityJoinRequester")
+  communityRequestsReviewed CommunityJoinRequest[]   @relation("CommunityJoinReviewer")
+  communityInvitesSent      CommunityInvite[]        @relation("CommunityInviter")
+  communityInvitesReceived  CommunityInvite[]        @relation("CommunityInvitee")
+  conversationsCreated      Conversation[]           @relation("ConversationCreator")
+  conversationMemberships   ConversationMember[]
+  messagesSent              Message[]                @relation("MessageSender")
+  messageReactions          MessageReaction[]
+  messageReadReceipts       MessageReadReceipt[]
+  notificationsReceived     Notification[]           @relation("NotificationRecipient")
+  notificationActors        Notification[]           @relation("NotificationActor")
+  notificationPreferences   NotificationPreference[]
+  devicePushTokens          DevicePushToken[]
+  callsInitiated            CallSession[]            @relation("CallInitiator")
+  callParticipations        CallParticipant[]
+  matchingPreference        MatchingPreference?
+  matchRecommendations      MatchRecommendation[]    @relation("MatchRecommendationOwner")
+  recommendedToOthers       MatchRecommendation[]    @relation("MatchRecommendationCandidate")
+  matchFeedbackGiven        MatchFeedback[]          @relation("MatchFeedbackOwner")
+  matchFeedbackReceived     MatchFeedback[]          @relation("MatchFeedbackCandidate")
+  moodCheckIns              MoodCheckIn[]
+  habitRoutines             HabitRoutine[]
+  habitCompletions          HabitCompletion[]
+  mascotSuggestions         MascotSuggestion[]
+  mascotMemories            MascotMemory[]
+  aiExecutionLogs           AiExecutionLog[]
+  analyticsEvents           AnalyticsEvent[]
 
   @@index([role, tier, isBanned])
 }
 
+model AuthIdentity {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        AuthProvider
+  providerSubject String
+  passwordHash    String?
+  providerEmail   String?
+  verifiedAt      DateTime?
+  lastUsedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model UserSession {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash    String    @unique
+  deviceId            String?
+  deviceName          String?
+  platform            String?
+  ipAddress           String?
+  userAgent           String?
+  lastUsedAt          DateTime  @default(now())
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedBySessionId String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId, revokedAt, expiresAt])
+}
+
+model OneTimeToken {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         OneTimeTokenType
+  tokenHash    String           @unique
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  attemptCount Int              @default(0)
+  createdAt    DateTime         @default(now())
+
+  @@index([userId, type, consumedAt, expiresAt])
+}
+
 model Profile {
-  id             String    @id @default(uuid())
-  userId         String    @unique
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName       String
-  username       String?   @unique
-  avatarUrl      String?
-  bio            String?
-  gender         String?
-  dateOfBirth    DateTime?
-  location       String?
-  interests      String[]  @default([])
-  habits         String[]  @default([])
-  connectionGoal String?
-  updatedAt      DateTime  @updatedAt
+  id                    String           @id @default(uuid())
+  userId                String           @unique
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName              String
+  username              String?          @unique
+  avatarUrl             String?
+  bio                   String?
+  gender                String?
+  dateOfBirth           DateTime?
+  location              String?
+  interests             String[]         @default([])
+  habits                String[]         @default([])
+  connectionGoal        String?
+  occupation            String?
+  industry              String?
+  countryCode           String?
+  onboardingStatus      OnboardingStatus @default(NOT_STARTED)
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+}
+
+model Interest {
+  id             String         @id @default(uuid())
+  slug           String         @unique
+  displayName    String
+  normalizedName String         @unique
+  isActive       Boolean        @default(true)
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  users          UserInterest[]
+
+  @@index([isActive, sortOrder])
+}
+
+model UserInterest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interestId  String
+  interest    Interest @relation(fields: [interestId], references: [id], onDelete: Restrict)
+  priority    Int      @default(0)
+  proficiency String?
+  source      String   @default("USER")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, interestId])
+  @@index([interestId, userId])
+}
+
+model Habit {
+  id             String         @id @default(uuid())
+  slug           String         @unique
+  displayName    String
+  normalizedName String         @unique
+  isActive       Boolean        @default(true)
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  users          UserHabit[]
+  routines       HabitRoutine[]
+
+  @@index([isActive, sortOrder])
+}
+
+model UserHabit {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitId       String
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Restrict)
+  priority      Int      @default(0)
+  frequency     String?
+  preferredTime String?
+  source        String   @default("USER")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, habitId])
+  @@index([habitId, userId])
+}
+
+model Place {
+  id             String      @id @default(uuid())
+  slug           String      @unique
+  displayName    String
+  normalizedName String      @unique
+  countryCode    String?
+  regionCode     String?
+  city           String?
+  district       String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  users          UserPlace[]
+
+  @@index([countryCode, city, isActive])
+}
+
+model UserPlace {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placeId      String
+  place        Place             @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  relationType UserPlaceRelation @default(CURRENT)
+  isPrimary    Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([userId, placeId, relationType])
+  @@index([placeId, userId])
+}
+
+model ConnectionGoal {
+  id             String               @id @default(uuid())
+  slug           String               @unique
+  displayName    String
+  normalizedName String               @unique
+  isActive       Boolean              @default(true)
+  sortOrder      Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  users          UserConnectionGoal[]
+
+  @@index([isActive, sortOrder])
+}
+
+model UserConnectionGoal {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connectionGoalId String
+  connectionGoal   ConnectionGoal @relation(fields: [connectionGoalId], references: [id], onDelete: Restrict)
+  priority         Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([userId, connectionGoalId])
+  @@index([connectionGoalId, userId])
+}
+
+model ProfileVisibilityRule {
+  id        String          @id @default(uuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section   ProfileSection
+  audience  ProfileAudience
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, section])
+  @@index([userId, audience])
 }
 
 model UserSetting {
@@ -96,84 +776,1015 @@ model UserSetting {
 }
 
 model Payment {
-  id              String        @id @default(uuid())
-  orderCode       Int           @unique
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tier            SubscriptionTier
-  durationMonths  Int           @default(1)
-  amount          Decimal       @db.Decimal(12, 2)
-  currency        String        @default("VND")
-  paymentMethod   String        @default("PAYOS")
-  status          PaymentStatus @default(PENDING)
-  checkoutUrl     String?
-  transactionRef  String?
-  paidAt          DateTime?
-  rawWebhookData  Json?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                    String           @id @default(uuid())
+  orderCode             Int              @unique
+  userId                String
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planId                String
+  plan                  Plan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscriptionId        String?
+  subscription          Subscription?    @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  tier                  SubscriptionTier
+  durationMonths        Int              @default(1)
+  amount                Decimal          @db.Decimal(12, 2)
+  currency              String           @default("VND")
+  paymentMethod         String           @default("PAYOS")
+  provider              PaymentProvider  @default(PAYOS)
+  providerOrderId       String?
+  providerTransactionId String?          @unique
+  idempotencyKey        String?          @unique
+  status                PaymentStatus    @default(PENDING)
+  checkoutUrl           String?
+  transactionRef        String?
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  rawWebhookData        Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
+  webhookEvents PaymentWebhookEvent[]
+
+  @@unique([provider, providerOrderId])
+  @@index([userId, status, createdAt])
   @@index([userId, status, orderCode])
+  @@index([planId, status, createdAt])
+}
+
+model Plan {
+  id            String           @id @default(uuid())
+  code          String
+  tier          SubscriptionTier
+  displayName   String
+  description   String?
+  billingPeriod BillingPeriod
+  price         Decimal          @db.Decimal(12, 2)
+  currency      String           @default("VND")
+  isActive      Boolean          @default(true)
+  version       Int              @default(1)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  features      PlanFeature[]
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@unique([code, version])
+  @@index([tier, isActive, version])
+}
+
+model Feature {
+  id          String             @id @default(uuid())
+  code        String             @unique
+  displayName String
+  description String?
+  valueType   String             @default("BOOLEAN")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  plans       PlanFeature[]
+  grants      EntitlementGrant[]
+}
+
+model PlanFeature {
+  id         String   @id @default(uuid())
+  planId     String
+  plan       Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  featureId  String
+  feature    Feature  @relation(fields: [featureId], references: [id], onDelete: Restrict)
+  enabled    Boolean  @default(false)
+  limitValue Int?
+  config     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([planId, featureId])
+  @@index([featureId, enabled])
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status             SubscriptionStatus @default(ACTIVE)
+  source             SubscriptionSource
+  startsAt           DateTime           @default(now())
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  payments           Payment[]
+
+  @@index([userId, status, currentPeriodEnd])
+  @@index([planId, status])
+}
+
+model EntitlementGrant {
+  id         String                @id @default(uuid())
+  userId     String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  featureId  String
+  feature    Feature               @relation(fields: [featureId], references: [id], onDelete: Restrict)
+  sourceType EntitlementSourceType
+  sourceId   String?
+  value      Json?
+  startsAt   DateTime              @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime              @default(now())
+
+  @@index([userId, featureId, revokedAt, expiresAt])
+  @@index([sourceType, sourceId])
+}
+
+model PaymentWebhookEvent {
+  id               String                  @id @default(uuid())
+  paymentId        String?
+  payment          Payment?                @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  provider         PaymentProvider
+  providerEventId  String
+  payloadHash      String
+  rawPayload       Json
+  signatureValid   Boolean
+  processingStatus WebhookProcessingStatus @default(RECEIVED)
+  processedAt      DateTime?
+  errorMessage     String?
+  createdAt        DateTime                @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([processingStatus, createdAt])
+  @@index([paymentId, createdAt])
 }
 
 model Post {
-  id          String         @id @default(uuid())
-  authorId    String
-  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content     String
-  mediaUrls   String[]       @default([])
-  visibility  PostVisibility @default(PUBLIC)
-  likesCount  Int            @default(0)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  authorId      String
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  communityId   String?
+  community     Community?     @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  content       String
+  mediaUrls     String[]       @default([])
+  visibility    PostVisibility @default(PUBLIC)
+  audience      PostVisibility @default(PUBLIC)
+  status        PostStatus     @default(PUBLISHED)
+  previewText   String?
+  commentPolicy CommentPolicy  @default(EVERYONE)
+  likesCount    Int            @default(0)
+  publishedAt   DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  comments    Comment[]
-  reports     Report[]
+  comments      Comment[]
+  reports       Report[]
+  media         PostMedia[]
+  audienceUsers PostAudienceUser[]
+  audienceLists PostAudienceList[]
+  excludedUsers PostExcludedUser[]
+  reactions     PostReaction[]
+  bookmarks     PostBookmark[]
+  shares        PostShare[]
 
   @@index([visibility, createdAt])
+  @@index([status, audience, publishedAt, id])
+  @@index([authorId, publishedAt, id])
+  @@index([communityId, status, publishedAt, id])
 }
 
 model Comment {
-  id          String        @id @default(uuid())
-  postId      String
-  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId    String
-  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content     String
-  status      CommentStatus @default(APPROVED)
-  flagReason  String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id              String        @id @default(uuid())
+  postId          String
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId        String
+  author          User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentCommentId String?
+  parentComment   Comment?      @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         Comment[]     @relation("CommentReplies")
+  content         String
+  status          CommentStatus @default(APPROVED)
+  moderationState String?
+  flagReason      String?
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  reports     Report[]
+  reports   Report[]
+  reactions CommentReaction[]
 
   @@index([postId, status, createdAt])
+  @@index([postId, parentCommentId, createdAt, id])
+}
+
+model MediaAsset {
+  id                  String                @id @default(uuid())
+  ownerId             String
+  owner               User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  storageProvider     String
+  bucket              String                @default("")
+  objectKey           String
+  sourceUrl           String?
+  mimeType            String
+  byteSize            BigInt?
+  width               Int?
+  height              Int?
+  durationMs          Int?
+  checksum            String?
+  processingStatus    MediaProcessingStatus @default(UPLOADING)
+  createdAt           DateTime              @default(now())
+  deletedAt           DateTime?
+  posts               PostMedia[]
+  communityAvatars    Community[]           @relation("CommunityAvatar")
+  communityCovers     Community[]           @relation("CommunityCover")
+  conversationAvatars Conversation[]        @relation("ConversationAvatar")
+  messageAttachments  MessageAttachment[]
+
+  @@unique([storageProvider, bucket, objectKey])
+  @@index([ownerId, processingStatus, createdAt])
+}
+
+model Community {
+  id            String                 @id @default(uuid())
+  ownerId       String
+  owner         User                   @relation("CommunityOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  name          String
+  slug          String                 @unique
+  description   String?
+  avatarMediaId String?
+  avatarMedia   MediaAsset?            @relation("CommunityAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  coverMediaId  String?
+  coverMedia    MediaAsset?            @relation("CommunityCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  visibility    CommunityVisibility    @default(PUBLIC)
+  status        CommunityStatus        @default(ACTIVE)
+  joinPolicy    CommunityJoinPolicy    @default(OPEN)
+  membersCount  Int                    @default(1)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  deletedAt     DateTime?
+  members       CommunityMember[]
+  joinRequests  CommunityJoinRequest[]
+  invites       CommunityInvite[]
+  posts         Post[]
+  conversations Conversation[]
+
+  @@index([status, visibility, createdAt])
+  @@index([ownerId, status])
+}
+
+model CommunityMember {
+  id          String                @id @default(uuid())
+  communityId String
+  community   Community             @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        CommunityMemberRole   @default(MEMBER)
+  status      CommunityMemberStatus @default(ACTIVE)
+  joinedAt    DateTime              @default(now())
+  leftAt      DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([communityId, userId])
+  @@index([userId, status, joinedAt])
+  @@index([communityId, role, status])
+}
+
+model CommunityJoinRequest {
+  id           String                     @id @default(uuid())
+  communityId  String
+  community    Community                  @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  requesterId  String
+  requester    User                       @relation("CommunityJoinRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  status       CommunityJoinRequestStatus @default(PENDING)
+  message      String?
+  reviewedById String?
+  reviewedBy   User?                      @relation("CommunityJoinReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@unique([communityId, requesterId])
+  @@index([communityId, status, createdAt])
+  @@index([requesterId, status, createdAt])
+}
+
+model CommunityInvite {
+  id          String                @id @default(uuid())
+  communityId String
+  community   Community             @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User                  @relation("CommunityInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  inviteeId   String
+  invitee     User                  @relation("CommunityInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  tokenHash   String                @unique
+  status      CommunityInviteStatus @default(PENDING)
+  expiresAt   DateTime
+  respondedAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([communityId, inviteeId])
+  @@index([inviteeId, status, expiresAt])
+  @@index([communityId, status, createdAt])
+}
+
+model Conversation {
+  id              String               @id @default(uuid())
+  type            ConversationType
+  communityId     String?
+  community       Community?           @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  directPairKey   String?              @unique
+  title           String?
+  avatarMediaId   String?
+  avatarMedia     MediaAsset?          @relation("ConversationAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  createdByUserId String?
+  createdByUser   User?                @relation("ConversationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lastMessageAt   DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  deletedAt       DateTime?
+  members         ConversationMember[]
+  messages        Message[]
+  calls           CallSession[]
+
+  @@index([communityId, type, updatedAt])
+  @@index([createdByUserId, type, updatedAt])
+  @@index([lastMessageAt, id])
+}
+
+model ConversationMember {
+  id                String                   @id @default(uuid())
+  conversationId    String
+  conversation      Conversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role              ConversationMemberRole   @default(MEMBER)
+  status            ConversationMemberStatus @default(ACTIVE)
+  joinedAt          DateTime                 @default(now())
+  leftAt            DateTime?
+  lastReadMessageId String?
+  lastReadMessage   Message?                 @relation("LastReadMessage", fields: [lastReadMessageId], references: [id], onDelete: SetNull)
+  lastReadAt        DateTime?
+  mutedUntil        DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([userId, status, updatedAt])
+  @@index([conversationId, role, status])
+}
+
+model Message {
+  id               String               @id @default(uuid())
+  conversationId   String
+  conversation     Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType       MessageSenderType    @default(USER)
+  senderUserId     String?
+  senderUser       User?                @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  type             MessageType          @default(TEXT)
+  body             String?
+  replyToMessageId String?
+  replyToMessage   Message?             @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          Message[]            @relation("MessageReplies")
+  clientMessageId  String?
+  createdAt        DateTime             @default(now())
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  attachments      MessageAttachment[]
+  reactions        MessageReaction[]
+  readReceipts     MessageReadReceipt[]
+  lastReadBy       ConversationMember[] @relation("LastReadMessage")
+
+  @@unique([conversationId, senderUserId, clientMessageId])
+  @@index([conversationId, createdAt, id])
+  @@index([senderUserId, createdAt])
+  @@index([replyToMessageId])
+}
+
+model MessageAttachment {
+  id           String     @id @default(uuid())
+  messageId    String
+  message      Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mediaAssetId String
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@unique([messageId, mediaAssetId])
+  @@unique([messageId, sortOrder])
+  @@index([mediaAssetId])
+}
+
+model MessageReaction {
+  id        String       @id @default(uuid())
+  messageId String
+  message   Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([messageId, userId])
+  @@index([userId, createdAt])
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([userId, readAt])
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  recipientId String
+  recipient   User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type        NotificationType
+  entityType  String?
+  entityId    String?
+  payload     Json
+  readAt      DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([recipientId, readAt, createdAt, id])
+  @@index([recipientId, type, createdAt])
+  @@index([entityType, entityId])
+}
+
+model NotificationPreference {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  channel   NotificationChannel
+  enabled   Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([userId, type, channel])
+  @@index([userId, channel, enabled])
+}
+
+model DevicePushToken {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform       PushPlatform
+  deviceId       String
+  tokenHash      String       @unique
+  encryptedToken String
+  isActive       Boolean      @default(true)
+  lastSeenAt     DateTime     @default(now())
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, platform, deviceId])
+  @@index([userId, isActive, lastSeenAt])
+}
+
+model OutboxEvent {
+  id            String          @id @default(uuid())
+  aggregateType String
+  aggregateId   String
+  eventType     OutboxEventType
+  payload       Json
+  dedupeKey     String?         @unique
+  status        OutboxStatus    @default(PENDING)
+  attempts      Int             @default(0)
+  availableAt   DateTime        @default(now())
+  lockedAt      DateTime?
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([aggregateType, aggregateId, createdAt])
+}
+
+model CallSession {
+  id               String            @id @default(uuid())
+  conversationId   String
+  conversation     Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  initiatorId      String
+  initiator        User              @relation("CallInitiator", fields: [initiatorId], references: [id], onDelete: Restrict)
+  type             CallType
+  status           CallStatus        @default(RINGING)
+  provider         String
+  providerRoomId   String            @unique
+  quality          String            @default("STANDARD")
+  startedAt        DateTime          @default(now())
+  answeredAt       DateTime?
+  endedAt          DateTime?
+  endReason        String?
+  providerMetadata Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  participants     CallParticipant[]
+
+  @@index([conversationId, startedAt])
+  @@index([initiatorId, status, startedAt])
+  @@index([status, startedAt])
+}
+
+model CallParticipant {
+  id            String                @id @default(uuid())
+  callSessionId String
+  callSession   CallSession           @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          CallParticipantRole   @default(PARTICIPANT)
+  status        CallParticipantStatus @default(INVITED)
+  joinedAt      DateTime?
+  leftAt        DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@unique([callSessionId, userId])
+  @@index([userId, status, createdAt])
+}
+
+model MatchingPreference {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled        Boolean  @default(true)
+  minAge         Int?
+  maxAge         Int?
+  maxDistanceKm  Int?
+  preferredGoals String[] @default([])
+  weights        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MatchRecommendation {
+  id               String                    @id @default(uuid())
+  userId           String
+  user             User                      @relation("MatchRecommendationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  candidateUserId  String
+  candidateUser    User                      @relation("MatchRecommendationCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  batchId          String
+  score            Float
+  reasons          Json
+  algorithmVersion String
+  status           MatchRecommendationStatus @default(PENDING)
+  viewedAt         DateTime?
+  respondedAt      DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  feedback         MatchFeedback[]
+
+  @@unique([userId, candidateUserId, batchId])
+  @@index([userId, status, score, createdAt])
+  @@index([candidateUserId, createdAt])
+}
+
+model MatchFeedback {
+  id               String               @id @default(uuid())
+  userId           String
+  user             User                 @relation("MatchFeedbackOwner", fields: [userId], references: [id], onDelete: Cascade)
+  candidateUserId  String
+  candidateUser    User                 @relation("MatchFeedbackCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  recommendationId String?
+  recommendation   MatchRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  type             MatchFeedbackType
+  reasons          Json?
+  createdAt        DateTime             @default(now())
+
+  @@index([userId, candidateUserId, createdAt])
+  @@index([recommendationId, createdAt])
+}
+
+model MoodCheckIn {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood        MoodValue
+  energyLevel Int
+  note        String?
+  recordedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, recordedAt])
+}
+
+model HabitRoutine {
+  id          String                @id @default(uuid())
+  userId      String
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitId     String?
+  habit       Habit?                @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  name        String
+  frequency   HabitRoutineFrequency
+  schedule    Json
+  timezone    String
+  targetValue Float                 @default(1)
+  unit        String                @default("times")
+  isActive    Boolean               @default(true)
+  startsOn    DateTime              @db.Date
+  endsOn      DateTime?             @db.Date
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  completions HabitCompletion[]
+
+  @@index([userId, isActive, createdAt])
+  @@index([habitId, isActive])
+}
+
+model HabitCompletion {
+  id          String                @id @default(uuid())
+  routineId   String
+  routine     HabitRoutine          @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  localDate   DateTime              @db.Date
+  value       Float                 @default(1)
+  source      HabitCompletionSource @default(USER)
+  note        String?
+  completedAt DateTime              @default(now())
+  createdAt   DateTime              @default(now())
+
+  @@unique([routineId, localDate])
+  @@index([userId, localDate])
+}
+
+model MascotSuggestion {
+  id          String                 @id @default(uuid())
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        MascotSuggestionType
+  title       String
+  content     String
+  reason      String?
+  payload     Json?
+  status      MascotSuggestionStatus @default(PENDING)
+  seenAt      DateTime?
+  respondedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime               @default(now())
+
+  @@index([userId, status, createdAt])
+}
+
+model MascotMemory {
+  id                String                 @id @default(uuid())
+  userId            String
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category          MascotMemoryCategory
+  summary           String
+  sourceType        MascotMemorySourceType
+  sourceId          String?
+  confidence        Float                  @default(1)
+  consentRecordedAt DateTime
+  createdAt         DateTime               @default(now())
+  expiresAt         DateTime?
+  revokedAt         DateTime?
+
+  @@index([userId, revokedAt, expiresAt, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+model AiExecutionLog {
+  id                         String                  @id @default(uuid())
+  userId                     String?
+  user                       User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  feature                    String
+  provider                   String
+  modelName                  String
+  promptVersion              String
+  inputSafetyClassification  String?
+  outputSafetyClassification String?
+  latencyMs                  Int?
+  inputTokens                Int?
+  outputTokens               Int?
+  estimatedCost              Decimal?                @db.Decimal(12, 6)
+  status                     AiExecutionStatus
+  errorCode                  String?
+  createdAt                  DateTime                @default(now())
+  moderationScans            ContentModerationScan[]
+
+  @@index([feature, status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ContentModerationScan {
+  id                String               @id @default(uuid())
+  targetType        String
+  targetId          String
+  contentHash       String
+  provider          String
+  modelName         String
+  modelVersion      String?
+  policyVersion     String
+  status            ModerationScanStatus @default(QUEUED)
+  classifications   Json?
+  scores            Json?
+  recommendedAction String?
+  executionLogId    String?
+  executionLog      AiExecutionLog?      @relation(fields: [executionLogId], references: [id], onDelete: SetNull)
+  errorCode         String?
+  queuedAt          DateTime             @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([targetType, targetId, contentHash, policyVersion])
+  @@index([status, queuedAt])
+  @@index([targetType, targetId, createdAt])
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId String?
+  sessionId   String?
+  eventName   String
+  source      String
+  entityType  String?
+  entityId    String?
+  properties  Json
+  dedupeKey   String?  @unique
+  occurredAt  DateTime
+  receivedAt  DateTime @default(now())
+
+  @@index([eventName, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([entityType, entityId, occurredAt])
+}
+
+model AnalyticsDailyMetric {
+  id            String   @id @default(uuid())
+  metricDate    DateTime @db.Date
+  metricName    String
+  dimensionHash String
+  dimensions    Json
+  value         Decimal  @db.Decimal(20, 6)
+  sampleCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([metricDate, metricName, dimensionHash])
+  @@index([metricName, metricDate])
+}
+
+model PostMedia {
+  id           String     @id @default(uuid())
+  postId       String
+  post         Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  mediaAssetId String
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  sortOrder    Int        @default(0)
+  altText      String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([postId, mediaAssetId])
+  @@unique([postId, sortOrder])
+  @@index([mediaAssetId])
+}
+
+model PostAudienceUser {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId, postId])
+}
+
+model AudienceList {
+  id        String               @id @default(uuid())
+  ownerId   String
+  owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  members   AudienceListMember[]
+  posts     PostAudienceList[]
+
+  @@unique([ownerId, name])
+  @@index([ownerId, updatedAt])
+}
+
+model AudienceListMember {
+  id             String       @id @default(uuid())
+  audienceListId String
+  audienceList   AudienceList @relation(fields: [audienceListId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([audienceListId, userId])
+  @@index([userId, audienceListId])
+}
+
+model PostAudienceList {
+  id             String       @id @default(uuid())
+  postId         String
+  post           Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  audienceListId String
+  audienceList   AudienceList @relation(fields: [audienceListId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([postId, audienceListId])
+  @@index([audienceListId, postId])
+}
+
+model PostExcludedUser {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId, postId])
+}
+
+model PostReaction {
+  id        String       @id @default(uuid())
+  postId    String
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model CommentReaction {
+  id        String       @id @default(uuid())
+  commentId String
+  comment   Comment      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([commentId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostBookmark {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostShare {
+  id          String           @id @default(uuid())
+  postId      String
+  post        Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination ShareDestination
+  targetRef   String?
+  createdAt   DateTime         @default(now())
+
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Report {
-  id             String       @id @default(uuid())
-  reporterId     String
-  reporter       User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  targetUserId   String?
-  targetUser     User?        @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
-  postId         String?
-  post           Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
-  commentId      String?
-  comment        Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  reason         String
-  status         String       @default("PENDING")
-  createdAt      DateTime     @default(now())
+  id               String          @id @default(uuid())
+  reporterId       String?
+  reporter         User?           @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  source           ReportSource    @default(USER)
+  moderationCaseId String?
+  moderationCase   ModerationCase? @relation(fields: [moderationCaseId], references: [id], onDelete: SetNull)
+  targetUserId     String?
+  targetUser       User?           @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  postId           String?
+  post             Post?           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId        String?
+  comment          Comment?        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reason           String
+  reasonCode       String?
+  details          String?
+  status           ReportStatus    @default(OPEN)
+  createdAt        DateTime        @default(now())
+  resolvedAt       DateTime?
+
+  @@index([status, createdAt])
+  @@index([moderationCaseId, createdAt])
+}
+
+model ModerationCase {
+  id           String               @id @default(uuid())
+  caseType     String
+  priority     ModerationPriority   @default(NORMAL)
+  status       ModerationCaseStatus @default(OPEN)
+  assigneeId   String?
+  assignee     User?                @relation("ModerationAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  ruleVersion  String?
+  modelName    String?
+  modelVersion String?
+  summary      String?
+  openedAt     DateTime             @default(now())
+  resolvedAt   DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  reports      Report[]
+  decisions    ModerationDecision[]
+
+  @@index([status, priority, openedAt])
+  @@index([assigneeId, status])
+}
+
+model ModerationDecision {
+  id        String         @id @default(uuid())
+  caseId    String
+  case      ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User           @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action    String
+  reason    String
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  @@index([caseId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model AuditLog {
+  id          String         @id @default(uuid())
+  actorType   AuditActorType
+  actorUserId String?
+  actorUser   User?          @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  targetType  String
+  targetId    String
+  beforeData  Json?
+  afterData   Json?
+  metadata    Json?
+  requestId   String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime       @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([requestId])
+}
+
+model UserRestriction {
+  id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation("RestrictedUser", fields: [userId], references: [id], onDelete: Cascade)
+  type            UserRestrictionType
+  reasonCode      String
+  note            String?
+  featureCode     String?
+  startsAt        DateTime            @default(now())
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  createdByUserId String?
+  createdByUser   User?               @relation("RestrictionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revokedByUserId String?
+  revokedByUser   User?               @relation("RestrictionRevoker", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+
+  @@index([userId, type, revokedAt, expiresAt])
+  @@index([featureCode, revokedAt])
 }
 
 model ModerationLog {
-  id           String    @id @default(uuid())
-  adminId      String
-  admin        User      @relation("AdminModerationLogs", fields: [adminId], references: [id], onDelete: Cascade)
-  action       String
-  targetType   String
-  targetId     String
-  note         String?
-  createdAt    DateTime  @default(now())
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      User     @relation("AdminModerationLogs", fields: [adminId], references: [id], onDelete: Cascade)
+  action     String
+  targetType String
+  targetId   String
+  note       String?
+  createdAt  DateTime @default(now())
 }
 
 model BadWord {
@@ -185,27 +1796,107 @@ model BadWord {
 }
 
 model UserConsent {
-  id           String   @id @default(uuid())
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionId    String?
-  consentType  String
-  isAccepted   Boolean  @default(true)
-  acceptedAt   DateTime @default(now())
-  ipAddress    String?
-  userAgent    String?
+  id                 String          @id @default(uuid())
+  userId             String?
+  user               User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId          String?
+  anonymousSessionId String?
+  legalDocumentId    String
+  legalDocument      LegalDocument   @relation(fields: [legalDocumentId], references: [id], onDelete: Restrict)
+  consentType        String
+  isAccepted         Boolean         @default(true)
+  decision           ConsentDecision @default(ACCEPTED)
+  categories         Json?
+  acceptedAt         DateTime        @default(now())
+  consentedAt        DateTime        @default(now())
+  ipAddress          String?
+  userAgent          String?
 
   @@index([userId, sessionId, consentType])
+  @@index([legalDocumentId, consentedAt])
+  @@index([anonymousSessionId, consentedAt])
+}
+
+model LegalDocument {
+  id          String            @id @default(uuid())
+  type        LegalDocumentType
+  version     String
+  contentHash String
+  publishedAt DateTime
+  effectiveAt DateTime
+  retiredAt   DateTime?
+  createdAt   DateTime          @default(now())
+  consents    UserConsent[]
+
+  @@unique([type, version])
+  @@index([type, effectiveAt, retiredAt])
+}
+
+model UserDataRequest {
+  id              String                @id @default(uuid())
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  type            UserDataRequestType
+  status          UserDataRequestStatus @default(REQUESTED)
+  requestedAt     DateTime              @default(now())
+  verifiedAt      DateTime?
+  completedAt     DateTime?
+  resultLocation  String?
+  resultExpiresAt DateTime?
+  rejectionReason String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([userId, status, requestedAt])
+  @@index([status, requestedAt])
 }
 
 model Connection {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   userId      String
-  user        User     @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
+  user        User             @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
   targetId    String
-  target      User     @relation("ConnectedUsers", fields: [targetId], references: [id], onDelete: Cascade)
-  status      String   @default("ACCEPTED")
-  createdAt   DateTime @default(now())
+  target      User             @relation("ConnectedUsers", fields: [targetId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("ConnectionAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  pairKey     String           @unique
+  status      ConnectionStatus @default(PENDING)
+  requestedAt DateTime         @default(now())
+  respondedAt DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@unique([userId, targetId])
+  @@index([requesterId, status, requestedAt])
+  @@index([addresseeId, status, requestedAt])
+  @@index([status, updatedAt])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId, createdAt])
+  @@index([followerId, createdAt])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId, createdAt])
 }

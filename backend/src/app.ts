@@ -8,6 +8,12 @@ import { searchRoutes } from "./modules/search/search.routes";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
 import { legalRoutes } from "./modules/legal/legal.routes";
 import { adminRoutes } from "./modules/admin/admin.routes";
+import { communitiesRoutes } from "./modules/communities/communities.routes";
+import { conversationsRoutes } from "./modules/conversations/conversations.routes";
+import { notificationsRoutes } from "./modules/notifications/notifications.routes";
+import { matchingRoutes } from "./modules/matching/matching.routes";
+import { wellbeingRoutes } from "./modules/wellbeing/wellbeing.routes";
+import { insightsRoutes } from "./modules/insights/insights.routes";
 
 export const createApp = () => {
   const app = express();
@@ -39,6 +45,12 @@ export const createApp = () => {
   app.use("/api/v1/payments", paymentsRoutes);
   app.use("/api/v1/legal", legalRoutes);
   app.use("/api/v1/admin", adminRoutes);
+  app.use("/api/v1/communities", communitiesRoutes);
+  app.use("/api/v1/conversations", conversationsRoutes);
+  app.use("/api/v1/notifications", notificationsRoutes);
+  app.use("/api/v1/matching", matchingRoutes);
+  app.use("/api/v1/wellbeing", wellbeingRoutes);
+  app.use("/api/v1/insights", insightsRoutes);
 
   // 404 handler
   app.use((req: Request, res: Response) => {

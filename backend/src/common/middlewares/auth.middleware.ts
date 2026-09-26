@@ -10,6 +10,7 @@ export interface AuthUserPayload {
   email: string;
   role: Role;
   tier: SubscriptionTier;
+  sessionId?: string;
 }
 
 declare global {
@@ -35,6 +36,22 @@ async function loadCurrentUser(decoded: AuthUserPayload) {
   });
 }
 
+async function hasActiveSession(decoded: AuthUserPayload) {
+  if (!decoded.sessionId) return true;
+
+  const session = await prisma.userSession.findFirst({
+    where: {
+      id: decoded.sessionId,
+      userId: decoded.id,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true },
+  });
+
+  return Boolean(session);
+}
+
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -43,7 +60,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const decoded = decodeAccessToken(authHeader.slice(7));
-    const user = await loadCurrentUser(decoded);
+    const [user, sessionIsActive] = await Promise.all([
+      loadCurrentUser(decoded),
+      hasActiveSession(decoded),
+    ]);
 
     if (!user) {
       return sendError(res, "Tài khoản không còn tồn tại", 401);
@@ -51,8 +71,17 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     if (user.isBanned) {
       return sendError(res, "Tài khoản đã bị khóa", 403);
     }
+    if (!sessionIsActive) {
+      return sendError(res, "Phiên đăng nhập đã bị thu hồi", 401);
+    }
 
-    req.user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tier: user.tier,
+      sessionId: decoded.sessionId,
+    };
     return next();
   } catch {
     return sendError(res, "Phiên đăng nhập đã hết hạn hoặc không hợp lệ", 401);
@@ -67,9 +96,12 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const decoded = decodeAccessToken(authHeader.slice(7));
-    const user = await loadCurrentUser(decoded);
+    const [user, sessionIsActive] = await Promise.all([
+      loadCurrentUser(decoded),
+      hasActiveSession(decoded),
+    ]);
 
-    if (!user) {
+    if (!user || !sessionIsActive) {
       req.user = undefined;
       return next();
     }
@@ -77,7 +109,13 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       return sendError(res, "Tài khoản đã bị khóa", 403);
     }
 
-    req.user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tier: user.tier,
+      sessionId: decoded.sessionId,
+    };
     return next();
   } catch {
     // Optional endpoints still work as Guest when a token is expired or malformed.

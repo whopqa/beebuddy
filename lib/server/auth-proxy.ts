@@ -31,7 +31,11 @@ export async function forwardAuthRequest(endpoint: string, body: unknown) {
   try {
     const upstream = await fetch(`${backendApiUrl()}${endpoint}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Platform": "web",
+      },
       body: JSON.stringify(body),
       cache: "no-store",
     });
@@ -79,7 +83,11 @@ export async function forwardAuthenticatedRequest(endpoint: string, init: Reques
     if ((!upstream || upstream.status === 401) && refreshToken) {
       const refreshResponse = await fetch(`${backendApiUrl()}/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-Platform": "web",
+        },
         body: JSON.stringify({ refreshToken }),
         cache: "no-store",
       });
@@ -130,7 +138,11 @@ export async function forwardOptionalAuthenticatedRequest(endpoint: string, init
     if (upstream.status === 401 && refreshToken) {
       const refreshResponse = await fetch(`${backendApiUrl()}/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-Platform": "web",
+        },
         body: JSON.stringify({ refreshToken }),
         cache: "no-store",
       });
