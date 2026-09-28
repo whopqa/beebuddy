@@ -1,10 +1,11 @@
 import bcrypt from "bcryptjs";
-import { createHash, randomUUID } from "crypto";
+import { createHash, randomBytes, randomInt, randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
 import {
   AuthProvider,
   ConsentDecision,
   LegalDocumentType,
+  OneTimeTokenType,
   ProfileAudience,
   ProfileSection,
   Role,
@@ -15,6 +16,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { ENV } from "../../config/environment";
 import { AuthUserPayload } from "../../common/middlewares/auth.middleware";
+import { AuthEmailService } from "./auth-email.service";
 
 type TokenUser = {
   id: string;
@@ -127,6 +129,70 @@ export class AuthService {
     return decoded as RefreshTokenPayload;
   }
 
+  private static verificationCodeHash(userId: string, code: string) {
+    return this.hashToken(`${userId}:${code}`);
+  }
+
+  private static async assertTokenCooldown(userId: string, type: OneTimeTokenType) {
+    const latest = await prisma.oneTimeToken.findFirst({
+      where: { userId, type },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    const cooldownMs = ENV.EMAIL.RESEND_COOLDOWN_SECONDS * 1000;
+    if (latest && Date.now() - latest.createdAt.getTime() < cooldownMs) {
+      const waitSeconds = Math.ceil((cooldownMs - (Date.now() - latest.createdAt.getTime())) / 1000);
+      throw new Error(`Vui lòng chờ ${waitSeconds} giây trước khi yêu cầu mã mới`);
+    }
+  }
+
+  private static async issueEmailVerification(input: {
+    userId: string;
+    email: string;
+    fullName: string;
+  }) {
+    await this.assertTokenCooldown(input.userId, OneTimeTokenType.EMAIL_VERIFICATION);
+    const code = randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(Date.now() + ENV.EMAIL.VERIFICATION_TTL_MINUTES * 60_000);
+    const token = await prisma.$transaction(async (tx) => {
+      const now = new Date();
+      await tx.oneTimeToken.updateMany({
+        where: {
+          userId: input.userId,
+          type: OneTimeTokenType.EMAIL_VERIFICATION,
+          consumedAt: null,
+        },
+        data: { consumedAt: now },
+      });
+      return tx.oneTimeToken.create({
+        data: {
+          userId: input.userId,
+          type: OneTimeTokenType.EMAIL_VERIFICATION,
+          tokenHash: this.verificationCodeHash(input.userId, code),
+          expiresAt,
+        },
+      });
+    });
+
+    try {
+      await AuthEmailService.sendVerificationCode({
+        email: input.email,
+        fullName: input.fullName,
+        code,
+      });
+    } catch (error) {
+      await prisma.oneTimeToken.update({
+        where: { id: token.id },
+        data: { consumedAt: new Date() },
+      });
+      throw error;
+    }
+
+    return ENV.NODE_ENV === "development" && ENV.EMAIL.DELIVERY_MODE === "console"
+      ? { developmentCode: code }
+      : {};
+  }
+
   public static async register(data: {
     email: string;
     password: string;
@@ -152,7 +218,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
-    const { user, tokens } = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx) => {
       const legalDocuments = await tx.legalDocument.findMany({
         where: {
           type: { in: [LegalDocumentType.TERMS, LegalDocumentType.PRIVACY] },
@@ -218,7 +284,6 @@ export class AuthService {
         include: { profile: true, settings: true },
       });
 
-      const sessionId = randomUUID();
       const freePlan = await tx.plan.findFirst({
         where: { tier: SubscriptionTier.FREE, isActive: true },
         orderBy: { version: "desc" },
@@ -236,18 +301,22 @@ export class AuthService {
         },
       });
 
-      const createdTokens = this.signTokens(createdUser, sessionId);
-      await tx.userSession.create({
-        data: this.sessionCreateData(
-          createdUser.id,
-          sessionId,
-          createdTokens.refreshToken,
-          data
-        ),
-      });
-
-      return { user: createdUser, tokens: createdTokens };
+      return createdUser;
     });
+
+    let verificationSent = false;
+    let developmentCode: string | undefined;
+    try {
+      const delivery = await this.issueEmailVerification({
+        userId: user.id,
+        email: user.email,
+        fullName: user.profile?.fullName || data.fullName,
+      });
+      verificationSent = true;
+      developmentCode = delivery.developmentCode;
+    } catch (error) {
+      console.error("Không thể gửi email xác minh sau khi đăng ký:", error);
+    }
 
     return {
       user: {
@@ -255,9 +324,12 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tier: user.tier,
+        isVerified: user.isVerified,
         profile: user.profile,
       },
-      ...tokens,
+      verificationRequired: true,
+      verificationSent,
+      ...(developmentCode ? { developmentCode } : {}),
     };
   }
 
@@ -283,11 +355,13 @@ export class AuthService {
     if (user.isBanned) {
       throw new Error(`Tài khoản của bạn đã bị khóa: ${user.banReason || "Vi phạm chính sách"}`);
     }
-
     const emailIdentity = user.authIdentities?.[0];
     const passwordHash = emailIdentity?.passwordHash || user.passwordHash;
     if (!passwordHash || !(await bcrypt.compare(data.password, passwordHash))) {
       throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+    }
+    if (!user.isVerified) {
+      throw new Error("Email chưa được xác minh. Vui lòng xác minh email trước khi đăng nhập");
     }
 
     if (emailIdentity) {
@@ -327,6 +401,243 @@ export class AuthService {
       },
       ...tokens,
     };
+  }
+
+  public static async requestEmailVerification(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { profile: { select: { fullName: true } } },
+    });
+
+    const genericResult = {
+      requested: true,
+      message: "Nếu tài khoản tồn tại và chưa được xác minh, mã mới đã được gửi đến email.",
+    };
+    if (!user || user.isVerified) return genericResult;
+
+    try {
+      const delivery = await this.issueEmailVerification({
+        userId: user.id,
+        email: user.email,
+        fullName: user.profile?.fullName || "bạn",
+      });
+      return { ...genericResult, ...delivery };
+    } catch (error) {
+      console.error("Không thể gửi lại mã xác minh:", error);
+      return genericResult;
+    }
+  }
+
+  public static async confirmEmailVerification(
+    data: { email: string; code: string },
+    metadata: SessionMetadata = {}
+  ) {
+    const normalizedEmail = data.email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
+    if (user.isVerified) throw new Error("Email này đã được xác minh");
+
+    const tokenHash = this.verificationCodeHash(user.id, data.code);
+    const token = await prisma.oneTimeToken.findFirst({
+      where: {
+        userId: user.id,
+        type: OneTimeTokenType.EMAIL_VERIFICATION,
+        tokenHash,
+        consumedAt: null,
+      },
+    });
+
+    if (!token) {
+      const latest = await prisma.oneTimeToken.findFirst({
+        where: {
+          userId: user.id,
+          type: OneTimeTokenType.EMAIL_VERIFICATION,
+          consumedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (latest) {
+        await prisma.oneTimeToken.update({
+          where: { id: latest.id },
+          data: { attemptCount: { increment: 1 } },
+        });
+      }
+      throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
+    }
+    if (token.expiresAt <= new Date() || token.attemptCount >= 5) {
+      await prisma.oneTimeToken.update({ where: { id: token.id }, data: { consumedAt: new Date() } });
+      throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
+    }
+
+    const sessionId = randomUUID();
+    const tokens = this.signTokens(user, sessionId);
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.oneTimeToken.updateMany({
+        where: {
+          id: token.id,
+          consumedAt: null,
+          expiresAt: { gt: new Date() },
+          attemptCount: { lt: 5 },
+        },
+        data: { consumedAt: new Date() },
+      });
+      if (consumed.count !== 1) throw new Error("Mã xác minh đã được sử dụng");
+
+      await tx.user.update({ where: { id: user.id }, data: { isVerified: true } });
+      await tx.authIdentity.updateMany({
+        where: { userId: user.id, provider: AuthProvider.EMAIL },
+        data: { verifiedAt: new Date() },
+      });
+      await tx.oneTimeToken.updateMany({
+        where: {
+          userId: user.id,
+          type: OneTimeTokenType.EMAIL_VERIFICATION,
+          consumedAt: null,
+        },
+        data: { consumedAt: new Date() },
+      });
+      await tx.userSession.create({
+        data: this.sessionCreateData(user.id, sessionId, tokens.refreshToken, metadata),
+      });
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tier: user.tier,
+        isVerified: true,
+      },
+      ...tokens,
+    };
+  }
+
+  public static async requestPasswordReset(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { profile: { select: { fullName: true } } },
+    });
+    const genericResult = {
+      requested: true,
+      message: "Nếu email đã đăng ký, chúng tôi đã gửi liên kết đặt lại mật khẩu.",
+    };
+    if (!user || user.isBanned) return genericResult;
+
+    try {
+      await this.assertTokenCooldown(user.id, OneTimeTokenType.PASSWORD_RESET);
+      const rawToken = randomBytes(32).toString("base64url");
+      const expiresAt = new Date(Date.now() + ENV.EMAIL.PASSWORD_RESET_TTL_MINUTES * 60_000);
+      const token = await prisma.$transaction(async (tx) => {
+        const now = new Date();
+        await tx.oneTimeToken.updateMany({
+          where: { userId: user.id, type: OneTimeTokenType.PASSWORD_RESET, consumedAt: null },
+          data: { consumedAt: now },
+        });
+        return tx.oneTimeToken.create({
+          data: {
+            userId: user.id,
+            type: OneTimeTokenType.PASSWORD_RESET,
+            tokenHash: this.hashToken(rawToken),
+            expiresAt,
+          },
+        });
+      });
+      const resetUrl = `${ENV.CLIENT_URL}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      try {
+        await AuthEmailService.sendPasswordReset({
+          email: user.email,
+          fullName: user.profile?.fullName || "bạn",
+          resetUrl,
+        });
+      } catch (error) {
+        await prisma.oneTimeToken.update({ where: { id: token.id }, data: { consumedAt: new Date() } });
+        throw error;
+      }
+
+      return {
+        ...genericResult,
+        ...(ENV.NODE_ENV === "development" && ENV.EMAIL.DELIVERY_MODE === "console"
+          ? { developmentActionUrl: resetUrl }
+          : {}),
+      };
+    } catch (error) {
+      console.error("Không thể gửi yêu cầu đặt lại mật khẩu:", error);
+      return genericResult;
+    }
+  }
+
+  public static async confirmPasswordReset(data: { token: string; newPassword: string }) {
+    const tokenHash = this.hashToken(data.token);
+    const token = await prisma.oneTimeToken.findUnique({
+      where: { tokenHash },
+      include: {
+        user: {
+          include: {
+            authIdentities: {
+              where: { provider: AuthProvider.EMAIL },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    if (
+      !token ||
+      token.type !== OneTimeTokenType.PASSWORD_RESET ||
+      token.consumedAt ||
+      token.expiresAt <= new Date() ||
+      token.user.isBanned
+    ) {
+      throw new Error("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+    }
+
+    const currentPasswordHash = token.user.authIdentities?.[0]?.passwordHash || token.user.passwordHash;
+    if (currentPasswordHash && await bcrypt.compare(data.newPassword, currentPasswordHash)) {
+      throw new Error("Mật khẩu mới phải khác mật khẩu hiện tại");
+    }
+
+    const passwordHash = await bcrypt.hash(data.newPassword, 10);
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.oneTimeToken.updateMany({
+        where: { id: token.id, consumedAt: null, expiresAt: { gt: new Date() } },
+        data: { consumedAt: new Date() },
+      });
+      if (consumed.count !== 1) throw new Error("Liên kết đặt lại mật khẩu đã được sử dụng");
+
+      await tx.user.update({
+        where: { id: token.userId },
+        data: { passwordHash },
+      });
+      await tx.authIdentity.upsert({
+        where: { userId_provider: { userId: token.userId, provider: AuthProvider.EMAIL } },
+        update: { passwordHash, providerEmail: token.user.email },
+        create: {
+          userId: token.userId,
+          provider: AuthProvider.EMAIL,
+          providerSubject: token.user.email,
+          providerEmail: token.user.email,
+          passwordHash,
+          verifiedAt: token.user.isVerified ? new Date() : null,
+        },
+      });
+      await tx.userSession.updateMany({
+        where: { userId: token.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await tx.oneTimeToken.updateMany({
+        where: {
+          userId: token.userId,
+          type: OneTimeTokenType.PASSWORD_RESET,
+          consumedAt: null,
+        },
+        data: { consumedAt: new Date() },
+      });
+    });
+
+    return { passwordReset: true, sessionsRevoked: true };
   }
 
   public static async refreshToken(token: string, metadata: SessionMetadata = {}) {

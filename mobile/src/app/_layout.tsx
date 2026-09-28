@@ -17,6 +17,8 @@ function Navigation() {
       <Stack.Screen name="index" options={{ title: "BeeBuddy" }} />
       <Stack.Screen name="sign-in" options={{ title: "Đăng nhập" }} />
       <Stack.Screen name="sign-up" options={{ title: "Đăng ký" }} />
+      <Stack.Screen name="verify-email" options={{ title: "Xác minh email" }} />
+      <Stack.Screen name="forgot-password" options={{ title: "Quên mật khẩu" }} />
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="account" options={{ title: "Tài khoản" }} />
       </Stack.Protected>

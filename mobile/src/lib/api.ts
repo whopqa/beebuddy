@@ -19,6 +19,12 @@ export type User = {
 
 export type Tokens = { accessToken: string; refreshToken: string };
 export type AuthResult = Tokens & { user: User };
+export type RegisterResult = {
+  user: User;
+  verificationRequired: true;
+  verificationSent: boolean;
+  developmentCode?: string;
+};
 
 export type FeedPost = {
   id: string;
@@ -85,9 +91,24 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   register: (fullName: string, email: string, password: string, acceptTerms: boolean, acceptPrivacy: boolean) =>
-    apiRequest<AuthResult>("/auth/register", {
+    apiRequest<RegisterResult>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ fullName, email, password, acceptTerms, acceptPrivacy }),
+    }),
+  requestEmailVerification: (email: string) =>
+    apiRequest<{ requested: boolean; message: string; developmentCode?: string }>("/auth/email-verification/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  confirmEmailVerification: (email: string, code: string) =>
+    apiRequest<AuthResult>("/auth/email-verification/confirm", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+  requestPasswordReset: (email: string) =>
+    apiRequest<{ requested: boolean; message: string }>("/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     }),
   me: (accessToken: string) => apiRequest<User>("/auth/me", {}, accessToken),
   refresh: (refreshToken: string) =>

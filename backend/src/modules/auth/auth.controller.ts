@@ -3,9 +3,15 @@ import { AuthService } from "./auth.service";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { z } from "zod";
 
+const strongPasswordSchema = z.string()
+  .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+  .max(72, "Mật khẩu không được vượt quá 72 ký tự")
+  .regex(/[A-Za-zÀ-ỹ]/, "Mật khẩu phải có ít nhất một chữ cái")
+  .regex(/\d/, "Mật khẩu phải có ít nhất một chữ số");
+
 const registerSchema = z.object({
   email: z.string().email("Email không đúng định dạng"),
-  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+  password: strongPasswordSchema,
   fullName: z.string().min(2, "Họ tên tối thiểu 2 ký tự"),
   acceptTerms: z.boolean().refine(Boolean, "Bạn phải đồng ý Điều khoản sử dụng"),
   acceptPrivacy: z.boolean().refine(Boolean, "Bạn phải đồng ý Chính sách quyền riêng tư"),
@@ -19,6 +25,20 @@ const loginSchema = z.object({
 
 const tokenSchema = z.object({
   refreshToken: z.string().min(1, "Thiếu refresh token"),
+});
+
+const emailSchema = z.object({
+  email: z.string().email("Email không đúng định dạng"),
+});
+
+const verifyEmailSchema = z.object({
+  email: z.string().email("Email không đúng định dạng"),
+  code: z.string().regex(/^\d{6}$/, "Mã xác minh phải gồm đúng 6 chữ số"),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(32, "Token đặt lại mật khẩu không hợp lệ").max(200),
+  newPassword: strongPasswordSchema,
 });
 
 function limitedHeader(req: Request, name: string, maxLength = 255) {
@@ -65,6 +85,47 @@ export class AuthController {
       return sendSuccess(res, result, "Đăng nhập thành công");
     } catch (err: any) {
       return sendError(res, err.message, 401);
+    }
+  }
+
+  public static async requestEmailVerification(req: Request, res: Response) {
+    try {
+      const parsed = emailSchema.safeParse(req.body);
+      if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+      const result = await AuthService.requestEmailVerification(parsed.data.email);
+      return sendSuccess(res, result, result.message);
+    } catch (err: any) {
+      const status = /Vui lòng chờ/.test(err.message) ? 429 : 400;
+      return sendError(res, err.message, status);
+    }
+  }
+
+  public static async confirmEmailVerification(req: Request, res: Response) {
+    try {
+      const parsed = verifyEmailSchema.safeParse(req.body);
+      if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+      const result = await AuthService.confirmEmailVerification(parsed.data, sessionMetadata(req));
+      return sendSuccess(res, result, "Xác minh email thành công");
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async requestPasswordReset(req: Request, res: Response) {
+    const parsed = emailSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    const result = await AuthService.requestPasswordReset(parsed.data.email);
+    return sendSuccess(res, result, result.message);
+  }
+
+  public static async confirmPasswordReset(req: Request, res: Response) {
+    try {
+      const parsed = resetPasswordSchema.safeParse(req.body);
+      if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+      const result = await AuthService.confirmPasswordReset(parsed.data);
+      return sendSuccess(res, result, "Đặt lại mật khẩu thành công");
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
     }
   }
 

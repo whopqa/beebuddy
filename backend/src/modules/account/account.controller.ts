@@ -37,7 +37,11 @@ const updateProfilePrivacySchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu hiện tại"),
-  newPassword: z.string().min(6, "Mật khẩu mới tối thiểu 6 ký tự"),
+  newPassword: z.string()
+    .min(8, "Mật khẩu mới phải có ít nhất 8 ký tự")
+    .max(72, "Mật khẩu mới không được vượt quá 72 ký tự")
+    .regex(/[A-Za-zÀ-ỹ]/, "Mật khẩu mới phải có ít nhất một chữ cái")
+    .regex(/\d/, "Mật khẩu mới phải có ít nhất một chữ số"),
 });
 
 export class AccountController {

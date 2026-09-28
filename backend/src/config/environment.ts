@@ -3,6 +3,11 @@ import { z } from "zod";
 
 dotenv.config();
 
+const booleanFromEnvironment = z.preprocess((value) => {
+  if (typeof value === "string") return value.trim().toLowerCase() === "true";
+  return value;
+}, z.boolean());
+
 const environmentSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65535).default(5000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -12,6 +17,16 @@ const environmentSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default("1d"),
   JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET phải có ít nhất 32 ký tự"),
   JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
+  EMAIL_DELIVERY_MODE: z.enum(["console", "smtp"]).default("console"),
+  EMAIL_FROM: z.string().min(3).default("BeeBuddy <no-reply@beebuddy.local>"),
+  SMTP_HOST: z.string().default(""),
+  SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
+  SMTP_SECURE: booleanFromEnvironment.default(false),
+  SMTP_USER: z.string().default(""),
+  SMTP_PASSWORD: z.string().default(""),
+  EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),
+  AUTH_TOKEN_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(15).max(3600).default(60),
   PUSH_TOKEN_ENCRYPTION_KEY: z.string().min(32).default("beebuddy_local_push_token_key_change_me"),
   PAYOS_CLIENT_ID: z.string().default(""),
   PAYOS_API_KEY: z.string().default(""),
@@ -62,6 +77,13 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
     if (!value.CLIENT_URL.startsWith("https://")) {
       errors.push("CLIENT_URL production phải sử dụng HTTPS");
     }
+
+    if (value.EMAIL_DELIVERY_MODE !== "smtp") {
+      errors.push("EMAIL_DELIVERY_MODE production phải là smtp");
+    }
+    if (!value.SMTP_HOST || !value.SMTP_USER || !value.SMTP_PASSWORD) {
+      errors.push("SMTP_HOST, SMTP_USER và SMTP_PASSWORD phải được cấu hình trong production");
+    }
   }
 
   if (errors.length > 0) {
@@ -78,6 +100,18 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
       EXPIRES_IN: value.JWT_EXPIRES_IN,
       REFRESH_SECRET: value.JWT_REFRESH_SECRET,
       REFRESH_EXPIRES_IN: value.JWT_REFRESH_EXPIRES_IN,
+    },
+    EMAIL: {
+      DELIVERY_MODE: value.EMAIL_DELIVERY_MODE,
+      FROM: value.EMAIL_FROM,
+      SMTP_HOST: value.SMTP_HOST,
+      SMTP_PORT: value.SMTP_PORT,
+      SMTP_SECURE: value.SMTP_SECURE,
+      SMTP_USER: value.SMTP_USER,
+      SMTP_PASSWORD: value.SMTP_PASSWORD,
+      VERIFICATION_TTL_MINUTES: value.EMAIL_VERIFICATION_TTL_MINUTES,
+      PASSWORD_RESET_TTL_MINUTES: value.PASSWORD_RESET_TTL_MINUTES,
+      RESEND_COOLDOWN_SECONDS: value.AUTH_TOKEN_RESEND_COOLDOWN_SECONDS,
     },
     PUSH_TOKEN_ENCRYPTION_KEY: value.PUSH_TOKEN_ENCRYPTION_KEY,
     PAYOS: {

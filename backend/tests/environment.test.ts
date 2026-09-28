@@ -10,6 +10,13 @@ const validEnvironment = {
   JWT_REFRESH_SECRET: "a-different-refresh-secret-with-more-than-32-characters",
   JWT_EXPIRES_IN: "1d",
   JWT_REFRESH_EXPIRES_IN: "7d",
+  EMAIL_DELIVERY_MODE: "smtp",
+  EMAIL_FROM: "BeeBuddy <no-reply@beebuddy.vn>",
+  SMTP_HOST: "smtp.beebuddy.vn",
+  SMTP_PORT: "587",
+  SMTP_SECURE: "false",
+  SMTP_USER: "mailer@beebuddy.vn",
+  SMTP_PASSWORD: "production-smtp-password",
   PUSH_TOKEN_ENCRYPTION_KEY: "a-distinct-production-push-encryption-secret-key",
   PAYOS_CLIENT_ID: "production-client-id",
   PAYOS_API_KEY: "production-api-key",
@@ -20,7 +27,9 @@ const validEnvironment = {
 
 describe("parseEnvironment", () => {
   it("accepts a complete production environment", () => {
-    expect(parseEnvironment(validEnvironment).NODE_ENV).toBe("production");
+    const environment = parseEnvironment(validEnvironment);
+    expect(environment.NODE_ENV).toBe("production");
+    expect(environment.EMAIL.SMTP_SECURE).toBe(false);
   });
 
   it("rejects mock credentials in production", () => {

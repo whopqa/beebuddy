@@ -10,7 +10,7 @@ import { webAuth } from "@/lib/auth-client";
 import { accountApi } from "@/lib/account-client";
 import { getConsentSessionId } from "@/lib/cookie-consent";
 
-export type AuthMode = "login" | "signup" | "verify" | "forgot" | "change";
+export type AuthMode = "login" | "signup" | "verify" | "forgot" | "reset" | "change";
 
 const copy: Record<AuthMode, { title: string; subtitle: string; submit: string }> = {
   login: {
@@ -33,6 +33,11 @@ const copy: Record<AuthMode, { title: string; subtitle: string; submit: string }
     subtitle: "Enter your email to reset your password",
     submit: "RESET PASSWORD",
   },
+  reset: {
+    title: "RESET PASSWORD",
+    subtitle: "Choose a secure new password for your account",
+    submit: "SAVE NEW PASSWORD",
+  },
   change: {
     title: "CHANGE PASSWORD",
     subtitle: "Enter your old and new password below",
@@ -40,15 +45,29 @@ const copy: Record<AuthMode, { title: string; subtitle: string; submit: string }
   },
 };
 
-export default function AuthShell({ mode }: { mode: AuthMode }) {
+export default function AuthShell({
+  mode,
+  initialEmail = "",
+  resetToken = "",
+  developmentCode = "",
+}: {
+  mode: AuthMode;
+  initialEmail?: string;
+  resetToken?: string;
+  developmentCode?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [developmentActionUrl, setDevelopmentActionUrl] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [code, setCode] = useState(() => {
+    const digits = developmentCode.replace(/\D/g, "").slice(0, 6).split("");
+    return [...digits, ...Array(6 - digits.length).fill("")];
+  });
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "", oldPassword: "" });
+  const [form, setForm] = useState({ name: "", email: initialEmail, password: "", confirm: "", oldPassword: "" });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const { title, subtitle, submit: submitLabel } = copy[mode];
@@ -62,15 +81,19 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setNotice("");
-    if (mode === "verify" && code.join("").length !== 6) return setError("Please enter the 6-digit verification code.");
+    if (mode === "verify" && (!form.email || code.join("").length !== 6)) return setError("Vui lòng nhập email và mã xác minh gồm 6 chữ số.");
     if (mode === "signup" && !form.name.trim()) return setError("Please enter your name.");
-    if (mode !== "verify" && !form.email && mode !== "change") return setError("Please enter your email address.");
-    if (["login", "signup"].includes(mode) && form.password.length < 6) return setError("Password must be at least 6 characters.");
+    if (["login", "signup", "forgot"].includes(mode) && !form.email) return setError("Please enter your email address.");
+    if (mode === "login" && !form.password) return setError("Please enter your password.");
+    if (mode === "signup" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số.");
     if (mode === "signup" && form.password !== form.confirm) return setError("Passwords do not match.");
     if (mode === "signup" && !acceptTerms) return setError("Bạn cần đồng ý Điều khoản sử dụng để đăng ký.");
     if (mode === "signup" && !acceptPrivacy) return setError("Bạn cần đồng ý Chính sách quyền riêng tư để đăng ký.");
-    if (mode === "change" && (!form.oldPassword || form.password.length < 6)) return setError("Please complete both password fields.");
+    if (mode === "change" && (!form.oldPassword || form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu mới cần ít nhất 8 ký tự, gồm chữ và số.");
     if (mode === "change" && form.oldPassword === form.password) return setError("New password must be different from the old password.");
+    if (mode === "reset" && !resetToken) return setError("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã thiếu token.");
+    if (mode === "reset" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số.");
+    if (mode === "reset" && form.password !== form.confirm) return setError("Mật khẩu xác nhận không khớp.");
     setLoading(true);
     try {
       if (mode === "login") {
@@ -78,17 +101,25 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
         router.replace(result.user.role === "ADMIN" ? "/admin" : "/home");
         router.refresh();
       } else if (mode === "signup") {
-        await webAuth.register(form.name.trim(), form.email.trim(), form.password, {
+        const result = await webAuth.register(form.name.trim(), form.email.trim(), form.password, {
           acceptTerms,
           acceptPrivacy,
           consentSessionId: getConsentSessionId(),
         });
+        const params = new URLSearchParams({ email: result.user.email });
+        if (result.developmentCode) params.set("devCode", result.developmentCode);
+        router.replace(`/verify-code?${params.toString()}`);
+      } else if (mode === "verify") {
+        await webAuth.confirmEmailVerification(form.email.trim(), code.join(""));
         router.replace("/get-started");
         router.refresh();
-      } else if (mode === "verify") {
-        setNotice("Xác minh email chưa được bật trong phiên bản hiện tại.");
       } else if (mode === "forgot") {
-        router.push("/change-password");
+        const result = await webAuth.requestPasswordReset(form.email.trim());
+        setNotice(result.message);
+        setDevelopmentActionUrl(result.developmentActionUrl || "");
+      } else if (mode === "reset") {
+        await webAuth.confirmPasswordReset(resetToken, form.password);
+        window.location.href = "/login?passwordChanged=1";
       } else if (mode === "change") {
         await accountApi.changePassword(form.oldPassword, form.password);
         await webAuth.logout();
@@ -98,6 +129,20 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể đăng nhập");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    setError(""); setNotice(""); setLoading(true);
+    try {
+      const result = await webAuth.requestEmailVerification(form.email.trim());
+      setNotice(result.developmentCode
+        ? `${result.message} Mã local development: ${result.developmentCode}`
+        : result.message);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể gửi lại mã xác minh");
     } finally {
       setLoading(false);
     }
@@ -162,7 +207,7 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
                 />
               )}
 
-              {mode !== "verify" && mode !== "change" && (
+              {["login", "signup", "forgot", "verify"].includes(mode) && (
                 <Field
                   label="Email Address"
                   type="email"
@@ -236,6 +281,27 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
                 />
               )}
 
+              {mode === "reset" && (
+                <>
+                  <PasswordField
+                    label="New Password"
+                    value={form.password}
+                    show={showPassword}
+                    onChange={(v) => update("password", v)}
+                    toggle={() => setShowPassword(!showPassword)}
+                    placeholder="At least 8 characters, letters and numbers"
+                  />
+                  <PasswordField
+                    label="Confirm New Password"
+                    value={form.confirm}
+                    show={showPassword}
+                    onChange={(v) => update("confirm", v)}
+                    toggle={() => setShowPassword(!showPassword)}
+                    placeholder="Enter the new password again"
+                  />
+                </>
+              )}
+
               {mode === "verify" && (
                 <OtpInput
                   code={code}
@@ -259,11 +325,37 @@ export default function AuthShell({ mode }: { mode: AuthMode }) {
               )}
 
               {error && <p className="form-error" role="alert">{error}</p>}
+              {mode === "login" && error.includes("Email chưa được xác minh") && (
+                <p className="form-notice">
+                  <Link
+                    href={`/verify-code?email=${encodeURIComponent(form.email.trim())}`}
+                    className="auth-switch-link"
+                  >
+                    Nhập hoặc gửi lại mã xác minh
+                  </Link>
+                </p>
+              )}
               {notice && <p className="form-notice" role="status">{notice}</p>}
+              {developmentActionUrl && (
+                <p className="form-notice">
+                  Local development: <Link href={developmentActionUrl} className="auth-switch-link">mở liên kết đặt lại mật khẩu</Link>.
+                </p>
+              )}
 
               <button className="auth-submit bb-figma-btn-primary" disabled={loading}>
                 {loading ? "Please wait..." : submitLabel}
               </button>
+              {mode === "verify" && (
+                <button
+                  type="button"
+                  className="auth-switch-link"
+                  onClick={resendVerification}
+                  disabled={loading || !form.email.trim()}
+                  style={{ border: 0, background: "transparent", cursor: "pointer", alignSelf: "center" }}
+                >
+                  Gửi lại mã xác minh
+                </button>
+              )}
             </form>
 
             {(mode === "login" || mode === "signup") && (
