@@ -17,6 +17,25 @@ const loginSchema = z.object({
   password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
+const tokenSchema = z.object({
+  refreshToken: z.string().min(1, "Thiếu refresh token"),
+});
+
+function limitedHeader(req: Request, name: string, maxLength = 255) {
+  const value = req.get(name)?.trim();
+  return value ? value.slice(0, maxLength) : undefined;
+}
+
+function sessionMetadata(req: Request) {
+  return {
+    deviceId: limitedHeader(req, "x-device-id", 100),
+    deviceName: limitedHeader(req, "x-device-name", 100),
+    platform: limitedHeader(req, "x-platform", 30),
+    ipAddress: req.ip,
+    userAgent: limitedHeader(req, "user-agent", 500),
+  };
+}
+
 export class AuthController {
   public static async register(req: Request, res: Response) {
     try {
@@ -27,8 +46,7 @@ export class AuthController {
 
       const result = await AuthService.register({
         ...parsed.data,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent"),
+        ...sessionMetadata(req),
       });
       return sendSuccess(res, result, "Đăng ký tài khoản thành công", 201);
     } catch (err: any) {
@@ -43,7 +61,7 @@ export class AuthController {
         return sendError(res, parsed.error.errors[0].message, 400);
       }
 
-      const result = await AuthService.login(parsed.data);
+      const result = await AuthService.login(parsed.data, sessionMetadata(req));
       return sendSuccess(res, result, "Đăng nhập thành công");
     } catch (err: any) {
       return sendError(res, err.message, 401);
@@ -52,16 +70,26 @@ export class AuthController {
 
   public static async refresh(req: Request, res: Response) {
     try {
-      const { refreshToken } = req.body;
-      if (!refreshToken) {
-        return sendError(res, "Thiếu refresh token", 400);
+      const parsed = tokenSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendError(res, parsed.error.errors[0].message, 400);
       }
 
-      const result = await AuthService.refreshToken(refreshToken);
+      const result = await AuthService.refreshToken(parsed.data.refreshToken, sessionMetadata(req));
       return sendSuccess(res, result, "Làm mới phiên thành công");
     } catch (err: any) {
       return sendError(res, err.message, 401);
     }
+  }
+
+  public static async logout(req: Request, res: Response) {
+    const parsed = tokenSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return sendError(res, parsed.error.errors[0].message, 400);
+    }
+
+    const result = await AuthService.logout(parsed.data.refreshToken);
+    return sendSuccess(res, result, "Đăng xuất thành công");
   }
 
   public static async getMe(req: Request, res: Response) {

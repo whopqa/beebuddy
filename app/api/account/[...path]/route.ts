@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearAuthCookies, forwardAuthenticatedRequest, setAuthCookies } from "@/lib/server/auth-proxy";
 
-const allowed = new Set(["profile", "settings", "password"]);
+const allowed = new Set(["profile", "settings", "password", "sessions"]);
 
 async function handle(request: NextRequest, { params }: { params: { path: string[] } }) {
   const endpoint = params.path.join("/");
-  if (!allowed.has(endpoint)) {
+  const isAllowed = allowed.has(endpoint) || (params.path.length === 2 && params.path[0] === "sessions");
+  if (!isAllowed) {
     return NextResponse.json({ success: false, error: "Account endpoint không tồn tại" }, { status: 404 });
   }
 
@@ -22,3 +23,4 @@ async function handle(request: NextRequest, { params }: { params: { path: string
 
 export const GET = handle;
 export const PUT = handle;
+export const DELETE = handle;

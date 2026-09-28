@@ -10,6 +10,7 @@ const validEnvironment = {
   JWT_REFRESH_SECRET: "a-different-refresh-secret-with-more-than-32-characters",
   JWT_EXPIRES_IN: "1d",
   JWT_REFRESH_EXPIRES_IN: "7d",
+  PUSH_TOKEN_ENCRYPTION_KEY: "a-distinct-production-push-encryption-secret-key",
   PAYOS_CLIENT_ID: "production-client-id",
   PAYOS_API_KEY: "production-api-key",
   PAYOS_CHECKSUM_KEY: "production-checksum-key",

@@ -12,7 +12,38 @@ const reportCommentSchema = z.object({
   reason: z.string().min(3, "Vui lòng cung cấp lý do báo cáo"),
 });
 
+const createCommunityPostSchema = z.object({
+  content: z.string().trim().min(1, "Nội dung bài viết không được rỗng").max(10000),
+}).strict();
+
 export class PostsController {
+  public static async getCommunityFeed(req: Request, res: Response) {
+    try {
+      return sendSuccess(res, await PostsService.getCommunityFeed({
+        communityId: req.params.communityId,
+        userId: req.user?.id,
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 10,
+      }));
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async createCommunityPost(req: Request, res: Response) {
+    const parsed = createCommunityPostSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try {
+      return sendSuccess(res, await PostsService.createCommunityPost({
+        communityId: req.params.communityId,
+        authorId: req.user!.id,
+        content: parsed.data.content,
+      }), "Đăng bài vào community thành công", 201);
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
   public static async getFeed(req: Request, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;

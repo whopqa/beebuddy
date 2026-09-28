@@ -1,4 +1,11 @@
-import { CommentStatus, PostVisibility, SubscriptionTier } from "@prisma/client";
+import {
+  CommentStatus,
+  CommunityMemberStatus,
+  CommunityVisibility,
+  PostStatus,
+  PostVisibility,
+  SubscriptionTier,
+} from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
@@ -6,6 +13,13 @@ const prismaMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     findFirst: vi.fn(),
   },
+  userBlock: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+  },
+  postAudienceUser: { findUnique: vi.fn() },
+  postAudienceList: { findFirst: vi.fn() },
+  postExcludedUser: { findUnique: vi.fn() },
   post: {
     count: vi.fn(),
     findMany: vi.fn(),
@@ -32,6 +46,8 @@ import { PostsService } from "../src/modules/posts/posts.service";
 describe("PostsService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.userBlock.findMany.mockResolvedValue([]);
+    prismaMock.userBlock.findFirst.mockResolvedValue(null);
   });
 
   it("queries only PUBLIC posts for a guest", async () => {
@@ -43,13 +59,21 @@ describe("PostsService", () => {
     expect(result.posts).toEqual([]);
     expect(prismaMock.connection.findMany).not.toHaveBeenCalled();
     expect(prismaMock.post.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { visibility: PostVisibility.PUBLIC },
+      where: {
+        status: PostStatus.PUBLISHED,
+        deletedAt: null,
+        audience: PostVisibility.PUBLIC,
+        OR: [
+          { communityId: null },
+          { community: { is: { visibility: CommunityVisibility.PUBLIC } } },
+        ],
+      },
     }));
   });
 
   it("includes CONNECTIONS posts for accepted connections in either direction", async () => {
     prismaMock.connection.findMany.mockResolvedValue([
-      { userId: "friend-1", targetId: "current-user" },
+      { requesterId: "friend-1", addresseeId: "current-user" },
     ]);
     prismaMock.post.count.mockResolvedValue(0);
     prismaMock.post.findMany.mockResolvedValue([]);
@@ -59,15 +83,75 @@ describe("PostsService", () => {
     expect(prismaMock.connection.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         status: "ACCEPTED",
-        OR: [{ userId: "current-user" }, { targetId: "current-user" }],
+        OR: [{ requesterId: "current-user" }, { addresseeId: "current-user" }],
       }),
     }));
     expect(prismaMock.post.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: {
-        OR: [
-          { visibility: PostVisibility.PUBLIC },
+      where: expect.objectContaining({
+        status: PostStatus.PUBLISHED,
+        deletedAt: null,
+        OR: expect.arrayContaining([
+          { audience: PostVisibility.PUBLIC },
           { authorId: "current-user" },
-          { visibility: PostVisibility.CONNECTIONS, authorId: { in: ["friend-1"] } },
+          { audience: PostVisibility.CONNECTIONS, authorId: { in: ["friend-1"] } },
+        ]),
+      }),
+    }));
+  });
+
+  it("removes users blocked in either direction from the member feed", async () => {
+    prismaMock.connection.findMany.mockResolvedValue([
+      { requesterId: "current-user", addresseeId: "blocked-user" },
+      { requesterId: "current-user", addresseeId: "friend-1" },
+    ]);
+    prismaMock.userBlock.findMany.mockResolvedValue([
+      { blockerId: "blocked-user", blockedId: "current-user" },
+    ]);
+    prismaMock.post.count.mockResolvedValue(0);
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    await PostsService.getFeed({ userId: "current-user" });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        AND: [
+          {
+            status: PostStatus.PUBLISHED,
+            deletedAt: null,
+            AND: [{
+              OR: [
+                { communityId: null },
+                { community: { is: { visibility: CommunityVisibility.PUBLIC } } },
+                { community: { is: { members: { some: { userId: "current-user", status: CommunityMemberStatus.ACTIVE } } } } },
+              ],
+            }],
+            OR: [
+              { audience: PostVisibility.PUBLIC },
+              { authorId: "current-user" },
+              { audience: PostVisibility.CONNECTIONS, authorId: { in: ["friend-1"] } },
+              {
+                audience: PostVisibility.SELECTED,
+                audienceUsers: { some: { userId: "current-user" } },
+              },
+              {
+                audience: PostVisibility.CUSTOM,
+                OR: [
+                  { audienceUsers: { some: { userId: "current-user" } } },
+                  {
+                    audienceLists: {
+                      some: {
+                        audienceList: {
+                          members: { some: { userId: "current-user" } },
+                        },
+                      },
+                    },
+                  },
+                ],
+                excludedUsers: { none: { userId: "current-user" } },
+              },
+            ],
+          },
+          { authorId: { notIn: ["blocked-user"] } },
         ],
       },
     }));
@@ -77,7 +161,9 @@ describe("PostsService", () => {
     prismaMock.post.findUnique.mockResolvedValue({
       id: "private-post",
       authorId: "author-1",
-      visibility: PostVisibility.PRIVATE,
+      audience: PostVisibility.PRIVATE,
+      status: PostStatus.PUBLISHED,
+      deletedAt: null,
     });
 
     await expect(PostsService.getComments("private-post", "other-user")).rejects.toMatchObject({
@@ -90,7 +176,9 @@ describe("PostsService", () => {
     prismaMock.post.findUnique.mockResolvedValue({
       id: "public-post",
       authorId: "author-1",
-      visibility: PostVisibility.PUBLIC,
+      audience: PostVisibility.PUBLIC,
+      status: PostStatus.PUBLISHED,
+      deletedAt: null,
     });
     vi.spyOn(BadwordsFilter, "checkContent").mockResolvedValue({
       isClean: false,
@@ -122,10 +210,10 @@ describe("PostsService", () => {
     expect(result.warning).toContain("kiểm duyệt");
     expect(prismaMock.report.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        reporterId: "current-user",
         commentId: "comment-1",
-        postId: "public-post",
-        status: "PENDING",
+        source: "RULE",
+        status: "OPEN",
+        reasonCode: "BADWORD_RULE",
       }),
     });
   });

@@ -1,286 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import {
-  CreditCard,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  ExternalLink,
-  RefreshCw,
-  TrendingUp,
-  Download,
-} from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { CreditCard, RefreshCw, Search } from "lucide-react";
+import { adminApi, type AdminPayment } from "@/lib/admin-client";
 
-interface PaymentItem {
-  orderCode: number;
-  email: string;
-  fullName: string;
-  tier: "VIP" | "PRO";
-  durationMonths: number;
-  amount: number;
-  paymentMethod: string;
-  status: "COMPLETED" | "PENDING" | "FAILED";
-  paidAt: string | null;
-  createdAt: string;
-}
-
-const initialPayments: PaymentItem[] = [
-  {
-    orderCode: 84920192,
-    email: "minh.nguyen@beebuddy.vn",
-    fullName: "Minh Nguyễn",
-    tier: "VIP",
-    durationMonths: 1,
-    amount: 49000,
-    paymentMethod: "PayOS VietQR",
-    status: "COMPLETED",
-    paidAt: "2026-09-22 19:30:12",
-    createdAt: "2026-09-22 19:28:45",
-  },
-  {
-    orderCode: 84920191,
-    email: "trang.le@beebuddy.vn",
-    fullName: "Trang Lê",
-    tier: "PRO",
-    durationMonths: 1,
-    amount: 99000,
-    paymentMethod: "PayOS VietQR",
-    status: "COMPLETED",
-    paidAt: "2026-09-22 18:55:01",
-    createdAt: "2026-09-22 18:53:20",
-  },
-  {
-    orderCode: 84920190,
-    email: "viet.anh@gmail.com",
-    fullName: "Việt Anh",
-    tier: "VIP",
-    durationMonths: 1,
-    amount: 49000,
-    paymentMethod: "PayOS VietQR",
-    status: "COMPLETED",
-    paidAt: "2026-09-22 17:15:33",
-    createdAt: "2026-09-22 17:12:00",
-  },
-  {
-    orderCode: 84920189,
-    email: "huong.giang@yahoo.com",
-    fullName: "Hương Giang",
-    tier: "PRO",
-    durationMonths: 1,
-    amount: 99000,
-    paymentMethod: "PayOS VietQR",
-    status: "PENDING",
-    paidAt: null,
-    createdAt: "2026-09-22 14:02:18",
-  },
-  {
-    orderCode: 84920188,
-    email: "tuan.kiet@outlook.com",
-    fullName: "Tuấn Kiệt",
-    tier: "VIP",
-    durationMonths: 1,
-    amount: 49000,
-    paymentMethod: "PayOS VietQR",
-    status: "FAILED",
-    paidAt: null,
-    createdAt: "2026-09-21 21:10:05",
-  },
-];
+const money = (value: number | string, currency = "VND") => new Intl.NumberFormat("vi-VN", { style: "currency", currency }).format(Number(value));
+const date = (value?: string | null) => value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
 
 export default function AdminPaymentsPage() {
-  const [payments, setPayments] = useState<PaymentItem[]>(initialPayments);
+  const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [notification, setNotification] = useState<string | null>(null);
+  const [status, setStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = payments.filter((p) => {
-    const matchSearch =
-      p.email.toLowerCase().includes(search.toLowerCase()) ||
-      p.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      String(p.orderCode).includes(search);
+  const load = useCallback(async (requestedPage = page) => {
+    setLoading(true); setError("");
+    const query = new URLSearchParams({ page: String(requestedPage), limit: "15" });
+    if (search.trim()) query.set("search", search.trim());
+    if (status !== "ALL") query.set("status", status);
+    try { const result = await adminApi.payments(query.toString()); setPayments(result.payments); setTotal(result.total); setTotalPages(Math.max(1,result.totalPages)); setPage(result.page); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể tải giao dịch"); }
+    finally { setLoading(false); }
+  }, [page, search, status]);
+  useEffect(()=>{ void load(1); },[status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const submit = (event:FormEvent) => { event.preventDefault(); void load(1); };
 
-    const matchStatus = statusFilter === "ALL" || p.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const handleManualApprove = (orderCode: number) => {
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.orderCode === orderCode
-          ? { ...p, status: "COMPLETED", paidAt: new Date().toISOString().replace("T", " ").slice(0, 19) }
-          : p
-      )
-    );
-    setNotification(`Đã xác nhận thanh toán thủ công cho đơn hàng #${orderCode}. Quyền VIP/PRO đã được cập nhật sang App.`);
-    setTimeout(() => setNotification(null), 4000);
-  };
-
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-            Quản Lý Doanh Thu & Giao Dịch PayOS
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Đối soát các đơn hàng quét mã VietQR và kiểm soát thời hạn gói cước của người dùng.
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            setNotification("Đang làm mới danh sách giao dịch từ cổng PayOS...");
-            setTimeout(() => setNotification(null), 2000);
-          }}
-          className="px-3.5 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-xs font-bold text-gray-700 transition-colors shadow-sm flex items-center gap-2 self-start"
-        >
-          <RefreshCw size={14} />
-          <span>Đồng bộ PayOS</span>
-        </button>
-      </div>
-
-      {notification && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-600" />
-          <span>{notification}</span>
-        </div>
-      )}
-
-      {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
-          <span className="text-xs font-semibold text-gray-500">Tổng thu PayOS</span>
-          <div className="text-xl font-extrabold text-gray-900 mt-1">16.246.000 ₫</div>
-          <span className="text-[11px] text-emerald-600 font-semibold">Tất cả giao dịch thành công</span>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
-          <span className="text-xs font-semibold text-gray-500">Giao dịch thành công</span>
-          <div className="text-xl font-extrabold text-emerald-600 mt-1">218 đơn</div>
-          <span className="text-[11px] text-gray-500">Tỷ lệ thành công: 92%</span>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
-          <span className="text-xs font-semibold text-gray-500">Đơn chờ thanh toán</span>
-          <div className="text-xl font-extrabold text-amber-600 mt-1">4 đơn</div>
-          <span className="text-[11px] text-gray-500">Chờ người dùng quét mã VietQR</span>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-80">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm theo mã đơn, email, tên..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD027] focus:bg-white"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter size={15} className="text-gray-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#FFD027]"
-          >
-            <option value="ALL">Tất cả trạng thái</option>
-            <option value="COMPLETED">Thành công (COMPLETED)</option>
-            <option value="PENDING">Chờ quét mã (PENDING)</option>
-            <option value="FAILED">Thất bại / Hủy (FAILED)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Transaction Table */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50/80 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-              <tr>
-                <th className="px-5 py-3.5">Mã đơn (OrderCode)</th>
-                <th className="px-5 py-3.5">Khách hàng</th>
-                <th className="px-5 py-3.5">Gói cước</th>
-                <th className="px-5 py-3.5">Số tiền</th>
-                <th className="px-5 py-3.5">Thời gian tạo</th>
-                <th className="px-5 py-3.5">Trạng thái</th>
-                <th className="px-5 py-3.5 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((item) => (
-                <tr key={item.orderCode} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-5 py-4 font-mono font-bold text-gray-900 text-xs">
-                    #{item.orderCode}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="font-bold text-gray-900 text-xs">{item.fullName}</div>
-                    <div className="text-[11px] text-gray-500">{item.email}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                        item.tier === "PRO"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {item.tier} (1 tháng)
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 font-extrabold text-gray-900 text-xs">
-                    {item.amount.toLocaleString("vi-VN")} ₫
-                  </td>
-                  <td className="px-5 py-4 text-xs text-gray-500">
-                    <div>{item.createdAt}</div>
-                    {item.paidAt && (
-                      <div className="text-[10px] text-emerald-600">Thanh toán: {item.paidAt}</div>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    {item.status === "COMPLETED" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 size={12} />
-                        Thành công
-                      </span>
-                    )}
-                    {item.status === "PENDING" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        <Clock size={12} />
-                        Chờ quét mã
-                      </span>
-                    )}
-                    {item.status === "FAILED" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200">
-                        <AlertCircle size={12} />
-                        Thất bại
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    {item.status === "PENDING" && (
-                      <button
-                        onClick={() => handleManualApprove(item.orderCode)}
-                        className="px-3 py-1.5 bg-[#FFD027] hover:bg-amber-400 text-gray-950 text-xs font-bold rounded-lg transition-colors shadow-sm"
-                      >
-                        Kích hoạt gói
-                      </button>
-                    )}
-                    {item.status === "COMPLETED" && (
-                      <span className="text-[11px] font-semibold text-gray-400">Đã kích hoạt</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="flex justify-between gap-4"><div><h1 className="text-2xl font-extrabold">Giao dịch & doanh thu</h1><p className="text-sm text-gray-500 mt-1">Đối soát {total} đơn hàng lưu trong PostgreSQL.</p></div><button onClick={()=>void load()} className="border bg-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 self-start"><RefreshCw size={14}/>Làm mới</button></div>
+    {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{error}</div>}
+    <form onSubmit={submit} className="bg-white border rounded-2xl p-4 flex flex-col md:flex-row gap-3"><div className="relative flex-1"><Search size={16} className="absolute left-3 top-3 text-gray-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Email hoặc mã đơn" className="w-full border rounded-xl py-2.5 pl-10 pr-3 text-sm"/></div><select value={status} onChange={e=>setStatus(e.target.value)} className="border rounded-xl px-3 text-sm"><option value="ALL">Mọi trạng thái</option>{["PENDING","COMPLETED","FAILED","CANCELLED","EXPIRED","REFUNDED","PARTIALLY_REFUNDED"].map(item=><option key={item}>{item}</option>)}</select><button className="bg-[#FFD027] px-5 py-2.5 rounded-xl text-sm font-bold">Lọc</button></form>
+    <div className="bg-white border rounded-2xl overflow-x-auto shadow-sm"><table className="w-full min-w-[900px] text-left"><thead className="bg-gray-50 text-xs text-gray-500"><tr><th className="p-4">Đơn hàng</th><th className="p-4">Người dùng</th><th className="p-4">Gói</th><th className="p-4">Số tiền</th><th className="p-4">Thời gian</th><th className="p-4">Trạng thái</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={6} className="p-10 text-center text-sm text-gray-500">Đang tải...</td></tr> : payments.length === 0 ? <tr><td colSpan={6} className="p-10 text-center text-sm text-gray-500"><CreditCard className="mx-auto mb-2"/>Chưa có giao dịch phù hợp.</td></tr> : payments.map(payment=><tr key={payment.id} className="text-sm"><td className="p-4"><p className="font-bold">#{payment.orderCode}</p><p className="text-xs text-gray-500">{payment.paymentMethod}</p></td><td className="p-4"><p className="font-semibold">{payment.user?.profile?.fullName || "Chưa đặt tên"}</p><p className="text-xs text-gray-500">{payment.user?.email}</p></td><td className="p-4 font-bold">{payment.tier}<span className="block text-xs font-normal text-gray-500">{payment.durationMonths} tháng</span></td><td className="p-4 font-bold">{money(payment.amount,payment.currency)}</td><td className="p-4 text-xs"><p>Tạo: {date(payment.createdAt)}</p><p className="text-gray-500">Trả: {date(payment.paidAt)}</p></td><td className="p-4"><Status value={payment.status}/></td></tr>)}</tbody></table></div>
+    <div className="flex justify-center items-center gap-3"><button disabled={page<=1} onClick={()=>void load(page-1)} className="border rounded-lg px-3 py-2 text-xs disabled:opacity-40">Trang trước</button><span className="text-xs">{page} / {totalPages}</span><button disabled={page>=totalPages} onClick={()=>void load(page+1)} className="border rounded-lg px-3 py-2 text-xs disabled:opacity-40">Trang sau</button></div>
+    <p className="text-xs text-gray-500">Trạng thái thanh toán chỉ được cập nhật bởi webhook PayOS đã xác thực; trang quản trị không giả lập xác nhận thủ công.</p>
+  </div>;
 }
+
+function Status({value}:{value:string}) { const color = value === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : value === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-700"; return <span className={`px-2 py-1 rounded-full text-[11px] font-bold ${color}`}>{value}</span>; }

@@ -42,6 +42,9 @@ pnpm-debug.log*
 !**/.env.example
 !.env.example
 
+# local database backups
+/.local-backups/
+
 # vercel
 .vercel
 

@@ -12,6 +12,7 @@ const environmentSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default("1d"),
   JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET phải có ít nhất 32 ký tự"),
   JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
+  PUSH_TOKEN_ENCRYPTION_KEY: z.string().min(32).default("beebuddy_local_push_token_key_change_me"),
   PAYOS_CLIENT_ID: z.string().default(""),
   PAYOS_API_KEY: z.string().default(""),
   PAYOS_CHECKSUM_KEY: z.string().default(""),
@@ -25,6 +26,7 @@ const unsafeProductionValues = new Set([
   "mock_client_id",
   "mock_api_key",
   "mock_checksum_key",
+  "beebuddy_local_push_token_key_change_me",
 ]);
 
 export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, string | undefined>) {
@@ -45,6 +47,7 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
     const productionSecrets = {
       JWT_SECRET: value.JWT_SECRET,
       JWT_REFRESH_SECRET: value.JWT_REFRESH_SECRET,
+      PUSH_TOKEN_ENCRYPTION_KEY: value.PUSH_TOKEN_ENCRYPTION_KEY,
       PAYOS_CLIENT_ID: value.PAYOS_CLIENT_ID,
       PAYOS_API_KEY: value.PAYOS_API_KEY,
       PAYOS_CHECKSUM_KEY: value.PAYOS_CHECKSUM_KEY,
@@ -76,6 +79,7 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
       REFRESH_SECRET: value.JWT_REFRESH_SECRET,
       REFRESH_EXPIRES_IN: value.JWT_REFRESH_EXPIRES_IN,
     },
+    PUSH_TOKEN_ENCRYPTION_KEY: value.PUSH_TOKEN_ENCRYPTION_KEY,
     PAYOS: {
       CLIENT_ID: value.PAYOS_CLIENT_ID,
       API_KEY: value.PAYOS_API_KEY,

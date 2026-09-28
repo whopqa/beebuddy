@@ -72,10 +72,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [acceptSession]);
 
   const signOut = useCallback(async () => {
+    if (tokens?.refreshToken) {
+      await authApi.logout(tokens.refreshToken).catch(() => undefined);
+    }
     await SecureStore.deleteItemAsync(SESSION_KEY);
     setTokens(null);
     setUser(null);
-  }, []);
+  }, [tokens]);
 
   return (
     <SessionContext.Provider value={{ loading, user, accessToken: tokens?.accessToken ?? null, signIn, signUp, signOut }}>
