@@ -238,6 +238,55 @@ export class AccountService {
     return { success: true, sessionsRevoked: true };
   }
 
+  public static async getSessions(userId: string, currentSessionId?: string) {
+    const sessions = await prisma.userSession.findMany({
+      where: { userId },
+      orderBy: { lastUsedAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        deviceName: true,
+        platform: true,
+        ipAddress: true,
+        userAgent: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        revokedAt: true,
+        createdAt: true,
+      },
+    });
+    const now = new Date();
+    return sessions.map((session) => ({
+      ...session,
+      isCurrent: session.id === currentSessionId,
+      isActive: !session.revokedAt && session.expiresAt > now,
+    }));
+  }
+
+  public static async revokeOtherSessions(userId: string, currentSessionId?: string) {
+    const result = await prisma.userSession.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+        ...(currentSessionId ? { id: { not: currentSessionId } } : {}),
+      },
+      data: { revokedAt: new Date() },
+    });
+    return { revokedCount: result.count };
+  }
+
+  public static async revokeSession(userId: string, sessionId: string, currentSessionId?: string) {
+    if (sessionId === currentSessionId) {
+      throw new Error("Hãy dùng nút đăng xuất để kết thúc phiên hiện tại");
+    }
+    const result = await prisma.userSession.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    if (!result.count) throw new Error("Phiên đăng nhập không tồn tại hoặc đã được thu hồi");
+    return { revoked: true };
+  }
+
   public static async getProfilePrivacy(userId: string) {
     return prisma.profileVisibilityRule.findMany({
       where: { userId },

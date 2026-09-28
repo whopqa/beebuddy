@@ -82,6 +82,33 @@ export class AccountController {
     }
   }
 
+  public static async getSessions(req: Request, res: Response) {
+    try {
+      const sessions = await AccountService.getSessions(req.user!.id, req.user!.sessionId);
+      return sendSuccess(res, sessions);
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async revokeOtherSessions(req: Request, res: Response) {
+    try {
+      const result = await AccountService.revokeOtherSessions(req.user!.id, req.user!.sessionId);
+      return sendSuccess(res, result, "Đã đăng xuất các phiên khác");
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async revokeSession(req: Request, res: Response) {
+    try {
+      const result = await AccountService.revokeSession(req.user!.id, req.params.id, req.user!.sessionId);
+      return sendSuccess(res, result, "Đã thu hồi phiên đăng nhập");
+    } catch (err: any) {
+      return sendError(res, err.message, 400);
+    }
+  }
+
   public static async getProfilePrivacy(req: Request, res: Response) {
     try {
       const rules = await AccountService.getProfilePrivacy(req.user!.id);

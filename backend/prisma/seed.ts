@@ -71,6 +71,8 @@ async function syncEmailIdentity(userId: string, email: string, passwordHash: st
     update: {
       userId,
       providerEmail: normalizedEmail,
+      passwordHash,
+      verifiedAt: new Date(),
     },
     create: {
       userId,
@@ -234,7 +236,7 @@ async function main() {
   // 2. Tạo tài khoản Quản trị viên (Admin)
   const admin = await prisma.user.upsert({
     where: { email: "admin@beebuddy.vn" },
-    update: { role: Role.ADMIN },
+    update: { role: Role.ADMIN, passwordHash: adminPasswordHash, isVerified: true },
     create: {
       email: "admin@beebuddy.vn",
       passwordHash: adminPasswordHash,
@@ -260,7 +262,7 @@ async function main() {
   // 3. Tạo tài khoản mẫu
   const user1 = await prisma.user.upsert({
     where: { email: "minh.nguyen@beebuddy.vn" },
-    update: {},
+    update: { passwordHash: userPasswordHash, isVerified: true },
     create: {
       email: "minh.nguyen@beebuddy.vn",
       passwordHash: userPasswordHash,
@@ -284,7 +286,7 @@ async function main() {
 
   const user2 = await prisma.user.upsert({
     where: { email: "trang.le@beebuddy.vn" },
-    update: {},
+    update: { passwordHash: userPasswordHash, isVerified: true },
     create: {
       email: "trang.le@beebuddy.vn",
       passwordHash: userPasswordHash,
@@ -308,7 +310,7 @@ async function main() {
 
   const user3 = await prisma.user.upsert({
     where: { email: "hoang.pham@beebuddy.vn" },
-    update: {},
+    update: { passwordHash: userPasswordHash, isVerified: true },
     create: {
       email: "hoang.pham@beebuddy.vn",
       passwordHash: userPasswordHash,

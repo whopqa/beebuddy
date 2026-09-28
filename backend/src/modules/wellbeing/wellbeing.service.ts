@@ -1,4 +1,5 @@
 import {
+  ConnectionStatus,
   ConversationMemberRole,
   ConversationType,
   HabitCompletionSource,
@@ -6,6 +7,7 @@ import {
   MascotMemoryCategory,
   MascotMemorySourceType,
   MascotSuggestionStatus,
+  MascotSuggestionType,
   MoodValue,
   Prisma,
 } from "@prisma/client";
@@ -38,6 +40,77 @@ export class WellbeingService {
   }
 
   static listSuggestions(userId: string) { return prisma.mascotSuggestion.findMany({ where: { userId, status: { in: [MascotSuggestionStatus.PENDING, MascotSuggestionStatus.SEEN] }, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, orderBy: { createdAt: "desc" } }); }
+  static async refreshSuggestions(userId: string) {
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const recentCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const [latestMood, todayMood, routines, connectionCount] = await Promise.all([
+      prisma.moodCheckIn.findFirst({ where: { userId }, orderBy: { recordedAt: "desc" } }),
+      prisma.moodCheckIn.findFirst({ where: { userId, recordedAt: { gte: today } } }),
+      prisma.habitRoutine.findMany({
+        where: { userId, isActive: true },
+        include: { completions: { where: { localDate: today }, take: 1 } },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.connection.count({
+        where: {
+          status: ConnectionStatus.ACCEPTED,
+          OR: [{ requesterId: userId }, { addresseeId: userId }],
+        },
+      }),
+    ]);
+
+    const candidates: Array<{ type: MascotSuggestionType; title: string; content: string; reason: string; payload?: Prisma.InputJsonValue }> = [];
+    if (!todayMood) {
+      candidates.push({
+        type: MascotSuggestionType.CHECK_IN,
+        title: "Bạn đang cảm thấy thế nào?",
+        content: "Dành một phút check-in cảm xúc và năng lượng hôm nay nhé.",
+        reason: "Bạn chưa có mood check-in hôm nay.",
+      });
+    } else if (latestMood && (latestMood.mood === MoodValue.VERY_LOW || latestMood.mood === MoodValue.LOW)) {
+      candidates.push({
+        type: MascotSuggestionType.CHECK_IN,
+        title: "Một nhịp nghỉ nhỏ cũng rất đáng quý",
+        content: "Hãy thử hít thở chậm, uống một cốc nước hoặc nhắn cho người bạn tin tưởng.",
+        reason: "Mood gần nhất của bạn đang ở mức thấp.",
+      });
+    }
+    const pendingRoutine = routines.find((routine) => routine.completions.length === 0);
+    if (pendingRoutine) {
+      candidates.push({
+        type: MascotSuggestionType.HABIT,
+        title: `Một bước nhỏ với “${pendingRoutine.name}”`,
+        content: `Hoàn thành ${pendingRoutine.targetValue} ${pendingRoutine.unit} hôm nay để giữ nhịp thói quen.`,
+        reason: "Routine này chưa được đánh dấu hoàn thành hôm nay.",
+        payload: { routineId: pendingRoutine.id },
+      });
+    }
+    if (connectionCount === 0) {
+      candidates.push({
+        type: MascotSuggestionType.SOCIAL,
+        title: "Tìm một người đồng điệu",
+        content: "Khám phá gợi ý matching để bắt đầu một kết nối tích cực mới.",
+        reason: "Bạn chưa có kết nối đang hoạt động.",
+      });
+    }
+
+    for (const candidate of candidates.slice(0, 3)) {
+      const recent = await prisma.mascotSuggestion.findFirst({
+        where: { userId, title: candidate.title, createdAt: { gte: recentCutoff } },
+      });
+      if (!recent) {
+        await prisma.mascotSuggestion.create({
+          data: {
+            userId,
+            ...candidate,
+            expiresAt: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+    }
+    return this.listSuggestions(userId);
+  }
   static async respondSuggestion(userId: string, suggestionId: string, status: "SEEN" | "ACCEPTED" | "DISMISSED") {
     const result = await prisma.mascotSuggestion.updateMany({ where: { id: suggestionId, userId }, data: { status, seenAt: new Date(), ...(status === MascotSuggestionStatus.ACCEPTED || status === MascotSuggestionStatus.DISMISSED ? { respondedAt: new Date() } : {}) } });
     if (!result.count) throw new AppError("Không tìm thấy gợi ý", 404); return { status };

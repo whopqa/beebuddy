@@ -22,6 +22,14 @@ export class NotificationsService {
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        actor: {
+          select: {
+            id: true,
+            profile: { select: { fullName: true, username: true, avatarUrl: true } },
+          },
+        },
+      },
     });
     const hasMore = rows.length > take;
     const items = hasMore ? rows.slice(0, take) : rows;

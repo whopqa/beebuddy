@@ -3,12 +3,14 @@ import {
   ConnectionStatus,
   MatchFeedbackType,
   MatchRecommendationStatus,
+  NotificationType,
   Prisma,
   ProfileAudience,
   ProfileSection,
 } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../common/errors/app-error";
+import { NotificationService } from "../../common/services/notification.service";
 
 function pairKey(first: string, second: string) { return [first, second].sort().join(":"); }
 function ageFrom(date?: Date | null) {
@@ -78,10 +80,19 @@ export class MatchingService {
         ...(sharedHabits ? [{ code: "SHARED_HABITS", count: sharedHabits }] : []),
         ...(goalMatches ? [{ code: "MATCHED_GOALS", count: goalMatches }] : []),
       ] }];
-    }).sort((a, b) => b.score - a.score).slice(0, Math.min(Math.max(limit, 1), 50));
+    }).filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.min(Math.max(limit, 1), 50));
     const batchId = randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     return prisma.$transaction(async (tx) => {
+      await tx.matchRecommendation.updateMany({
+        where: {
+          userId,
+          status: { in: [MatchRecommendationStatus.PENDING, MatchRecommendationStatus.VIEWED] },
+        },
+        data: { status: MatchRecommendationStatus.EXPIRED },
+      });
       const items = [];
       for (const item of ranked) {
         items.push(await tx.matchRecommendation.create({
@@ -113,10 +124,19 @@ export class MatchingService {
       }
       if (type === MatchFeedbackType.CONNECT) {
         const key = pairKey(userId, rec.candidateUserId);
-        await tx.connection.upsert({
+        const connection = await tx.connection.upsert({
           where: { pairKey: key },
           update: { requesterId: userId, addresseeId: rec.candidateUserId, userId, targetId: rec.candidateUserId, status: ConnectionStatus.PENDING, requestedAt: now, respondedAt: null, endedAt: null },
           create: { userId, targetId: rec.candidateUserId, requesterId: userId, addresseeId: rec.candidateUserId, pairKey: key },
+        });
+        await NotificationService.create(tx, {
+          recipientId: rec.candidateUserId,
+          actorId: userId,
+          type: NotificationType.CONNECTION_REQUEST,
+          entityType: "Connection",
+          entityId: connection.id,
+          payload: { connectionId: connection.id, requesterId: userId },
+          dedupeKey: `connection-request:${connection.id}:${now.toISOString()}`,
         });
       }
       if (type === MatchFeedbackType.REPORT) {

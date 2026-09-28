@@ -30,6 +30,20 @@ export type AccountSettings = {
   theme: string;
 };
 
+export type AccountSession = {
+  id: string;
+  deviceName?: string | null;
+  platform?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  lastUsedAt: string;
+  expiresAt: string;
+  revokedAt?: string | null;
+  createdAt: string;
+  isCurrent: boolean;
+  isActive: boolean;
+};
+
 async function request<T>(path: string, init?: RequestInit) {
   const response = await fetch(`/api/account/${path}`, {
     ...init,
@@ -52,4 +66,7 @@ export const accountApi = {
     request<AccountSettings>("settings", { method: "PUT", body: JSON.stringify(data) }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<null>("password", { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) }),
+  sessions: () => request<AccountSession[]>("sessions"),
+  revokeOtherSessions: () => request<{ revokedCount: number }>("sessions", { method: "DELETE" }),
+  revokeSession: (id: string) => request<{ revoked: boolean }>(`sessions/${id}`, { method: "DELETE" }),
 };

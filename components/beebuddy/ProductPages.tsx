@@ -28,10 +28,20 @@ import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
 import SimpleFooter from "./SimpleFooter";
 import CommentsModal from "./CommentsModal";
+import CommunityHub from "./CommunityHub";
+import NotificationsHub from "./NotificationsHub";
+import SecurityHub from "./SecurityHub";
 import { webAuth } from "@/lib/auth-client";
+import type { WebUser } from "@/lib/auth-types";
 import { accountApi, type AccountProfile, type AccountSettings } from "@/lib/account-client";
 import { postsApi, type FeedPost } from "@/lib/posts-client";
-import { getSubscriptionPlans, type SubscriptionPlan } from "@/lib/payments-client";
+import {
+  createCheckout,
+  getPaymentStatus,
+  getSubscriptionPlans,
+  type Checkout,
+  type SubscriptionPlan,
+} from "@/lib/payments-client";
 import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
 
 export type ProductView =
@@ -50,30 +60,39 @@ export default function ProductPage({ view }: { view: ProductView }) {
   // Community uses full mountain footer per Figma 219:5235 / 481:1343
   const isCommunity = view === "community";
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<WebUser | null>(null);
 
   useEffect(() => {
     let active = true;
-    webAuth.me().then(() => active && setIsLoggedIn(true)).catch(() => active && setIsLoggedIn(false));
+    webAuth.me().then((user) => {
+      if (!active) return;
+      setIsLoggedIn(true);
+      setCurrentUser(user);
+    }).catch(() => {
+      if (!active) return;
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+    });
     return () => { active = false; };
   }, []);
 
   return (
     <div className="bb-site bb-product-page-root">
       <FigmaHeader authenticated={isLoggedIn} />
-      <ProductContent view={view} isLoggedIn={isLoggedIn} />
+      <ProductContent view={view} isLoggedIn={isLoggedIn} currentUser={currentUser} />
       {isCommunity ? <FigmaFooter /> : <SimpleFooter />}
     </div>
   );
 }
 
-function ProductContent({ view, isLoggedIn }: { view: ProductView; isLoggedIn: boolean }) {
+function ProductContent({ view, isLoggedIn, currentUser }: { view: ProductView; isLoggedIn: boolean; currentUser: WebUser | null }) {
   switch (view) {
     case "get-started":
       return <GetStarted />;
     case "start-your-journey":
       return <StartYourJourney />;
     case "community":
-      return <CommunityDirectory isLoggedIn={isLoggedIn} />;
+      return <CommunityHub isLoggedIn={isLoggedIn} currentUser={currentUser} />;
     case "settings":
       return <Settings isLoggedIn={isLoggedIn} />;
     case "account":
@@ -81,13 +100,13 @@ function ProductContent({ view, isLoggedIn }: { view: ProductView; isLoggedIn: b
     case "account-edit":
       return <AccountInfo isLoggedIn={isLoggedIn} editing />;
     case "security":
-      return <Security isLoggedIn={isLoggedIn} />;
+      return <SecurityHub isLoggedIn={isLoggedIn} />;
     case "billing":
       return <Billing isLoggedIn={isLoggedIn} />;
     case "help":
       return <HelpSupport isLoggedIn={isLoggedIn} />;
     case "notifications":
-      return <Notifications />;
+      return <NotificationsHub />;
   }
 }
 
@@ -1158,6 +1177,9 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
 function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentTier, setCurrentTier] = useState<string | null>(null);
+  const [checkout, setCheckout] = useState<Checkout | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState("PENDING");
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -1181,6 +1203,33 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const price = (value: number) =>
     value === 0 ? "Miễn phí" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
   const planIcons: Record<SubscriptionPlan["tier"], string> = { FREE: "⭐", VIP: "🧭", PRO: "🛡️" };
+  const startCheckout = async (tier: "VIP" | "PRO") => {
+    setCheckoutLoading(tier);
+    setError("");
+    try {
+      const nextCheckout = await createCheckout(tier);
+      setCheckout(nextCheckout);
+      setPaymentStatus("PENDING");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tạo đơn thanh toán");
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
+  const refreshPayment = async () => {
+    if (!checkout) return;
+    setCheckoutLoading(checkout.tier);
+    setError("");
+    try {
+      const payment = await getPaymentStatus(checkout.orderCode);
+      setPaymentStatus(payment.status);
+      if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể kiểm tra trạng thái");
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   return (
     <main className="bb-canvas bb-billing-canvas">
@@ -1195,7 +1244,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               </p>
               <div className="bb-billing-security-note">
                 <Shield size={14} className="text-gray-400" />
-                <span>Giá niêm yết bằng VND cho một tháng. Thanh toán trực tuyến sẽ được kích hoạt trong W5.</span>
+                <span>Giá niêm yết bằng VND. Thanh toán bằng VietQR; quyền gói chỉ được cấp sau webhook hợp lệ.</span>
               </div>
             </div>
             <Link href="/help" className="bb-billing-help-btn">❓ Trợ giúp</Link>
@@ -1230,13 +1279,18 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                       </div>
                       <p className="bb-plan-short-desc">Gói {plan.tier} dành cho thành viên BeeBuddy.</p>
                       <ul className="bb-plan-checklist">
-                        {plan.features.map((feature) => <li key={feature}><span className="dot" />{feature}</li>)}
+                        {plan.features.map((feature) => <li key={feature.code}><span className="dot" />{feature.name}</li>)}
                       </ul>
                       {isCurrent ? (
                         <span className="bb-plan-status-label">✓ Gói hiện tại</span>
                       ) : isLoggedIn ? (
-                        <button type="button" className="bb-plan-action-filled orange" disabled title="Thanh toán sẽ được hoàn thiện ở W5">
-                          Thanh toán sắp mở
+                        <button
+                          type="button"
+                          className="bb-plan-action-filled orange"
+                          disabled={checkoutLoading !== null}
+                          onClick={() => void startCheckout(plan.tier as "VIP" | "PRO")}
+                        >
+                          {checkoutLoading === plan.tier ? "Đang tạo đơn..." : "Thanh toán bằng VietQR →"}
                         </button>
                       ) : (
                         <Link href="/login" className="bb-plan-action-filled orange bb-plan-link-action">Đăng nhập để nâng cấp →</Link>
@@ -1253,6 +1307,27 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 />
               </div>
             </div>
+          )}
+
+          {checkout && (
+            <section className="bb-billing-live-checkout" aria-live="polite">
+              <div>
+                <p className="bb-billing-live-kicker">Đơn hàng #{checkout.orderCode}</p>
+                <h2>Thanh toán gói {checkout.tier}</h2>
+                <p>{checkout.instructions}</p>
+                <dl>
+                  <div><dt>Số tiền</dt><dd>{price(checkout.amount)}</dd></div>
+                  <div><dt>Nội dung</dt><dd>{checkout.description}</dd></div>
+                  <div><dt>Trạng thái</dt><dd className={`is-${paymentStatus.toLowerCase()}`}>{paymentStatus}</dd></div>
+                </dl>
+                <div className="bb-billing-live-actions">
+                  <button type="button" onClick={() => void refreshPayment()} disabled={checkoutLoading !== null}>Kiểm tra trạng thái</button>
+                  <button type="button" className="secondary" onClick={() => setCheckout(null)}>Đóng</button>
+                </div>
+                <small>Trong môi trường development, đơn sẽ giữ PENDING cho đến khi backend nhận webhook PayOS có chữ ký hợp lệ.</small>
+              </div>
+              <img src={checkout.qrCodeUrl} alt={`Mã VietQR cho đơn ${checkout.orderCode}`} />
+            </section>
           )}
         </div>
       </div>

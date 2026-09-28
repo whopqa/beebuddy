@@ -11,6 +11,9 @@ router.put("/profile", AccountController.updateProfile);
 router.get("/privacy", AccountController.getProfilePrivacy);
 router.put("/privacy", AccountController.updateProfilePrivacy);
 router.put("/password", AccountController.changePassword);
+router.get("/sessions", AccountController.getSessions);
+router.delete("/sessions", AccountController.revokeOtherSessions);
+router.delete("/sessions/:id", AccountController.revokeSession);
 router.get("/settings", AccountController.getSettings);
 router.put("/settings", AccountController.updateSettings);
 
