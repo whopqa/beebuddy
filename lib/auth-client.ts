@@ -1,4 +1,4 @@
-import type { ApiEnvelope, AuthPayload, WebUser } from "./auth-types";
+import type { ApiEnvelope, AuthPayload, AuthRequestResult, RegisterPayload, WebUser } from "./auth-types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -31,9 +31,29 @@ export const webAuth = {
     password: string,
     consent: { acceptTerms: boolean; acceptPrivacy: boolean; consentSessionId?: string }
   ) =>
-    request<AuthPayload>("/api/auth/register", {
+    request<RegisterPayload>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ fullName, email, password, ...consent }),
+    }),
+  requestEmailVerification: (email: string) =>
+    request<AuthRequestResult>("/api/auth/email-verification/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  confirmEmailVerification: (email: string, code: string) =>
+    request<AuthPayload>("/api/auth/email-verification/confirm", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+  requestPasswordReset: (email: string) =>
+    request<AuthRequestResult>("/api/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    request<{ passwordReset: boolean; sessionsRevoked: boolean }>("/api/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
     }),
   me: () => request<WebUser>("/api/auth/me"),
   logout: async () => {

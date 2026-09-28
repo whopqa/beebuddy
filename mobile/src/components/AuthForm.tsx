@@ -18,14 +18,24 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     if (busy) return;
     if (register && fullName.trim().length < 2) { setError("Họ tên phải có ít nhất 2 ký tự."); return; }
     if (!email.includes("@")) { setError("Email không hợp lệ."); return; }
-    if (register && password.length < 6) { setError("Mật khẩu phải có ít nhất 6 ký tự."); return; }
+    if (register && (password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(password) || !/\d/.test(password))) { setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số."); return; }
     if (register && !acceptLegal) { setError("Bạn cần đồng ý Điều khoản và Chính sách quyền riêng tư."); return; }
     setBusy(true);
     setError(null);
     try {
-      if (register) await signUp(fullName, email, password, acceptLegal, acceptLegal);
-      else await signIn(email, password);
-      router.replace("/");
+      if (register) {
+        const result = await signUp(fullName, email, password, acceptLegal, acceptLegal);
+        router.replace({
+          pathname: "/verify-email",
+          params: {
+            email: result.user.email,
+            ...(result.developmentCode ? { devCode: result.developmentCode } : {}),
+          },
+        });
+      } else {
+        await signIn(email, password);
+        router.replace("/");
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Có lỗi xảy ra.");
     } finally {
@@ -50,7 +60,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             </Pressable>
           )}
           {error && <Text style={styles.error}>{error}</Text>}
+          {!register && error?.includes("Email chưa được xác minh") && (
+            <Link href={{ pathname: "/verify-email", params: { email } }} style={styles.link}>Nhập hoặc gửi lại mã xác minh</Link>
+          )}
           <Pressable style={[styles.button, busy && styles.disabled]} disabled={busy} onPress={() => void submit()}>{busy ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>{register ? "Đăng ký" : "Đăng nhập"}</Text>}</Pressable>
+          {!register && <Link href="/forgot-password" style={styles.link}>Quên mật khẩu?</Link>}
           <Link href={register ? "/sign-in" : "/sign-up"} style={styles.link}>{register ? "Đã có tài khoản? Đăng nhập" : "Chưa có tài khoản? Đăng ký"}</Link>
           <Link href="/" style={styles.guest}>Khám phá với tư cách khách</Link>
         </ScrollView>

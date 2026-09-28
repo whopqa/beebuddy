@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import {
   AuthProvider,
   LegalDocumentType,
+  OneTimeTokenType,
   ProfileAudience,
   ProfileSection,
   Role,
@@ -11,6 +12,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma";
 import { AuthService } from "../src/modules/auth/auth.service";
+import { AuthEmailService } from "../src/modules/auth/auth-email.service";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -25,6 +27,7 @@ async function mockUser(overrides: Record<string, unknown> = {}) {
     role: Role.USER,
     tier: SubscriptionTier.FREE,
     isBanned: false,
+    isVerified: true,
     banReason: null,
     profile: null,
     authIdentities: [{ id: "identity-1", passwordHash }],
@@ -74,10 +77,11 @@ describe("AuthService.register", () => {
       email: "new@beebuddy.vn",
       role: Role.USER,
       tier: SubscriptionTier.FREE,
+      isVerified: false,
       profile: { fullName: "New User" },
       settings: {},
     } as never);
-    vi.spyOn(prisma.userSession, "create").mockResolvedValue({} as never);
+    const createSession = vi.spyOn(prisma.userSession, "create").mockResolvedValue({} as never);
     vi.spyOn(prisma.plan, "findFirst").mockResolvedValue({ id: "free-plan" } as never);
     vi.spyOn(prisma.legalDocument, "findMany").mockResolvedValue([
       { id: "terms-v1", type: LegalDocumentType.TERMS },
@@ -88,8 +92,12 @@ describe("AuthService.register", () => {
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
       callback(prisma)
     );
+    vi.spyOn(prisma.oneTimeToken, "findFirst").mockResolvedValue(null);
+    vi.spyOn(prisma.oneTimeToken, "updateMany").mockResolvedValue({ count: 0 });
+    vi.spyOn(prisma.oneTimeToken, "create").mockResolvedValue({ id: "verification-token" } as never);
+    vi.spyOn(AuthEmailService, "sendVerificationCode").mockResolvedValue();
 
-    await AuthService.register({
+    const result = await AuthService.register({
       email: "new@beebuddy.vn",
       password: "password123",
       fullName: "New User",
@@ -134,6 +142,9 @@ describe("AuthService.register", () => {
     expect(createSubscription).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ userId: "new-user", planId: "free-plan" }),
     }));
+    expect(result.verificationRequired).toBe(true);
+    expect(result.verificationSent).toBe(true);
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("rejects registration when legal consent is missing", async () => {
@@ -210,5 +221,144 @@ describe("AuthService refresh sessions", () => {
     expect(revoke).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ revokedAt: expect.any(Date) }),
     }));
+  });
+});
+
+describe("AuthService email verification", () => {
+  it("issues a hashed one-time code and never stores the plain code", async () => {
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue({
+      id: "user-verify",
+      email: "verify@beebuddy.vn",
+      isVerified: false,
+      profile: { fullName: "Verify User" },
+    } as never);
+    vi.spyOn(prisma.oneTimeToken, "findFirst").mockResolvedValue(null);
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const create = vi.fn().mockImplementation(async ({ data }) => ({ id: "verify-token", ...data }));
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+      callback({ oneTimeToken: { updateMany, create } })
+    );
+    vi.spyOn(AuthEmailService, "sendVerificationCode").mockResolvedValue();
+
+    const result = await AuthService.requestEmailVerification("verify@beebuddy.vn");
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        userId: "user-verify",
+        type: OneTimeTokenType.EMAIL_VERIFICATION,
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    }));
+    expect(create.mock.calls[0][0].data.tokenHash).not.toBe(result.developmentCode);
+    expect(AuthEmailService.sendVerificationCode).toHaveBeenCalledOnce();
+  });
+
+  it("marks the account verified, consumes the code and creates the first session", async () => {
+    const user = {
+      id: "user-verify",
+      email: "verify@beebuddy.vn",
+      role: Role.USER,
+      tier: SubscriptionTier.FREE,
+      isVerified: false,
+    };
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(user as never);
+    vi.spyOn(prisma.oneTimeToken, "findFirst").mockResolvedValue({
+      id: "verify-token",
+      userId: user.id,
+      type: OneTimeTokenType.EMAIL_VERIFICATION,
+      tokenHash: createHash("sha256").update(`${user.id}:123456`).digest("hex"),
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+      attemptCount: 0,
+    } as never);
+    const tx = {
+      oneTimeToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      user: { update: vi.fn().mockResolvedValue({}) },
+      authIdentity: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      userSession: { create: vi.fn().mockResolvedValue({}) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await AuthService.confirmEmailVerification({
+      email: user.email,
+      code: "123456",
+    });
+    expect(result.user.isVerified).toBe(true);
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: user.id },
+      data: { isVerified: true },
+    }));
+    expect(tx.userSession.create).toHaveBeenCalledOnce();
+  });
+});
+
+describe("AuthService password reset", () => {
+  it("changes both password hashes, consumes the token and revokes every session", async () => {
+    const rawToken = "a".repeat(43);
+    vi.spyOn(prisma.oneTimeToken, "findUnique").mockResolvedValue({
+      id: "reset-token",
+      userId: "user-reset",
+      type: OneTimeTokenType.PASSWORD_RESET,
+      tokenHash: createHash("sha256").update(rawToken).digest("hex"),
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+      user: {
+        id: "user-reset",
+        email: "reset@beebuddy.vn",
+        isVerified: true,
+        isBanned: false,
+      },
+    } as never);
+    const tx = {
+      oneTimeToken: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      user: { update: vi.fn().mockResolvedValue({}) },
+      authIdentity: { upsert: vi.fn().mockResolvedValue({}) },
+      userSession: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    await expect(AuthService.confirmPasswordReset({
+      token: rawToken,
+      newPassword: "NewPassword123",
+    })).resolves.toEqual({ passwordReset: true, sessionsRevoked: true });
+
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "user-reset" },
+      data: { passwordHash: expect.any(String) },
+    }));
+    expect(tx.authIdentity.upsert).toHaveBeenCalledOnce();
+    expect(tx.userSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "user-reset", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    }));
+  });
+
+  it("rejects a reset token that lost the atomic one-time-use race", async () => {
+    const rawToken = "b".repeat(43);
+    vi.spyOn(prisma.oneTimeToken, "findUnique").mockResolvedValue({
+      id: "reset-token",
+      userId: "user-reset",
+      type: OneTimeTokenType.PASSWORD_RESET,
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+      user: {
+        id: "user-reset",
+        email: "reset@beebuddy.vn",
+        passwordHash: null,
+        authIdentities: [],
+        isVerified: true,
+        isBanned: false,
+      },
+    } as never);
+    const updateUser = vi.fn();
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback({
+      oneTimeToken: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      user: { update: updateUser },
+    }));
+
+    await expect(AuthService.confirmPasswordReset({
+      token: rawToken,
+      newPassword: "AnotherPassword123",
+    })).rejects.toThrow(/đã được sử dụng/);
+    expect(updateUser).not.toHaveBeenCalled();
   });
 });

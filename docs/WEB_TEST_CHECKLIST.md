@@ -38,7 +38,20 @@ npm.cmd run prisma:seed
 
 Nên dùng cửa sổ thường cho User 1 và cửa sổ ẩn danh/trình duyệt khác cho User 2 để test kết nối và tin nhắn hai chiều.
 
-## 3. Luồng user chính
+## 3. Xác minh email và reset mật khẩu
+
+Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã xác minh và đường dẫn reset ra terminal, đồng thời web hiển thị tiện ích local để test nhanh. Production bắt buộc cấu hình SMTP theo `backend/.env.example`.
+
+1. Mở `/signup`, tạo tài khoản bằng email chưa tồn tại và mật khẩu tối thiểu 8 ký tự có chữ và số.
+2. Xác nhận được chuyển tới `/verify-code`; nhập mã 6 số trong terminal backend.
+3. Thử nhập sai mã; mã đúng phải xác minh tài khoản và tạo phiên đăng nhập.
+4. Đăng xuất, mở `/forgot-password` và nhập email vừa đăng ký.
+5. Mở liên kết reset trong terminal hoặc liên kết local development trên màn hình.
+6. Đặt mật khẩu mới rồi xác nhận mật khẩu cũ không đăng nhập được, mật khẩu mới đăng nhập được.
+7. Xác nhận các phiên đăng nhập trước khi reset đều bị thu hồi.
+8. Thử mở lại cùng liên kết reset; hệ thống phải báo token đã dùng hoặc hết hạn.
+
+## 4. Luồng user chính
 
 ### Dashboard — `/home`
 
@@ -86,7 +99,7 @@ Nên dùng cửa sổ thường cho User 1 và cửa sổ ẩn danh/trình duy�
 3. Bấm kiểm tra trạng thái; trong development trạng thái dự kiến là `PENDING`.
 4. Không tự sửa `COMPLETED` trong database. Quyền gói chỉ được cấp khi backend nhận webhook PayOS có chữ ký hợp lệ.
 
-## 4. Luồng admin
+## 5. Luồng admin
 
 Đăng xuất user, đăng nhập `admin@beebuddy.vn`, rồi mở `/admin`.
 
@@ -96,7 +109,7 @@ Nên dùng cửa sổ thường cho User 1 và cửa sổ ẩn danh/trình duy�
 4. Moderation: thêm rồi xóa một từ cấm thử nghiệm.
 5. Nếu có bình luận bị report/flagged, thử Approve hoặc Hide và xác nhận hàng đợi cập nhật.
 
-## 5. Kết quả tự động hiện tại
+## 6. Kết quả tự động hiện tại
 
 ```powershell
 cd backend
@@ -108,9 +121,9 @@ npx.cmd tsc --noEmit
 npm.cmd run build
 ```
 
-Kỳ vọng: backend compile; 34/34 test pass; web TypeScript pass; Next.js build đủ 41 trang/route.
+Kỳ vọng: backend compile; 38/38 test pass; web TypeScript pass; Next.js build đủ 46 trang/route; mobile typecheck và lint pass.
 
-## 6. Phạm vi chưa phải luồng production hoàn chỉnh
+## 7. Phạm vi chưa phải luồng production hoàn chỉnh
 
 - Google/Apple OAuth chưa có provider credentials nên nút social login chỉ thông báo chưa kết nối.
 - Thanh toán local tạo đơn và QR thật theo cấu hình development, nhưng không giả lập webhook thành công.

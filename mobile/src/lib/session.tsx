@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { ApiError, authApi, AuthResult, Tokens, User } from "./api";
+import { ApiError, authApi, AuthResult, RegisterResult, Tokens, User } from "./api";
 
 const SESSION_KEY = "beebuddy_session";
 
@@ -9,7 +9,8 @@ type SessionContextValue = {
   user: User | null;
   accessToken: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (fullName: string, email: string, password: string, acceptTerms: boolean, acceptPrivacy: boolean) => Promise<void>;
+  signUp: (fullName: string, email: string, password: string, acceptTerms: boolean, acceptPrivacy: boolean) => Promise<RegisterResult>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -68,7 +69,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [acceptSession]);
 
   const signUp = useCallback(async (fullName: string, email: string, password: string, acceptTerms: boolean, acceptPrivacy: boolean) => {
-    await acceptSession(await authApi.register(fullName.trim(), email.trim(), password, acceptTerms, acceptPrivacy));
+    return authApi.register(fullName.trim(), email.trim(), password, acceptTerms, acceptPrivacy);
+  }, []);
+
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    await acceptSession(await authApi.confirmEmailVerification(email.trim(), code.trim()));
   }, [acceptSession]);
 
   const signOut = useCallback(async () => {
@@ -81,7 +86,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [tokens]);
 
   return (
-    <SessionContext.Provider value={{ loading, user, accessToken: tokens?.accessToken ?? null, signIn, signUp, signOut }}>
+    <SessionContext.Provider value={{ loading, user, accessToken: tokens?.accessToken ?? null, signIn, signUp, verifyEmail, signOut }}>
       {children}
     </SessionContext.Provider>
   );
