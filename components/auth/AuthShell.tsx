@@ -71,6 +71,7 @@ export default function AuthShell({
   const [form, setForm] = useState({ name: "", email: initialEmail, password: "", confirm: "", oldPassword: "" });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [showSignupConsents, setShowSignupConsents] = useState(false);
   const { title, subtitle, submit: submitLabel } = copy[mode];
 
   useEffect(() => {
@@ -88,8 +89,10 @@ export default function AuthShell({
     if (mode === "login" && !form.password) return setError("Please enter your password.");
     if (mode === "signup" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số.");
     if (mode === "signup" && form.password !== form.confirm) return setError("Passwords do not match.");
-    if (mode === "signup" && !acceptTerms) return setError("Bạn cần đồng ý Điều khoản sử dụng để đăng ký.");
-    if (mode === "signup" && !acceptPrivacy) return setError("Bạn cần đồng ý Chính sách quyền riêng tư để đăng ký.");
+    if (mode === "signup" && (!acceptTerms || !acceptPrivacy)) {
+      setShowSignupConsents(true);
+      return setError("Vui lòng xác nhận Điều khoản sử dụng và Chính sách quyền riêng tư để đăng ký.");
+    }
     if (mode === "change" && (!form.oldPassword || form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu mới cần ít nhất 8 ký tự, gồm chữ và số.");
     if (mode === "change" && form.oldPassword === form.password) return setError("New password must be different from the old password.");
     if (mode === "reset" && !resetToken) return setError("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã thiếu token.");
@@ -152,6 +155,7 @@ export default function AuthShell({
   const googleSignIn = async (credential: string) => {
     setError(""); setNotice("");
     if (mode === "signup" && (!acceptTerms || !acceptPrivacy)) {
+      setShowSignupConsents(true);
       setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư trước khi đăng ký bằng Google.");
       return;
     }
@@ -182,7 +186,7 @@ export default function AuthShell({
   };
 
   return (
-    <div className="auth-page bb-figma-auth-screen">
+    <div className={`auth-page bb-figma-auth-screen bb-auth-${mode}`}>
       {/* change-password in Figma uses authenticated header */}
       <FigmaHeader authenticated={mode === "change"} />
 
@@ -191,7 +195,7 @@ export default function AuthShell({
         <section className="auth-hero">
           <div
             className="auth-hero-image"
-            style={{ backgroundImage: "url(/assets/home/figma-puzzle.png)", backgroundPosition: "82% center" }}
+            style={{ backgroundImage: "url(/assets/home/figma-puzzle.png)" }}
           />
           <div className="auth-hero-copy">
             <h2>Explore the world with friends</h2>
@@ -230,7 +234,7 @@ export default function AuthShell({
                 />
               )}
 
-              {["login", "signup", "forgot", "verify"].includes(mode) && (
+              {(["login", "signup", "forgot"].includes(mode) || (mode === "verify" && !initialEmail)) && (
                 <Field
                   label="Email Address"
                   type="email"
@@ -266,7 +270,7 @@ export default function AuthShell({
                     onChange={(v) => update("confirm", v)}
                     toggle={() => setShowPassword(!showPassword)}
                   />
-                  <div className="bb-signup-consents">
+                  {showSignupConsents && <div className="bb-signup-consents">
                     <label className="bb-signup-consent-row">
                       <input
                         type="checkbox"
@@ -289,7 +293,7 @@ export default function AuthShell({
                         Tôi đồng ý với <Link href="/privacy" target="_blank">Chính sách quyền riêng tư</Link>.
                       </span>
                     </label>
-                  </div>
+                  </div>}
                 </>
               )}
 
@@ -368,7 +372,7 @@ export default function AuthShell({
               <button className="auth-submit bb-figma-btn-primary" disabled={loading}>
                 {loading ? "Please wait..." : submitLabel}
               </button>
-              {mode === "verify" && (
+              {mode === "verify" && (error || notice) && (
                 <button
                   type="button"
                   className="auth-switch-link"
@@ -381,7 +385,7 @@ export default function AuthShell({
               )}
             </form>
 
-            {(mode === "login" || mode === "signup") && googleSignInConfigured && (
+            {(mode === "login" || mode === "signup") && (
               <>
                 <AuthDivider />
                 <div className="bb-social-stack">
@@ -390,12 +394,13 @@ export default function AuthShell({
                       Bằng cách tiếp tục với Google, bạn đồng ý với <Link href="/terms" target="_blank">Điều khoản sử dụng</Link> và <Link href="/privacy" target="_blank">Chính sách quyền riêng tư</Link> của BeeBuddy.
                     </p>
                   )}
-                  <GoogleSignInButton
+                  {googleSignInConfigured ? <GoogleSignInButton
                     mode={mode}
                     disabled={loading}
                     onCredential={googleSignIn}
                     onError={setError}
-                  />
+                  /> : <SocialLoginButton provider="Google" disabled />}
+                  <SocialLoginButton provider="Apple" disabled />
                 </div>
               </>
             )}
@@ -509,5 +514,31 @@ export function AuthDivider() {
       <span className="auth-divider-text">Or continue with</span>
       <span className="auth-divider-line" />
     </div>
+  );
+}
+
+export function SocialLoginButton({ provider, disabled = false }: { provider: "Google" | "Apple"; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={`social-login ${provider === "Apple" ? "apple" : "google"}`}
+      disabled={disabled}
+      title={provider === "Apple" ? "Apple login is not available yet" : "Google login is not configured"}
+      aria-label={`Continue with ${provider}`}
+    >
+      {provider === "Google" ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.42c.64-.78 1.08-1.87.96-2.96-.94.04-2.07.63-2.73 1.41-.58.68-1.1 1.77-.96 2.83 1.05.08 2.1-.53 2.73-1.28z" />
+        </svg>
+      )}
+      <span>Continue with {provider}</span>
+    </button>
   );
 }

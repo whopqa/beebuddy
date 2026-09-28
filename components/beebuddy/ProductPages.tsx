@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion, type Transition } from "motion/react";
 import {
   MessageSquare,
   Users,
@@ -9,6 +10,7 @@ import {
   Clock,
   Search,
   SlidersHorizontal,
+  ChevronDown,
   ArrowLeft,
   Globe,
   Heart,
@@ -29,12 +31,9 @@ import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
 import SimpleFooter from "./SimpleFooter";
 import CommentsModal from "./CommentsModal";
-import CommunityHub from "./CommunityHub";
-import NotificationsHub from "./NotificationsHub";
-import SecurityHub from "./SecurityHub";
 import { webAuth } from "@/lib/auth-client";
 import type { WebUser } from "@/lib/auth-types";
-import { accountApi, type AccountProfile, type AccountSettings } from "@/lib/account-client";
+import { accountApi, type AccountProfile, type AccountSettings, type AccountSession } from "@/lib/account-client";
 import { postsApi, type FeedPost } from "@/lib/posts-client";
 import {
   cancelCheckout,
@@ -45,6 +44,7 @@ import {
   type PaymentStatus as PaymentStatusRecord,
   type SubscriptionPlan,
 } from "@/lib/payments-client";
+import { notificationsApi, type AppNotification } from "@/lib/notifications-client";
 import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
 import { uploadImage } from "@/lib/media-client";
 
@@ -92,11 +92,11 @@ export default function ProductPage({ view }: { view: ProductView }) {
 function ProductContent({ view, isLoggedIn, currentUser }: { view: ProductView; isLoggedIn: boolean; currentUser: WebUser | null }) {
   switch (view) {
     case "get-started":
-      return <GetStarted />;
+      return <GetStarted isLoggedIn={isLoggedIn} />;
     case "start-your-journey":
       return <StartYourJourney />;
     case "community":
-      return <CommunityHub isLoggedIn={isLoggedIn} currentUser={currentUser} />;
+      return <CommunityDirectory isLoggedIn={isLoggedIn} />;
     case "settings":
       return <Settings isLoggedIn={isLoggedIn} />;
     case "account":
@@ -104,13 +104,13 @@ function ProductContent({ view, isLoggedIn, currentUser }: { view: ProductView; 
     case "account-edit":
       return <AccountInfo isLoggedIn={isLoggedIn} editing />;
     case "security":
-      return <SecurityHub isLoggedIn={isLoggedIn} />;
+      return <Security isLoggedIn={isLoggedIn} />;
     case "billing":
       return <Billing isLoggedIn={isLoggedIn} />;
     case "help":
       return <HelpSupport isLoggedIn={isLoggedIn} />;
     case "notifications":
-      return <NotificationsHub />;
+      return <Notifications />;
   }
 }
 
@@ -164,7 +164,18 @@ function SettingsNavTabs({ active }: { active: "settings" | "account" | "billing
 /* ==========================================================================
    1. GET STARTED (Figma Frame 227:40 & 280:2924)
    ========================================================================== */
-function GetStarted() {
+function GetStarted({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const reducedMotion = useReducedMotion() === true;
+  const entrance = (start: number, first = false) => {
+    const times = first ? [0, 0.25, 1] : [0, start, start + 0.25, 1];
+    const opacity = first ? [0, 1, 1] : [0, 0, 1, 1];
+    const y = first ? [24, 0, 0] : [24, 24, 0, 0];
+    const ease: Transition["ease"] = first ? [[0.22, 1, 0.36, 1], "linear"] : ["linear", [0.22, 1, 0.36, 1], "linear"];
+    return reducedMotion
+      ? { initial: false as const, animate: { opacity: 1, y: 0 }, transition: { duration: 0 } }
+      : { initial: { opacity: 0, y: 24 }, animate: { opacity, y }, transition: { opacity: { duration: 2, times, ease }, y: { duration: 2, times, ease } } as Transition };
+  };
+  const afterSubtitle = (start: number) => start + (isLoggedIn ? 0.02 : 0);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([
     "Backpack & Trek",
     "Foodie & Cafes",
@@ -190,16 +201,20 @@ function GetStarted() {
     <main className="bb-canvas bb-get-started-canvas">
       {/* 1. Header welcome */}
       <section className="bb-gs-welcome-section">
-        <span className="bb-gs-kicker-pill">● ONBOARDING CENTER</span>
-        <h1 className="bb-gs-main-title">YOUR JOURNEY STARTS HERE</h1>
-        <p className="bb-gs-subtitle">
+        <motion.span className="bb-gs-kicker-pill" data-node-id={isLoggedIn ? "280:2973" : "227:63"} {...entrance(0, true)}>● ONBOARDING CENTER</motion.span>
+        <motion.h1 className="bb-gs-main-title" data-node-id={isLoggedIn ? "280:2977" : "227:67"} {...entrance(0.04)}>YOUR JOURNEY STARTS HERE</motion.h1>
+        {isLoggedIn ? <motion.p className="bb-gs-subtitle" data-node-id="280:2978" {...entrance(0.07)}>
           Welcome to BeeBuddy! Setting up your space takes less than 2 minutes. Follow these simple
           checkpoints to customize your travel style, connect with verified companions, and prepare
           for your next shared adventure.
-        </p>
+        </motion.p> : <p className="bb-gs-subtitle">
+          Welcome to BeeBuddy! Setting up your space takes less than 2 minutes. Follow these simple
+          checkpoints to customize your travel style, connect with verified companions, and prepare
+          for your next shared adventure.
+        </p>}
 
         {/* Ready to setup travel passport card */}
-        <div className="bb-gs-passport-card">
+        <motion.div className="bb-gs-passport-card" data-node-id={isLoggedIn ? "280:2979" : "227:69"} {...entrance(afterSubtitle(0.09))}>
           <img
             src="/assets/community/alex_rivera.png"
             alt="Traveler avatar"
@@ -220,7 +235,7 @@ function GetStarted() {
             <span>LAUNCH PASSPORT</span>
             <span>💬</span>
           </button>
-        </div>
+        </motion.div>
       </section>
 
       {/* 2. How BeeBuddy Works Walkthrough (4 Staggered Steps) */}
@@ -234,19 +249,19 @@ function GetStarted() {
             <div className="bb-gs-step-text">
               <span className="bb-gs-step-num">01</span>
               <h3>Find Your People</h3>
-              <p>
+              <motion.p data-node-id={isLoggedIn ? "280:3000" : "227:91"} {...entrance(afterSubtitle(0.15))}>
                 Onboarding starts with self-expression. Share your unique vibe, preferred pace, and
                 local exploration bucket lists. Our intelligent matchmaking aligns you with buddies
                 traveling with exact-match expectations.
-              </p>
-              <ul className="bb-gs-step-bullets">
+              </motion.p>
+              <motion.ul className="bb-gs-step-bullets" data-node-id={isLoggedIn ? "280:3001" : "227:92"} {...entrance(afterSubtitle(0.19))}>
                 <li><span className="bb-bullet-dot" /> Social Media Identity Sync</li>
                 <li><span className="bb-bullet-dot" /> Vibe & Activity Tags</li>
-              </ul>
+              </motion.ul>
             </div>
-            <div className="bb-gs-step-img-wrap">
-              <img src="/assets/home/hero-01.png" alt="Find your people" className="bb-gs-step-img" />
-            </div>
+            <motion.div className="bb-gs-step-img-wrap" data-node-id={isLoggedIn ? "280:3008" : "227:99"} {...entrance(afterSubtitle(0.17))}>
+              <img src="/assets/home/figma-onboarding-step-1.png" alt="Find your people" className="bb-gs-step-img" />
+            </motion.div>
           </div>
 
           {/* Step 02 (Reversed) */}
@@ -254,19 +269,19 @@ function GetStarted() {
             <div className="bb-gs-step-text">
               <span className="bb-gs-step-num">02</span>
               <h3>Shared Adventures</h3>
-              <p>
+              <motion.p data-node-id={isLoggedIn ? "280:3015" : "227:107"} {...entrance(afterSubtitle(0.23))}>
                 Browse, join, or create micro-events. Whether it is a weekend market run, a local
                 foodie crawl, or an intense mountain trek, shared plans build immediate comfort.
                 Every event includes real-time group chat before setting out.
-              </p>
-              <ul className="bb-gs-step-bullets">
+              </motion.p>
+              <motion.ul className="bb-gs-step-bullets" data-node-id={isLoggedIn ? "280:3016" : "227:108"} {...entrance(afterSubtitle(0.27))}>
                 <li><span className="bb-bullet-dot" /> Instant Group Events & Meetups</li>
                 <li><span className="bb-bullet-dot" /> Pre-Trip Coordinates & Chats</li>
-              </ul>
+              </motion.ul>
             </div>
-            <div className="bb-gs-step-img-wrap">
-              <img src="/assets/home/figma-community-mountain.png" alt="Shared adventures" className="bb-gs-step-img" />
-            </div>
+            <motion.div className="bb-gs-step-img-wrap" data-node-id={isLoggedIn ? "280:3011" : "227:102"} {...entrance(afterSubtitle(0.25))}>
+              <img src="/assets/home/figma-onboarding-step-2.png" alt="Shared adventures" className="bb-gs-step-img" />
+            </motion.div>
           </div>
 
           {/* Step 03 */}
@@ -274,19 +289,19 @@ function GetStarted() {
             <div className="bb-gs-step-text">
               <span className="bb-gs-step-num">03</span>
               <h3>Stories That Stay</h3>
-              <p>
+              <motion.p data-node-id={isLoggedIn ? "280:3026" : "227:119"} {...entrance(afterSubtitle(0.31))}>
                 Preserve what matters. Share travel snapshots, pin your favorite local coffee shops,
                 and write journal entries directly inside the community log. Let others trace your
                 favorite trails and learn from your stories.
-              </p>
-              <ul className="bb-gs-step-bullets">
+              </motion.p>
+              <motion.ul className="bb-gs-step-bullets" data-node-id={isLoggedIn ? "280:3027" : "227:120"} {...entrance(afterSubtitle(0.35))}>
                 <li><span className="bb-bullet-dot" /> Artisanal Route & Spot Pinning</li>
                 <li><span className="bb-bullet-dot" /> Community Scrapbooks & Diaries</li>
-              </ul>
+              </motion.ul>
             </div>
-            <div className="bb-gs-step-img-wrap">
-              <img src="/assets/home/hero-04.png" alt="Stories that stay" className="bb-gs-step-img" />
-            </div>
+            <motion.div className="bb-gs-step-img-wrap" data-node-id={isLoggedIn ? "280:3034" : "227:127"} {...entrance(afterSubtitle(0.33))}>
+              <img src="/assets/home/figma-onboarding-step-3.png" alt="Stories that stay" className="bb-gs-step-img" />
+            </motion.div>
           </div>
 
           {/* Step 04 (Reversed) */}
@@ -294,19 +309,19 @@ function GetStarted() {
             <div className="bb-gs-step-text">
               <span className="bb-gs-step-num">04</span>
               <h3>Build Your Circle</h3>
-              <p>
+              <motion.p data-node-id={isLoggedIn ? "280:3041" : "227:135"} {...entrance(afterSubtitle(0.39))}>
                 Onboarding finalizes with trust. Turn brief holiday connections into lifelong
                 circles. Add travelers to your inner group, stay updated on their next destination
                 ideas, and plan recurring reunions across the globe.
-              </p>
-              <ul className="bb-gs-step-bullets">
+              </motion.p>
+              <motion.ul className="bb-gs-step-bullets" data-node-id={isLoggedIn ? "280:3042" : "227:136"} {...entrance(afterSubtitle(0.43))}>
                 <li><span className="bb-bullet-dot" /> Private Core Member Circles</li>
                 <li><span className="bb-bullet-dot" /> Verified Companion Network</li>
-              </ul>
+              </motion.ul>
             </div>
-            <div className="bb-gs-step-img-wrap">
-              <img src="/assets/home/hero-03.png" alt="Build your circle" className="bb-gs-step-img" />
-            </div>
+            <motion.div className="bb-gs-step-img-wrap" data-node-id={isLoggedIn ? "280:3037" : "227:130"} {...entrance(afterSubtitle(0.41))}>
+              <img src="/assets/home/figma-onboarding-step-4.png" alt="Build your circle" className="bb-gs-step-img" />
+            </motion.div>
           </div>
         </div>
       </section>
@@ -415,13 +430,40 @@ function StartYourJourney() {
 function Notifications() {
   const [activeTab, setActiveTab] = useState<"all" | "unread" | "mentions">("all");
 
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [profileComplete, setProfileComplete] = useState(false);
+  useEffect(() => {
+    let active = true;
+    notificationsApi.list(undefined, 100).then(page => {
+      if (active) { setItems(page.items); setUnreadCount(page.unreadCount); }
+    }).catch(cause => { if (active) setError(cause.message); })
+      .finally(() => { if (active) setLoading(false); });
+    accountApi.profile().then(profile => {
+      if (active) setProfileComplete(Boolean(profile.bio && profile.avatarUrl));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const readNotification = async (item: AppNotification) => {
+    try {
+      if (!item.readAt) {
+        await notificationsApi.markRead(item.id);
+        setItems(current => current.map(row => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
+        setUnreadCount(count => Math.max(0, count - 1));
+      }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to mark notification read."); }
+  };
+  const visibleItems = items.filter(item => activeTab === "unread" ? !item.readAt : activeTab === "mentions" ? item.payload.mention === true : true);
+
   return (
     <main className="bb-canvas bb-notifications-canvas">
       <div className="bb-notif-container">
         <header className="bb-notif-page-header">
           <h1 className="bb-notif-page-title">Notifications</h1>
           <p className="bb-notif-page-sub">
-            {activeTab === "mentions" ? "You have 2 new mentions" : "You have 3 unread messages"}
+            {activeTab === "mentions" ? `${visibleItems.length} mentions` : `${unreadCount} unread notifications`}
           </p>
         </header>
 
@@ -462,27 +504,27 @@ function Notifications() {
             </div>
 
             <div className="bb-notif-checklist">
-              <div className="bb-notif-check-item is-checked">
-                <span className="bb-check-circle">✓</span>
+              <div className={`bb-notif-check-item ${profileComplete ? "is-checked" : ""}`}>
+                <span className={profileComplete ? "bb-check-circle" : "bb-circle-num"}>{profileComplete ? "✓" : "1"}</span>
                 <div>
                   <strong>Complete your profile</strong>
                   <p>Add your photo and bio</p>
                 </div>
               </div>
 
-              <div className="bb-notif-check-item is-checked">
-                <span className="bb-check-circle">✓</span>
+              <div className="bb-notif-check-item">
+                <span className="bb-circle-num">2</span>
                 <div>
-                  <strong>Invite teammates</strong>
-                  <p>Share the workspace link</p>
+                  <strong>Invite friends</strong>
+                  <p>Share BeeBuddy with your friends</p>
                 </div>
               </div>
 
               <div className="bb-notif-check-item">
                 <span className="bb-circle-num">3</span>
                 <div>
-                  <strong>Create your first project</strong>
-                  <p>Start organizing your work</p>
+                  <strong>Explore your community</strong>
+                  <p>Find people who share your interests</p>
                 </div>
               </div>
             </div>
@@ -491,78 +533,33 @@ function Notifications() {
 
         {/* 2. Notifications List Items */}
         <div className="bb-notif-items-card">
-          {activeTab === "all" && (
-            <>
-              <NotificationItem
-                avatar="/assets/community/alex_rivera.png"
-                title={<span><strong>Alex Johnson</strong> invited you to join <span className="text-[#ff7300]">Design Team</span></span>}
-                desc="Join the workspace to collaborate on new projects."
-                time="2m ago"
-                unread
-              />
-              <NotificationItem
-                avatar="/assets/community/header_avatar.png"
-                title={<span><strong>System</strong> shared a file with you</span>}
-                desc="Q3 Marketing Assets.zip has been uploaded to the shared drive."
-                time="1h ago"
-                unread
-              />
-              <NotificationItem
-                avatar="/assets/community/elena_rossi.png"
-                title={<span><strong>Sarah Connor</strong> mentioned you in a comment</span>}
-                desc="&ldquo;Can you review the latest design specs for the dashboard?&rdquo;"
-                time="Yesterday"
-              />
-              <NotificationItem
-                avatar="/assets/community/sam_kim.png"
-                title={<span><strong>TaskBot</strong> assigned you a task</span>}
-                desc="New task: &ldquo;Update user documentation&rdquo; has been added to your board."
-                time="Oct 24"
-              />
-            </>
-          )}
-
-          {activeTab === "unread" && (
-            <>
-              <NotificationItem
-                avatar="/assets/community/alex_rivera.png"
-                title={<span><strong>Alex Johnson</strong> invited you to join <span className="text-[#ff7300]">Design Team</span></span>}
-                desc="Join the workspace to collaborate on new projects."
-                time="2m ago"
-                unread
-              />
-              <NotificationItem
-                avatar="/assets/community/header_avatar.png"
-                title={<span><strong>System</strong> shared a file with you</span>}
-                desc="Q3 Marketing Assets.zip has been uploaded to the shared drive."
-                time="1h ago"
-                unread
-              />
-            </>
-          )}
-
-          {activeTab === "mentions" && (
-            <>
-              <NotificationItem
-                avatar="/assets/community/elena_rossi.png"
-                title={<span><strong>Sarah Chen</strong> mentioned you in <span className="text-[#ff7300]">Homepage Redesign</span></span>}
-                desc="&ldquo;@you Can you review the hero section layout?&rdquo;"
-                time="5m ago"
-                unread
-              />
-              <NotificationItem
-                avatar="/assets/community/marcus_chen.png"
-                title={<span><strong>Mike Rivera</strong> tagged you in</span>}
-                desc="Sprint Review Notes"
-                time="20m ago"
-                unread
-              />
-            </>
-          )}
+          {loading && <p className="bb-notif-row">Loading notifications...</p>}
+          {error && <p className="bb-notif-row form-error" role="alert">{error}</p>}
+          {!loading && !error && visibleItems.length === 0 && <p className="bb-notif-row">No notifications yet.</p>}
+          {visibleItems.map(item => (
+            <NotificationItem key={item.id}
+              avatar={item.actor?.profile?.avatarUrl || "/assets/home/figma-buzzy.png"}
+              title={<span><strong>{item.actor?.profile?.fullName || "BeeBuddy"}</strong> {notificationTitle(item)}</span>}
+              desc={String(item.payload.message || item.payload.content || "You have a new update.")}
+              time={formatRelativeTime(item.createdAt)} unread={!item.readAt}
+              onRead={() => void readNotification(item)}
+            />
+          ))}
         </div>
       </div>
     </main>
   );
+}
+
+function notificationTitle(item: AppNotification) {
+  switch (item.type) {
+    case "CONNECTION_REQUEST": return "sent you a connection request";
+    case "CONNECTION_ACCEPTED": return "accepted your connection request";
+    case "COMMUNITY_INVITE": return "invited you to a community";
+    case "COMMUNITY_JOIN_APPROVED": return "approved your community request";
+    case "MESSAGE": return "sent you a message";
+    default: return "has an update for you";
+  }
 }
 
 function NotificationItem({
@@ -571,15 +568,17 @@ function NotificationItem({
   desc,
   time,
   unread = false,
+  onRead,
 }: {
   avatar: string;
   title: React.ReactNode;
   desc: string;
   time: string;
   unread?: boolean;
+  onRead?: () => void;
 }) {
   return (
-    <div className={`bb-notif-row ${unread ? "is-unread" : ""}`}>
+    <div className={`bb-notif-row ${unread ? "is-unread" : ""}`} role="button" tabIndex={0} onClick={onRead} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onRead?.(); } }}>
       <img src={avatar} alt="" className="bb-notif-row-avatar" />
       <div className="bb-notif-row-body">
         <div className="bb-notif-row-title">{title}</div>
@@ -690,48 +689,6 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
           </div>
         )}
 
-        {authenticated && profile && (
-          <div className="bb-profile-card bb-settings-account-summary">
-            <div className="bb-profile-card-header">
-              <div className="bb-profile-head-left">
-                <UserIcon size={18} className="text-[#ff7300]" />
-                <h2>Account Information</h2>
-              </div>
-              <Link href="/account/edit" className="bb-profile-edit-btn">Edit</Link>
-            </div>
-            <div className="bb-profile-identity-row">
-              <img src={profile.avatarUrl || "/assets/home/figma-buzzy.png"} alt={profile.fullName} className="bb-profile-avatar-circle" />
-              <div className="bb-profile-user-fields">
-                <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{profile.fullName}</strong></div>
-                <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{profile.user.email}</strong></div>
-                <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{profile.username || "Not set"}</strong></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {authenticated && (
-          <div className="bb-settings-preferences-box">
-            <div className="bb-pref-box-title-row">
-              <div className="bb-profile-head-left"><Bell size={18} className="text-[#ff7300]" /><h3>Notification Preferences</h3></div>
-              {saving && <span className="bb-settings-save-state">Saving...</span>}
-              {notice && !saving && <span className="bb-settings-save-state">{notice}</span>}
-            </div>
-            <div className="bb-pref-items-list">
-              <div className="bb-pref-item-row">
-                <div className="bb-pref-item-info"><strong>Email Notifications</strong><p>News, events and important account updates</p></div>
-                <label className="bb-figma-switch"><input type="checkbox" checked={settings.emailNotification} onChange={(event) => void saveSettings({ ...settings, emailNotification: event.target.checked })} /><span /></label>
-              </div>
-              <div className="bb-pref-item-row">
-                <div className="bb-pref-item-info"><strong>Profile Visibility</strong><p>Choose who can see your BeeBuddy profile</p></div>
-                <select className="bb-pref-select" value={settings.profileVisibility} onChange={(event) => void saveSettings({ ...settings, profileVisibility: event.target.value as AccountSettings["profileVisibility"] })}>
-                  <option value="PUBLIC">Everyone</option><option value="CONNECTIONS">Connections</option><option value="ONLY_ME">Only me</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Preferences Box */}
         <div className="bb-settings-preferences-box">
           <div className="bb-pref-box-title-row">
@@ -814,6 +771,7 @@ type AccountDraft = {
   interests: string;
   habits: string;
   connectionGoal: string;
+  occupation: string;
 };
 
 const accountDraftFrom = (profile: AccountProfile): AccountDraft => ({
@@ -826,6 +784,7 @@ const accountDraftFrom = (profile: AccountProfile): AccountDraft => ({
   interests: profile.interests.join(", "),
   habits: profile.habits.join(", "),
   connectionGoal: profile.connectionGoal || "",
+  occupation: profile.occupation || "",
 });
 
 function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boolean; editing?: boolean }) {
@@ -878,6 +837,7 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
         interests: split(draft.interests),
         habits: split(draft.habits),
         connectionGoal: draft.connectionGoal.trim(),
+        occupation: draft.occupation.trim(),
       });
       setProfile(updated);
       window.location.href = "/account";
@@ -886,6 +846,8 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
       setSaving(false);
     }
   };
+
+  const user = { name: draft?.fullName || "", email: profile?.user.email || "", username: profile?.username || "Not set" };
 
   return (
     <main className="bb-canvas bb-account-canvas">
@@ -907,8 +869,8 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
 
         {/* Guest Banner Row matching Figma 395:3299 */}
         {loading ? (
-          <div className="bb-profile-card bb-account-loading">Loading account...</div>
-        ) : !authenticated && !editing ? (
+          <div className="bb-profile-card">Loading account...</div>
+        ) : !authenticated ? (
           <div className="bb-settings-guest-row">
             <div className="bb-guest-card-wrap">
               <img
@@ -944,7 +906,7 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
             </div>
           </div>
         ) : !profile || !draft ? (
-          <div className="bb-profile-card bb-account-loading"><p>{error || "Please sign in to manage your account."}</p><Link href="/login" className="bb-profile-edit-btn">Sign in</Link></div>
+          <div className="bb-profile-card"><p role="alert">{error || "Unable to load account."}</p></div>
         ) : !editing ? (
           <div className="bb-account-view-stage">
             {/* White Profile Card */}
@@ -963,22 +925,22 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
               {/* User Bio Top Row */}
               <div className="bb-profile-identity-row">
                 <img
-                  src={profile.avatarUrl || "/assets/home/figma-buzzy.png"}
+                  src={avatarPreview || (removeAvatar ? null : profile.avatarUrl) || "/assets/home/figma-buzzy.png"}
                   alt="Avatar"
                   className="bb-profile-avatar-circle"
                 />
                 <div className="bb-profile-user-fields">
                   <div className="bb-field-pair">
                     <span className="label">Full Name</span>
-                    <strong className="val">{profile.fullName}</strong>
+                    <strong className="val">{user.name}</strong>
                   </div>
                   <div className="bb-field-pair">
                     <span className="label">Email</span>
-                    <strong className="val text-[#ff7300]">{profile.user.email}</strong>
+                    <strong className="val text-[#ff7300]">{user.email}</strong>
                   </div>
                   <div className="bb-field-pair">
                     <span className="label">Username</span>
-                    <strong className="val">{profile.username || "Not set"}</strong>
+                    <strong className="val">{user.username}</strong>
                   </div>
                 </div>
                 <span className="bb-members-pill-badge">{profile.user.tier}</span>
@@ -989,52 +951,71 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 <div>
                   <span className="bb-tag-group-title">BASIC INFO</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip">📅 {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString("vi-VN") : "Not set"}</span>
+                    <span className="bb-info-chip">📅 {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : "Not set"}</span>
                     <span className="bb-info-chip">{profile.gender || "Not set"}</span>
-                    <span className="bb-info-chip">{profile.location || "Location not set"}</span>
+                    <span className="bb-info-chip">{profile.occupation || "Not set"}</span>
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">HOBBIES</span>
                   <div className="bb-tags-wrap">
-                    {(profile.habits.length ? profile.habits : ["Not set"]).map((habit) => <span key={habit} className="bb-info-chip green">{habit}</span>)}
+                    {(profile.habits.length ? profile.habits : ["Not set"]).map(tag => <span key={tag} className="bb-info-chip green">{tag}</span>)}
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">INTERESTS</span>
                   <div className="bb-tags-wrap">
-                    {(profile.interests.length ? profile.interests : ["Not set"]).map((interest) => <span key={interest} className="bb-info-chip orange">{interest}</span>)}
+                    {(profile.interests.length ? profile.interests : ["Not set"]).map(tag => <span key={tag} className="bb-info-chip orange">{tag}</span>)}
                   </div>
                 </div>
 
                 <div>
-                  <span className="bb-tag-group-title">CONNECTION GOAL</span>
+                  <span className="bb-tag-group-title">SKILLS</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip purple">{profile.connectionGoal || "Not set"}</span>
+                    <span className="bb-info-chip purple">Not set</span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="bb-tag-group-title">LOCATION</span>
+                  <span className="bb-tag-group-title">PERSONALITY & LIFESTYLE</span>
                   <div className="bb-tags-wrap">
-                    <span className="bb-info-chip blue">{profile.location || "Not set"}</span>
+                    <span className="bb-info-chip blue">Not set</span>
                   </div>
                 </div>
 
                 <div>
                   <span className="bb-tag-group-title">DAILY HABITS</span>
                   <div className="bb-tags-wrap">
-                    {(profile.habits.length ? profile.habits : ["Not set"]).map((habit) => <span key={habit} className="bb-info-chip yellow">{habit}</span>)}
+                    <span className="bb-info-chip yellow">{profile.habits.join(", ") || "Not set"}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="bb-tag-group-title">FAVORITE COLORS</span>
+                  <div className="bb-color-dots-row">
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
                   </div>
                 </div>
               </div>
 
               {/* Bio & Socials */}
               <div className="bb-profile-bio-block">
-                <p>{profile.bio || "Tell the BeeBuddy community something about yourself."}</p>
-                {profile.connectionGoal && <div className="bb-profile-social-links"><span>🎯 {profile.connectionGoal}</span></div>}
+                <p>{profile.bio || "Not set"}</p>
+                <div className="bb-profile-social-links"><span>Social links: Not set</span></div>
+              </div>
+
+              {/* Gallery */}
+              <div className="bb-profile-gallery-block">
+                <span className="bb-gallery-title">Gallery</span>
+                <div className="bb-gallery-cards-row">
+                  <div className="bb-gallery-img bb-gallery-empty" aria-label="No gallery photo">No photo</div>
+                  <div className="bb-gallery-img bb-gallery-empty" aria-label="No gallery photo">No photo</div>
+                  <div className="bb-gallery-img bb-gallery-empty" aria-label="No gallery photo">No photo</div>
+                </div>
               </div>
 
               {/* Billing / Plan Card inside Profile */}
@@ -1045,13 +1026,13 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
                 <div className="bb-pbc-body">
                   <div className="bb-pbc-info">
-                    <strong>BeeBuddy Explorer <span className="bb-plan-chip">{profile.user.tier} Plan</span></strong>
-                    <p>Access to premium features, exclusive events and more!</p>
+                    <strong>BeeBuddy {profile.user.tier === "PRO" ? "Buddy+" : profile.user.tier === "VIP" ? "Explorer" : "Free"} <span className="bb-plan-chip">{profile.user.tier === "FREE" ? "Free Plan" : "Paid Plan"}</span></strong>
+                    <p>{profile.user.tier === "FREE" ? "Your free plan is active." : "Your purchased plan benefits are active."}</p>
                   </div>
                   <div className="bb-pbc-renewal">
-                    <small>Next Renewal</small>
-                    <strong>{profile.user.tierExpiresAt ? new Date(profile.user.tierExpiresAt).toLocaleDateString("vi-VN") : "No renewal date"}</strong>
-                    <small>Billing Cycle: <strong>Yearly</strong></small>
+                    <small>Valid Until</small>
+                    <strong>{profile.user?.tierExpiresAt ? new Date(profile.user.tierExpiresAt).toLocaleDateString("en-GB") : "No renewal scheduled"}</strong>
+                    <small>No automatic renewal</small>
                   </div>
                   <Link href="/billing" className="bb-pbc-manage-btn">Manage Plan</Link>
                 </div>
@@ -1059,13 +1040,13 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
 
               {/* Bottom Actions */}
               <div className="bb-profile-bottom-actions">
-                <button type="button" className="bb-profile-logout-btn" onClick={() => void webAuth.logout().then(() => { window.location.href = "/"; })}>
+                <Link href="/" className="bb-profile-logout-btn">
                   <span>↳ Log out</span>
-                </button>
+                </Link>
                 <button
                   type="button"
                   className="bb-profile-invite-btn"
-                  onClick={() => alert("Invite link copied to clipboard!")}
+                  onClick={() => void navigator.clipboard?.writeText(window.location.origin)}
                 >
                   Invite friends
                 </button>
@@ -1084,25 +1065,14 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
               </div>
               <div className="bb-profile-identity-row">
-                <div className="bb-edit-avatar-control">
-                  <img src={removeAvatar ? "/assets/home/figma-buzzy.png" : avatarPreview || draft.avatarUrl || "/assets/home/figma-buzzy.png"} alt="Ảnh đại diện xem trước" className="bb-profile-avatar-circle" />
-                  <label><Camera size={16} /> Chọn ảnh<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-                      setError("Ảnh đại diện phải là JPEG/PNG/WebP/GIF và không vượt quá 5 MB.");
-                      return;
-                    }
-                    setError("");
-                    setRemoveAvatar(false);
-                    setAvatarFile(file);
-                  }} /></label>
-                  {(draft.avatarUrl || avatarFile) && <button type="button" onClick={() => { setAvatarFile(null); setRemoveAvatar(true); }}>Gỡ ảnh</button>}
-                </div>
+                <label className="bb-profile-avatar-upload" title="Change profile photo">
+                  <img src={avatarPreview || (removeAvatar ? null : profile.avatarUrl) || "/assets/home/figma-buzzy.png"} alt="Change profile photo" className="bb-profile-avatar-circle" />
+                  <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={event => { setAvatarFile(event.target.files?.[0] || null); setRemoveAvatar(false); }} />
+                </label>
                 <div className="bb-profile-user-fields">
-                  <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{draft.fullName}</strong></div>
-                  <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{profile.user.email}</strong></div>
-                  <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{profile.username || "Not set"}</strong></div>
+                  <div className="bb-field-pair"><span className="label">Full Name</span><input className="val" aria-label="Full Name" value={draft.fullName} onChange={event => updateDraft("fullName", event.target.value)} maxLength={100} /></div>
+                  <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{user.email}</strong></div>
+                  <div className="bb-field-pair"><span className="label">Username</span><strong className="val">{user.username}</strong></div>
                 </div>
               </div>
             </div>
@@ -1124,27 +1094,31 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Date of Birth</strong><p>Your birthdate (MM/DD/YYYY)</p></div>
-                  <input className="bb-edit-val-underlined" type="date" value={draft.dateOfBirth} onChange={(event) => updateDraft("dateOfBirth", event.target.value)} />
+                  <input type="date" className="bb-edit-val-underlined" aria-label="Date of Birth" value={draft.dateOfBirth} onChange={event => updateDraft("dateOfBirth", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Gender</strong><p>Select your gender identity</p></div>
-                  <input className="bb-edit-val-underlined" value={draft.gender} onChange={(event) => updateDraft("gender", event.target.value)} placeholder="Your gender" />
+                  <input type="text" className="bb-edit-val-underlined" aria-label="Gender" value={draft.gender} onChange={event => updateDraft("gender", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
-                  <div><strong>Location</strong><p>Your current city or area</p></div>
-                  <input className="bb-edit-val-underlined" value={draft.location} onChange={(event) => updateDraft("location", event.target.value)} placeholder="Your location" />
+                  <div><strong>Occupation</strong><p>Your current role or profession</p></div>
+                  <input type="text" className="bb-edit-val-underlined" aria-label="Occupation" value={draft.occupation} onChange={event => updateDraft("occupation", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Interests</strong><p>Topics you enjoy talking about</p></div>
-                  <input className="bb-edit-val-underlined" value={draft.interests} onChange={(event) => updateDraft("interests", event.target.value)} placeholder="Design, Coffee, Hiking" />
+                  <input type="text" className="bb-edit-val-underlined" aria-label="Interests" value={draft.interests} onChange={event => updateDraft("interests", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
-                  <div><strong>Profile picture</strong><p>JPEG, PNG, WebP or GIF · maximum 5 MB</p></div>
-                  <span className="bb-edit-avatar-status">{avatarFile ? avatarFile.name : removeAvatar ? "Will be removed" : draft.avatarUrl ? "Current image" : "Not set"}</span>
+                  <div><strong>Favorite Colors</strong><p>Colors that match your vibe</p></div>
+                  <div className="bb-color-dots-row">
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
+                    <span className="bb-color-dot" style={{ background: "#e5e7eb" }} />
+                  </div>
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Habits</strong><p>Daily routines and rituals</p></div>
-                  <input className="bb-edit-val-underlined" value={draft.habits} onChange={(event) => updateDraft("habits", event.target.value)} placeholder="Morning journaling" />
+                  <input className="bb-edit-val-underlined" value={draft.habits} onChange={(event) => updateDraft("habits", event.target.value)} aria-label="Habits" />
                 </div>
               </div>
             </div>
@@ -1161,10 +1135,10 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
               <div className="bb-edit-detail-list">
                 <div className="bb-detail-item">
                   <div className="bb-detail-item-label">
-                    <strong>Full Name</strong>
-                    <small>Your name shown across BeeBuddy</small>
+                    <strong>About Me</strong>
+                    <small>A brief intro about yourself</small>
                   </div>
-                  <input className="bb-detail-item-val bb-edit-text-input" required value={draft.fullName} onChange={(event) => updateDraft("fullName", event.target.value)} />
+                  <textarea className="bb-detail-item-val" aria-label="Bio" value={draft.bio} onChange={event => updateDraft("bio", event.target.value)} maxLength={500} />
                 </div>
 
                 <div className="bb-detail-item">
@@ -1172,17 +1146,61 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                     <strong>Self-Description / Bio</strong>
                     <small>A short bio that appears on your profile</small>
                   </div>
-                  <textarea className="bb-detail-item-val bb-edit-text-input" rows={3} maxLength={500} value={draft.bio} onChange={(event) => updateDraft("bio", event.target.value)} />
+                  <textarea className="bb-detail-item-val" aria-label="Bio" value={draft.bio} onChange={event => updateDraft("bio", event.target.value)} maxLength={500} />
                 </div>
 
                 <div className="bb-detail-item">
                   <div className="bb-detail-item-label">
-                    <strong>Connection Goal</strong>
-                    <small>What kind of connection are you looking for?</small>
+                    <strong>Personality Type</strong>
+                    <small>Your personality style (e.g., INTP, ENFJ)</small>
                   </div>
-                  <textarea className="bb-detail-item-val bb-edit-text-input" rows={2} maxLength={300} value={draft.connectionGoal} onChange={(event) => updateDraft("connectionGoal", event.target.value)} />
+                  <span className="bb-detail-item-val">Not set</span>
                 </div>
 
+                <div className="bb-detail-item">
+                  <div className="bb-detail-item-label">
+                    <strong>Lifestyle</strong>
+                    <small>Your daily habits and living style</small>
+                  </div>
+                  <span className="bb-detail-item-val">Not set</span>
+                </div>
+
+                <div className="bb-detail-item">
+                  <div className="bb-detail-item-label">
+                    <strong>Hobbies</strong>
+                    <small>Activities you enjoy in your free time</small>
+                  </div>
+                  <span className="bb-detail-item-val">{profile.habits.join(", ") || "Not set"}</span>
+                </div>
+
+                <div className="bb-detail-item">
+                  <div className="bb-detail-item-label">
+                    <strong>Skills</strong>
+                    <small>Abilities you&apos;re proficient in</small>
+                  </div>
+                  <span className="bb-detail-item-val">Not set</span>
+                </div>
+
+                <div className="bb-detail-item">
+                  <div className="bb-detail-item-label">
+                    <strong>Social Links</strong>
+                    <small>Connect your profiles (e.g., Twitter, Instagram)</small>
+                  </div>
+                  <span className="bb-detail-item-val">Not set</span>
+                </div>
+
+                {/* Gallery with dashed plus card */}
+                <div className="bb-edit-gallery-section">
+                  <span className="label">Gallery</span>
+                  <div className="bb-gallery-cards-row">
+
+
+
+                    <div className="bb-gallery-add-card">
+                      <span>+</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Form Actions */}
@@ -1190,8 +1208,8 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 <Link href="/account" className="bb-edit-cancel-btn">✕ Cancel</Link>
                 <button type="submit" className="bb-edit-save-btn" disabled={saving}>{saving ? "Saving..." : "✓ Save Changes"}</button>
               </div>
-              {error && <p className="form-error" role="alert">{error}</p>}
             </div>
+          {error && <p className="form-error" role="alert">{error}</p>}
           </form>
         )}
       </div>
@@ -1203,239 +1221,58 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
    6. BILLING & PLANS (Figma Frames 381:289, 407:9189, 407:8501, 566:7784)
    ========================================================================== */
 function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [currentTier, setCurrentTier] = useState<string | null>(null);
-  const [checkout, setCheckout] = useState<Checkout | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState("PENDING");
-  const [returnedPayment, setReturnedPayment] = useState<PaymentStatusRecord | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    Promise.all([
-      getSubscriptionPlans(),
-      isLoggedIn ? webAuth.me().catch(() => null) : Promise.resolve(null),
-    ])
-      .then(([nextPlans, user]) => {
-        if (!active) return;
-        setPlans(nextPlans);
-        setCurrentTier(user?.tier || null);
-      })
-      .catch((cause: Error) => active && setError(cause.message))
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const rawOrderCode = new URLSearchParams(window.location.search).get("orderCode");
-    const orderCode = Number(rawOrderCode);
-    if (!rawOrderCode || !Number.isSafeInteger(orderCode) || orderCode <= 0) return;
-
-    let active = true;
-    setCheckoutLoading("RETURN");
-    getPaymentStatus(orderCode)
-      .then((payment) => {
-        if (!active) return;
-        setReturnedPayment(payment);
-        setPaymentStatus(payment.status);
-        if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
-      })
-      .catch((cause) => active && setError(cause instanceof Error ? cause.message : "Không thể xác minh thanh toán PayOS"))
-      .finally(() => active && setCheckoutLoading(null));
-    return () => { active = false; };
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (!checkout || paymentStatus !== "PENDING") return;
-    const timer = window.setInterval(() => {
-      getPaymentStatus(checkout.orderCode).then((payment) => {
-        setPaymentStatus(payment.status);
-        if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
-      }).catch(() => undefined);
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [checkout, paymentStatus]);
-
-  const price = (value: number) =>
-    value === 0 ? "Miễn phí" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
-  const planIcons: Record<SubscriptionPlan["tier"], string> = { FREE: "⭐", VIP: "🧭", PRO: "🛡️" };
-  const startCheckout = async (tier: "VIP" | "PRO") => {
-    setCheckoutLoading(tier);
-    setError("");
-    try {
-      const nextCheckout = await createCheckout(tier);
-      setCheckout(nextCheckout);
-      setPaymentStatus("PENDING");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo đơn thanh toán");
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-  const refreshPayment = async () => {
-    if (!checkout) return;
-    setCheckoutLoading(checkout.tier);
-    setError("");
-    try {
-      const payment = await getPaymentStatus(checkout.orderCode);
-      setPaymentStatus(payment.status);
-      if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể kiểm tra trạng thái");
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-  const cancelCurrentCheckout = async () => {
-    if (!checkout) return;
-    setCheckoutLoading(checkout.tier);
-    setError("");
-    try {
-      const result = await cancelCheckout(checkout.orderCode);
-      setPaymentStatus(result.status);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hủy đơn thanh toán");
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-
-  return (
-    <main className="bb-canvas bb-billing-canvas">
-      <div className="bb-billing-page-content">
-        <SettingsNavTabs active="billing" />
-        <div className="bb-billing-overview-stage">
-          <div className="bb-billing-head-row">
-            <div>
-              <h1 className="bb-billing-main-title">Các gói BeeBuddy</h1>
-              <p className="bb-billing-subhead">
-                Chọn cấp độ phù hợp với hành trình kết nối của bạn. Quyền lợi và giá dưới đây được tải trực tiếp từ hệ thống BeeBuddy.
-              </p>
-              <div className="bb-billing-security-note">
-                <Shield size={14} className="text-gray-400" />
-                <span>Giá niêm yết bằng VND. Thanh toán bằng VietQR; quyền gói chỉ được cấp sau webhook hợp lệ.</span>
-              </div>
-            </div>
-            <Link href="/help" className="bb-billing-help-btn">❓ Trợ giúp</Link>
-          </div>
-
-          {loading && <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng giá...</div>}
-          {returnedPayment && (
-            <div className={`bb-billing-return-notice is-${returnedPayment.status.toLowerCase()}`} role="status">
-              <strong>
-                {returnedPayment.status === "COMPLETED"
-                  ? "Thanh toán thành công"
-                  : returnedPayment.status === "CANCELLED"
-                    ? "Bạn đã hủy thanh toán"
-                    : returnedPayment.status === "PENDING"
-                      ? "PayOS đang chờ thanh toán"
-                      : `Trạng thái thanh toán: ${returnedPayment.status}`}
-              </strong>
-              <span>Đơn #{returnedPayment.orderCode} · Gói {returnedPayment.tier}</span>
-            </div>
-          )}
-          {error && !loading && (
-            <div className="bb-feed-state-card is-error">
-              <p>{error}</p>
-              <button type="button" onClick={() => window.location.reload()}>Thử lại</button>
-            </div>
-          )}
-
-          {!loading && !error && (
-            <div className="bb-billing-grid-and-photo">
-              <div className="bb-plans-2x2-grid">
-                {plans.map((plan) => {
-                  const isCurrent = currentTier === plan.tier || (!isLoggedIn && plan.tier === "FREE");
-                  return (
-                    <article key={plan.tier} className={`bb-figma-plan-card ${plan.tier === "VIP" ? "is-popular" : ""}`}>
-                      <div className="bb-plan-card-top">
-                        <span className="bb-plan-icon">{planIcons[plan.tier]}</span>
-                        <div>
-                          <h3>{plan.name}</h3>
-                          <small>{plan.tier === "FREE" ? "Bắt đầu hành trình" : plan.tier === "VIP" ? "Kết nối nhiều hơn" : "Trải nghiệm đầy đủ"}</small>
-                        </div>
-                        {plan.tier === "VIP" && <span className="bb-popular-chip">⭐ Phổ biến</span>}
-                      </div>
-                      <div className="bb-plan-price-row">
-                        <strong>{price(plan.priceVND)}</strong>
-                        {plan.priceVND > 0 && <span>/ {plan.durationMonths} tháng</span>}
-                      </div>
-                      <p className="bb-plan-short-desc">Gói {plan.tier} dành cho thành viên BeeBuddy.</p>
-                      <ul className="bb-plan-checklist">
-                        {plan.features.map((feature) => <li key={feature.code}><span className="dot" />{feature.name}</li>)}
-                      </ul>
-                      {isCurrent ? (
-                        <span className="bb-plan-status-label">✓ Gói hiện tại</span>
-                      ) : isLoggedIn ? (
-                        <button
-                          type="button"
-                          className="bb-plan-action-filled orange"
-                          disabled={checkoutLoading !== null}
-                          onClick={() => void startCheckout(plan.tier as "VIP" | "PRO")}
-                        >
-                          {checkoutLoading === plan.tier ? "Đang tạo đơn..." : "Thanh toán bằng VietQR →"}
-                        </button>
-                      ) : (
-                        <Link href="/login" className="bb-plan-action-filled orange bb-plan-link-action">Đăng nhập để nâng cấp →</Link>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-              <div className="bb-billing-photo-card">
-                <img
-                  src="/assets/buzzy/billing_friends_photo.png"
-                  alt="Bạn bè cùng khám phá BeeBuddy"
-                  className="bb-billing-friends-img"
-                />
-              </div>
-            </div>
-          )}
-
-          {checkout && (
-            <section className="bb-billing-live-checkout" aria-live="polite">
-              <div>
-                <p className="bb-billing-live-kicker">Đơn hàng #{checkout.orderCode}</p>
-                <h2>Thanh toán gói {checkout.tier}</h2>
-                <p>{checkout.instructions}</p>
-                <dl>
-                  <div><dt>Số tiền</dt><dd>{price(checkout.amount)}</dd></div>
-                  <div><dt>Nội dung</dt><dd>{checkout.description}</dd></div>
-                  <div><dt>Trạng thái</dt><dd className={`is-${paymentStatus.toLowerCase()}`}>{paymentStatus}</dd></div>
-                </dl>
-                <div className="bb-billing-live-actions">
-                  <a href={checkout.checkoutUrl} rel="noreferrer">Mở cổng PayOS</a>
-                  <button type="button" onClick={() => void refreshPayment()} disabled={checkoutLoading !== null}>Kiểm tra trạng thái</button>
-                  {paymentStatus === "PENDING" && (
-                    <button type="button" className="secondary" onClick={() => void cancelCurrentCheckout()} disabled={checkoutLoading !== null}>Hủy đơn</button>
-                  )}
-                  <button type="button" className="secondary" onClick={() => setCheckout(null)}>Đóng</button>
-                </div>
-                <small>Trạng thái được đồng bộ từ PayOS qua webhook và kiểm tra định kỳ. Không đóng trang ngân hàng trước khi có kết quả.</small>
-              </div>
-              <div className="bb-payos-checkout-panel">
-                <Shield size={32} />
-                <strong>Thanh toán bảo mật qua PayOS</strong>
-                <span>Trang PayOS sẽ hiển thị mã VietQR chính xác của đơn hàng.</span>
-                <a href={checkout.checkoutUrl} rel="noreferrer">Thanh toán ngay →</a>
-              </div>
-            </section>
-          )}
-        </div>
-      </div>
-    </main>
-  );
-}
-
-// Giữ lại bản thiết kế checkout để nối PayOS ở W5; không render trong W4.
-function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [subView, setSubView] = useState<"overview" | "compare" | "manage" | "checkout">("overview");
   const [selectedPlan, setSelectedPlan] = useState("Explorer");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "apple">("card");
+
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const [paymentNotice, setPaymentNotice] = useState("");
+  const tierFor = (name: string) => name === "Free" ? "FREE" : name === "Explorer" ? "VIP" : name === "Buddy+" ? "PRO" : null;
+  const findPlan = (name: string) => plans.find(plan => plan.tier === tierFor(name));
+  const formatPrice = (name: string) => {
+    const plan = findPlan(name);
+    return plan ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(plan.priceVND) : name === "Hive Pro" ? "Coming soon" : "Loading...";
+  };
+  const currentName = profile?.user.tier === "PRO" ? "Buddy+" : profile?.user.tier === "VIP" ? "Explorer" : "Free";
+  const renewal = profile?.user.tierExpiresAt ? new Date(profile.user.tierExpiresAt).toLocaleDateString() : "No renewal";
+  useEffect(() => {
+    let active = true;
+    getSubscriptionPlans().then(data => { if (active) setPlans(data); }).catch(cause => { if (active) setError(cause.message); });
+    if (isLoggedIn) accountApi.profile().then(data => { if (active) setProfile(data); }).catch(cause => { if (active) setError(cause.message); });
+    return () => { active = false; };
+  }, [isLoggedIn]);
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const orderCode = Number(new URLSearchParams(window.location.search).get("orderCode"));
+    if (!Number.isSafeInteger(orderCode) || orderCode <= 0) return;
+    let active = true;
+    let timer: number | undefined;
+    const sync = async () => {
+      try {
+        const payment = await getPaymentStatus(orderCode);
+        if (!active) return;
+        setPaymentNotice(payment.status === "COMPLETED" ? "Payment completed. Your plan is active." : `Payment: ${payment.status}`);
+        if (payment.status === "COMPLETED") { const nextProfile = await accountApi.profile(); if (active) setProfile(nextProfile); }
+        else if (payment.status === "PENDING") timer = window.setTimeout(() => void sync(), 5000);
+      } catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "Unable to check payment."); }
+    };
+    void sync();
+    return () => { active = false; if (timer) window.clearTimeout(timer); };
+  }, [isLoggedIn]);
+  const subscribe = async () => {
+    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    const tier = tierFor(selectedPlan);
+    if (tier === "FREE") { window.location.href = "/home"; return; }
+    if (!tier) { setError("This plan is not available yet."); return; }
+    setWorking(true); setError("");
+    try {
+      const checkout = await createCheckout(tier);
+      window.location.assign(checkout.checkoutUrl);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to create checkout."); setWorking(false); }
+  };
 
   return (
     <main className="bb-canvas bb-billing-canvas">
@@ -1454,6 +1291,8 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
       <div className="bb-billing-page-content">
         <SettingsNavTabs active="billing" />
+        {error && <p className="form-error" role="alert">{error}</p>}
+        {paymentNotice && <p className="form-notice" role="status">{paymentNotice}</p>}
 
         {/* 1. VIEW PLANS OVERVIEW (Figma Frame 381:289 & 407:10861) */}
         {subView === "overview" && (
@@ -1504,7 +1343,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 </p>
                 <div className="bb-billing-security-note">
                   <Shield size={14} className="text-gray-400" />
-                  <span>All prices are shown in USD. Cancel anytime. No long-term commitments.</span>
+                  <span>All prices are shown in VND. Pay securely with PayOS.</span>
                 </div>
               </div>
               <div className="bb-billing-head-actions">
@@ -1528,20 +1367,20 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 </div>
                 <div className="bb-bil-acc-details">
                   <div className="bb-bil-avatar-col">
-                    <img src="/assets/home/figma-buzzy.png" alt="Avatar" className="bb-bil-avatar-img" />
+                    <img src={profile?.avatarUrl || "/assets/home/figma-buzzy.png"} alt="Avatar" className="bb-bil-avatar-img" />
                   </div>
                   <div className="bb-bil-info-grid">
                     <div className="bb-bil-info-row">
                       <span className="lbl">Full Name</span>
-                      <span className="val">BeeBuddy</span>
+                      <span className="val">{profile?.fullName || "Not set"}</span>
                     </div>
                     <div className="bb-bil-info-row">
                       <span className="lbl">Email</span>
-                      <span className="val text-[#ff7300] font-semibold">hello.beebuddy@gmail.com</span>
+                      <span className="val text-[#ff7300] font-semibold">{profile?.user?.email || "Not signed in"}</span>
                     </div>
                     <div className="bb-bil-info-row">
                       <span className="lbl">Username</span>
-                      <span className="val">BeeNguyen</span>
+                      <span className="val">{profile?.username || "Not set"}</span>
                     </div>
                   </div>
                 </div>
@@ -1552,15 +1391,15 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 </div>
                 <div className="bb-bil-plan-summary-row">
                   <div className="bb-bil-plan-left">
-                    <strong>BeeBuddy Explorer</strong>
-                    <span className="bb-bil-plan-pro-pill">Pro Plan</span>
-                    <p>Access to premium features, exclusive events and more!</p>
+                    <strong>BeeBuddy {currentName}</strong>
+                    <span className="bb-bil-plan-pro-pill">{currentName === "Free" ? "Free Plan" : "Paid Plan"}</span>
+                    <p>{currentName === "Free" ? "Your free plan is active." : "Your purchased benefits are available until the expiry date."}</p>
                   </div>
                   <div className="bb-bil-plan-right">
                     <div className="bb-bil-renewal-info">
-                      <small>Next Renewal</small>
-                      <strong>May 28, 2027</strong>
-                      <small>Billing Cycle: Yearly</small>
+                      <small>Valid Until</small>
+                      <strong>{renewal}</strong>
+                      <small>One-time payment; no automatic renewal.</small>
                     </div>
                     <button
                       type="button"
@@ -1587,22 +1426,17 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     </div>
                   </div>
                   <div className="bb-plan-price-row">
-                    <strong>$0</strong>
+                    <strong>{formatPrice("Free")}</strong>
                     <span>/ month</span>
                   </div>
                   <p className="bb-plan-short-desc">
                     Perfect for new users who want to explore the BeeBuddy community and start connecting.
                   </p>
-                  <ul className="bb-plan-checklist">
-                    <li><span className="dot" /> Create and share posts</li>
-                    <li><span className="dot" /> Join public communities</li>
-                    <li><span className="dot" /> Explore activities</li>
-                    <li><span className="dot" /> Save favorite posts and places</li>
-                  </ul>
+                  <ul className="bb-plan-checklist">{findPlan("Free")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}{feature.limitValue != null ? `: ${feature.limitValue}` : ""}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-outline"
-                    onClick={() => { setSelectedPlan("Free"); setSubView("checkout"); }}
+                    onClick={() => { window.location.href = isLoggedIn ? "/home" : "/signup"; }}
                   >
                     Continue with free →
                   </button>
@@ -1619,18 +1453,13 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     <span className="bb-popular-chip">⭐ Most Popular</span>
                   </div>
                   <div className="bb-plan-price-row">
-                    <strong>$4.99</strong>
+                    <strong>{formatPrice(currentName)}</strong>
                     <span>/ month</span>
                   </div>
                   <p className="bb-plan-short-desc">
                     Best for active users who want better discovery tools and more ways to connect.
                   </p>
-                  <ul className="bb-plan-checklist">
-                    <li><span className="dot" /> Everything in Free</li>
-                    <li><span className="dot" /> Advanced search and filters</li>
-                    <li><span className="dot" /> Unlimited saved posts and places</li>
-                    <li><span className="dot" /> Create private groups</li>
-                  </ul>
+                  <ul className="bb-plan-checklist">{findPlan("Explorer")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled orange"
@@ -1650,18 +1479,13 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     </div>
                   </div>
                   <div className="bb-plan-price-row">
-                    <strong>$9.99</strong>
+                    <strong>{formatPrice("Buddy+")}</strong>
                     <span>/ month</span>
                   </div>
                   <p className="bb-plan-short-desc">
                     Designed for highly engaged users who want richer social experiences and stronger community tools.
                   </p>
-                  <ul className="bb-plan-checklist">
-                    <li><span className="dot" /> Everything in Explorer</li>
-                    <li><span className="dot" /> Featured profile badge</li>
-                    <li><span className="dot" /> Unlimited private groups</li>
-                    <li><span className="dot" /> Advanced event planning tools</li>
-                  </ul>
+                  <ul className="bb-plan-checklist">{findPlan("Buddy+")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled purple"
@@ -1681,22 +1505,17 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     </div>
                   </div>
                   <div className="bb-plan-price-row">
-                    <strong>$19.99</strong>
+                    <strong>{formatPrice("Hive Pro")}</strong>
                     <span>/ month</span>
                   </div>
                   <p className="bb-plan-short-desc">
                     Made for community leaders, organizers, and super users who want the full BeeBuddy experience.
                   </p>
-                  <ul className="bb-plan-checklist">
-                    <li><span className="dot" /> Everything in Buddy+</li>
-                    <li><span className="dot" /> Community mgmt dashboard</li>
-                    <li><span className="dot" /> Advanced privacy controls</li>
-                    <li><span className="dot" /> Exclusive campaigns and events</li>
-                  </ul>
+                  <ul className="bb-plan-checklist">{findPlan("Hive Pro")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Coming soon</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled amber"
-                    onClick={() => { setSelectedPlan("Hive Pro"); setSubView("checkout"); }}
+                    disabled title="This plan is not available yet"
                   >
                     Upgrade to Hive Pro →
                   </button>
@@ -1750,99 +1569,22 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="category-header">
-                    <td colSpan={5}>COMMUNITY & GROUPS</td>
-                  </tr>
-                  <tr>
-                    <td>Join public communities</td>
-                    <td>✓</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Create private groups</td>
-                    <td>—</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Unlimited private groups</td>
-                    <td>—</td>
-                    <td className="highlight-col">—</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Community management dashboard</td>
-                    <td>—</td>
-                    <td className="highlight-col">—</td>
-                    <td>—</td>
-                    <td>✓</td>
-                  </tr>
-
-                  <tr className="category-header">
-                    <td colSpan={5}>SEARCH & PROFILES</td>
-                  </tr>
-                  <tr>
-                    <td>Basic search and filters</td>
-                    <td>✓</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Advanced search and filters</td>
-                    <td>—</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Better profile visibility</td>
-                    <td>Basic</td>
-                    <td className="highlight-col">Better</td>
-                    <td>High</td>
-                    <td>Max</td>
-                  </tr>
-                  <tr>
-                    <td>Featured profile badge</td>
-                    <td>—</td>
-                    <td className="highlight-col">—</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-
-                  <tr className="category-header">
-                    <td colSpan={5}>STORAGE & INSIGHTS</td>
-                  </tr>
-                  <tr>
-                    <td>Create and share posts</td>
-                    <td>✓</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>Save favorite posts and places</td>
-                    <td>✓</td>
-                    <td className="highlight-col">✓</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                  </tr>
-                  <tr>
-                    <td>More storage for photos and memories</td>
-                    <td>1 GB</td>
-                    <td className="highlight-col">5 GB</td>
-                    <td>20 GB</td>
-                    <td>Unlimited</td>
-                  </tr>
+                  <tr className="category-header"><td colSpan={5}>PLAN BENEFITS</td></tr>
+                  {Array.from(new Map(plans.flatMap(plan => plan.features.map(feature => [feature.code, feature] as const))).values()).map(feature => (
+                    <tr key={feature.code}>
+                      <td>{feature.name}</td>
+                      {["Free", "Explorer", "Buddy+", "Hive Pro"].map(name => (
+                        <td key={name} className={name === "Explorer" ? "highlight-col" : undefined}>
+                          {name === "Hive Pro" ? "Coming soon" : findPlan(name)?.features.find(item => item.code === feature.code)?.limitValue ?? (findPlan(name)?.features.some(item => item.code === feature.code) ? "✓" : "—")}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
-            <p className="bb-compare-footer-note">All prices are shown in USD. Cancel anytime.</p>
+            <p className="bb-compare-footer-note">All prices are shown in VND.</p>
           </div>
         )}
 
@@ -1865,20 +1607,20 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               </div>
               <div className="bb-bil-acc-details">
                 <div className="bb-bil-avatar-col">
-                  <img src="/assets/home/figma-buzzy.png" alt="Avatar" className="bb-bil-avatar-img" />
+                  <img src={profile?.avatarUrl || "/assets/home/figma-buzzy.png"} alt="Avatar" className="bb-bil-avatar-img" />
                 </div>
                 <div className="bb-bil-info-grid">
                   <div className="bb-bil-info-row">
                     <span className="lbl">Full Name</span>
-                    <span className="val">BeeBuddy</span>
+                    <span className="val">{profile?.fullName || "Not set"}</span>
                   </div>
                   <div className="bb-bil-info-row">
                     <span className="lbl">Email</span>
-                    <span className="val text-[#ff7300] font-semibold">hello.beebuddy@gmail.com</span>
+                    <span className="val text-[#ff7300] font-semibold">{profile?.user?.email || "Not signed in"}</span>
                   </div>
                   <div className="bb-bil-info-row">
                     <span className="lbl">Username</span>
-                    <span className="val">BeeNguyen</span>
+                    <span className="val">{profile?.username || "Not set"}</span>
                   </div>
                 </div>
               </div>
@@ -1889,14 +1631,14 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               </div>
               <div className="bb-bil-plan-summary-row">
                 <div className="bb-bil-plan-left">
-                  <strong>BeeBuddy Explorer <span className="bb-bil-plan-pro-pill">Pro Plan</span></strong>
-                  <p>Access to premium features, exclusive events and more!</p>
+                  <strong>BeeBuddy {currentName} <span className="bb-bil-plan-pro-pill">{currentName === "Free" ? "Free Plan" : "Paid Plan"}</span></strong>
+                  <p>{currentName === "Free" ? "Your free plan is active." : "Your purchased benefits are available until the expiry date."}</p>
                 </div>
                 <div className="bb-bil-plan-right">
                   <div className="bb-bil-renewal-info">
-                    <small>Next Renewal</small>
-                    <strong>May 28, 2027</strong>
-                    <small>Billing Cycle: Yearly</small>
+                    <small>Valid Until</small>
+                    <strong>{renewal}</strong>
+                    <small>One-time payment; no automatic renewal.</small>
                   </div>
                 </div>
               </div>
@@ -1910,25 +1652,25 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">🧭</span>
                       <div>
-                        <h3>Explorer</h3>
+                        <h3>{currentName}</h3>
                         <small>Current active plan</small>
                       </div>
                     </div>
                     <span className="bb-active-pill">ACTIVE</span>
                   </div>
                   <div className="bb-sub-price-row">
-                    <strong>$4.99</strong>
+                    <strong>{formatPrice(currentName)}</strong>
                     <span>/ month</span>
-                    <small className="ml-auto">Next Renewal: <strong>May 28, 2027</strong></small>
+                    <small className="ml-auto">Valid Until: <strong>{renewal}</strong></small>
                   </div>
                   <p className="bb-sub-info">
-                    You&apos;re currently on the Explorer plan. This gives you advanced discovery tools, unlimited saved posts, and the ability to create private groups.
+                    You&apos;re currently on the {currentName} plan. {findPlan(currentName)?.features.map(feature => feature.name).join(", ")}.
                   </p>
                   <div className="bb-sub-actions-row">
                     <button type="button" className="bb-btn-change-plan" onClick={() => setSubView("overview")}>
                       Change Plan
                     </button>
-                    <button type="button" className="bb-btn-cancel-plan" onClick={() => alert("Subscription cancelled.")}>
+                    <button type="button" className="bb-btn-cancel-plan" disabled title="Plans expire automatically at the end of the paid period.">
                       Cancel Plan
                     </button>
                   </div>
@@ -1947,7 +1689,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                         <small className="text-purple-600 font-semibold">Upgrade</small>
                       </div>
                       <div className="bb-other-price">
-                        <strong>$9.99</strong>
+                        <strong>{formatPrice("Buddy+")}</strong>
                         <span>/ month</span>
                       </div>
                       <p>Unlock featured profile badges, unlimited private groups, and advanced event planning.</p>
@@ -1964,11 +1706,11 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                         <small className="text-amber-600 font-semibold">Upgrade</small>
                       </div>
                       <div className="bb-other-price">
-                        <strong>$19.99</strong>
+                        <strong>{formatPrice("Hive Pro")}</strong>
                         <span>/ month</span>
                       </div>
                       <p>Unlock featured profile badges, unlimited private groups, and advanced event planning.</p>
-                      <button type="button" className="bb-btn-upgrade-orange" onClick={() => { setSelectedPlan("Hive Pro"); setSubView("checkout"); }}>
+                      <button type="button" className="bb-btn-upgrade-orange" disabled title="This plan is not available yet">
                         Upgrade to Hive Pro+
                       </button>
                     </div>
@@ -1989,7 +1731,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             <div className="bb-manage-footer-note">
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Shield size={14} />
-                <span>All prices are shown in USD. Cancel anytime. No long-term commitments.</span>
+                <span>All prices are shown in VND. Pay securely with PayOS.</span>
               </div>
               <button
                 type="button"
@@ -2028,7 +1770,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                       onChange={() => setPaymentMethod("card")}
                     />
                     <CreditCard size={18} />
-                    <strong>Credit / Debit Card</strong>
+                    <strong>PayOS / VietQR</strong>
                   </label>
 
                   <label className={`bb-payment-method-row ${paymentMethod === "paypal" ? "is-selected" : ""}`}>
@@ -2036,7 +1778,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                       type="radio"
                       name="pay"
                       checked={paymentMethod === "paypal"}
-                      onChange={() => setPaymentMethod("paypal")}
+                      disabled title="Not supported"
                     />
                     <span>PayPal</span>
                   </label>
@@ -2046,7 +1788,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                       type="radio"
                       name="pay"
                       checked={paymentMethod === "apple"}
-                      onChange={() => setPaymentMethod("apple")}
+                      disabled title="Not supported"
                     />
                     <span>Apple Pay</span>
                   </label>
@@ -2056,21 +1798,21 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <div className="bb-card-fields-grid">
                     <div className="bb-form-group">
                       <label>Card Number</label>
-                      <input type="text" placeholder="0000 0000 0000 0000" defaultValue="4242 •••• •••• 4242" />
+                      <input type="text" disabled placeholder="Handled securely by PayOS" />
                     </div>
                     <div className="bb-form-row-2">
                       <div className="bb-form-group">
                         <label>Expiry Date</label>
-                        <input type="text" placeholder="MM/YY" defaultValue="12/28" />
+                        <input type="text" disabled placeholder="Handled securely by PayOS" />
                       </div>
                       <div className="bb-form-group">
                         <label>CVV</label>
-                        <input type="text" placeholder="123" defaultValue="888" />
+                        <input type="text" disabled placeholder="Handled securely by PayOS" />
                       </div>
                     </div>
                     <div className="bb-form-group">
                       <label>Cardholder Name</label>
-                      <input type="text" placeholder="John Doe" defaultValue="Jane Doe" />
+                      <input type="text" disabled placeholder="Handled securely by PayOS" />
                     </div>
                   </div>
                 )}
@@ -2079,7 +1821,7 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <div className="bb-billing-address-box">
                   <div className="bb-form-group">
                     <label>Country</label>
-                    <select defaultValue="United States">
+                    <select disabled defaultValue="United States">
                       <option value="United States">United States</option>
                       <option value="United Kingdom">United Kingdom</option>
                       <option value="Canada">Canada</option>
@@ -2087,11 +1829,11 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   </div>
                   <div className="bb-form-group">
                     <label>Full Name</label>
-                    <input type="text" defaultValue="Jane Doe" />
+                    <input type="text" disabled placeholder="Handled securely by PayOS" />
                   </div>
                   <div className="bb-form-group">
                     <label>Address Line 1</label>
-                    <input type="text" defaultValue="123 Main Street" />
+                    <input type="text" disabled placeholder="Handled securely by PayOS" />
                   </div>
                   <div className="bb-form-group">
                     <label>Address Line 2 (Optional)</label>
@@ -2100,24 +1842,22 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <div className="bb-form-row-3">
                     <div className="bb-form-group">
                       <label>City</label>
-                      <input type="text" defaultValue="San Francisco" />
+                      <input type="text" disabled placeholder="Handled securely by PayOS" />
                     </div>
                     <div className="bb-form-group">
                       <label>State/Province</label>
-                      <input type="text" defaultValue="CA" />
+                      <input type="text" disabled placeholder="Handled securely by PayOS" />
                     </div>
                     <div className="bb-form-group">
                       <label>ZIP/Postal Code</label>
-                      <input type="text" defaultValue="94103" />
+                      <input type="text" disabled placeholder="Handled securely by PayOS" />
                     </div>
                   </div>
 
                   <button
                     type="button"
                     className="bb-btn-checkout-submit"
-                    onClick={() => {
-                      alert("Billing details submitted!");
-                    }}
+                    onClick={() => void subscribe()} disabled={working || !findPlan(selectedPlan)}
                   >
                     Submit
                   </button>
@@ -2130,27 +1870,24 @@ function LegacyBilling({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <h3>Order Summary</h3>
                   <div className="bb-order-line">
                     <span>{selectedPlan} Plan (Monthly)</span>
-                    <strong>{selectedPlan === "Free" ? "$0.00" : selectedPlan === "Explorer" ? "$4.99" : selectedPlan === "Buddy+" ? "$9.99" : "$19.99"}</strong>
+                    <strong>{formatPrice(selectedPlan)}</strong>
                   </div>
                   <div className="bb-order-line">
                     <span>Taxes</span>
-                    <strong>$0.00</strong>
+                    <strong>0 ₫</strong>
                   </div>
                   <div className="bb-order-divider" />
                   <div className="bb-order-total-line">
                     <span>Total</span>
-                    <strong>{selectedPlan === "Free" ? "$0.00" : selectedPlan === "Explorer" ? "$4.99" : selectedPlan === "Buddy+" ? "$9.99" : "$19.99"}</strong>
+                    <strong>{formatPrice(selectedPlan)}</strong>
                   </div>
 
                   <button
                     type="button"
                     className="bb-btn-subscribe-now"
-                    onClick={() => {
-                      alert(`Subscription confirmed for ${selectedPlan} plan!`);
-                      setSubView("manage");
-                    }}
+                    disabled={working || !findPlan(selectedPlan)} onClick={() => void subscribe()}
                   >
-                    Subscribe Now
+                    {working ? "Please wait..." : "Subscribe Now"}
                   </button>
 
                   <div className="bb-secure-payment-label">
@@ -2175,10 +1912,29 @@ type SecurityTab = "overview" | "activity" | "details";
 function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [securityView, setSecurityView] = useState<SecurityTab>("overview");
   const [logoutNotice, setLogoutNotice] = useState(false);
-
-  const handleLogoutAll = () => {
-    setLogoutNotice(true);
-    setTimeout(() => setLogoutNotice(false), 4000);
+  const [sessions, setSessions] = useState<AccountSession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<AccountSession | null>(null);
+  const [error, setError] = useState("");
+  const [working, setWorking] = useState(false);
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let active = true;
+    accountApi.sessions().then(data => {
+      if (active) { setSessions(data); setSelectedSession(data.find(item => item.isCurrent) || data[0] || null); }
+    }).catch(cause => { if (active) setError(cause.message); });
+    return () => { active = false; };
+  }, [isLoggedIn]);
+  const currentSession = sessions.find(item => item.isCurrent);
+  const detailsSession = selectedSession || currentSession;
+  const deviceName = (session?: AccountSession | null) => session?.deviceName || session?.platform || "Web browser";
+  const handleLogoutAll = async () => {
+    setWorking(true); setError("");
+    try {
+      await accountApi.revokeOtherSessions();
+      setSessions(await accountApi.sessions());
+      setLogoutNotice(true);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to log out other sessions."); }
+    finally { setWorking(false); }
   };
 
   return (
@@ -2198,6 +1954,7 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
       <div className="bb-security-page-content">
         <SettingsNavTabs active="security" />
+        {error && <p className="form-error" role="alert">{error}</p>}
 
         {/* 1. SECURITY OVERVIEW (Guest: Frame 386:720 / Logged-in: Frame 395:5785) */}
         {securityView === "overview" && (
@@ -2299,7 +2056,7 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               <button
                 type="button"
                 className="bb-btn-logout-all"
-                onClick={handleLogoutAll}
+                onClick={() => void handleLogoutAll()} disabled={working}
               >
                 <span>↳</span> Log Out All Sessions
               </button>
@@ -2314,15 +2071,16 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             {/* Current Session Card */}
             <div
               className="bb-current-session-card"
-              onClick={() => setSecurityView("details")}
+              onClick={() => { setSelectedSession(currentSession || null); setSecurityView("details"); }}
               role="button"
               tabIndex={0}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedSession(currentSession || null); setSecurityView("details"); } }}
             >
               <div className="bb-current-session-left">
                 <div className="bb-device-icon-box">💻</div>
                 <div className="bb-current-session-info">
-                  <strong>Google Chrome on macOS (Apple Silicon)</strong>
-                  <small>IP Address: 192.168.1.15 • San Francisco, CA, USA</small>
+                  <strong>{deviceName(currentSession)}</strong>
+                  <small>IP Address: {currentSession?.ipAddress || "Unknown"}</small>
                 </div>
               </div>
               <span className="bb-current-session-pill">CURRENT SESSION</span>
@@ -2333,75 +2091,21 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               <h3>Recent Logins</h3>
 
               <div className="bb-login-history-list">
-                <div className="bb-login-history-row">
-                  <div className="bb-log-info-group">
-                    <div className="bb-log-icon-wrap active-icon">📱</div>
-                    <div className="bb-log-details">
-                      <strong>Safari on iPhone 15</strong>
-                      <small>London, UK • 85.90.12.34</small>
+                {sessions.filter(session => !session.isCurrent).map(session => (
+                  <div key={session.id} className="bb-login-history-row" role="button" tabIndex={0}
+                    onClick={() => { setSelectedSession(session); setSecurityView("details"); }}
+                    onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedSession(session); setSecurityView("details"); } }}>
+                    <div className="bb-log-info-group">
+                      <div className={`bb-log-icon-wrap ${session.isActive ? "active-icon" : ""}`}>{/mobile|ios|android/i.test(session.platform || "") ? "📱" : "💻"}</div>
+                      <div className="bb-log-details"><strong>{deviceName(session)}</strong><small>{session.ipAddress || "Unknown IP"}</small></div>
+                    </div>
+                    <div className="bb-log-meta-group">
+                      <span className="bb-log-time">{formatRelativeTime(session.lastUsedAt)}</span>
+                      <span className={`bb-log-badge ${session.isActive ? "active" : "expired"}`}>{session.isActive ? "ACTIVE" : session.revokedAt ? "REVOKED" : "EXPIRED"}</span>
                     </div>
                   </div>
-                  <div className="bb-log-meta-group">
-                    <span className="bb-log-time">2 hours ago</span>
-                    <span className="bb-log-badge active">ACTIVE</span>
-                  </div>
-                </div>
-
-                <div className="bb-login-history-row">
-                  <div className="bb-log-info-group">
-                    <div className="bb-log-icon-wrap">💻</div>
-                    <div className="bb-log-details">
-                      <strong>Firefox on Windows 11</strong>
-                      <small>Paris, France • 109.12.67.54</small>
-                    </div>
-                  </div>
-                  <div className="bb-log-meta-group">
-                    <span className="bb-log-time">Yesterday</span>
-                    <span className="bb-log-badge expired">EXPIRED</span>
-                  </div>
-                </div>
-
-                <div className="bb-login-history-row">
-                  <div className="bb-log-info-group">
-                    <div className="bb-log-icon-wrap">💻</div>
-                    <div className="bb-log-details">
-                      <strong>Chrome on macOS (Apple Silicon)</strong>
-                      <small>San Francisco, CA, USA • 192.168.1.12</small>
-                    </div>
-                  </div>
-                  <div className="bb-log-meta-group">
-                    <span className="bb-log-time">3 days ago</span>
-                    <span className="bb-log-badge expired">EXPIRED</span>
-                  </div>
-                </div>
-
-                <div className="bb-login-history-row">
-                  <div className="bb-log-info-group">
-                    <div className="bb-log-icon-wrap">📱</div>
-                    <div className="bb-log-details">
-                      <strong>Edge on Android</strong>
-                      <small>Tokyo, Japan • 210.45.67.89</small>
-                    </div>
-                  </div>
-                  <div className="bb-log-meta-group">
-                    <span className="bb-log-time">1 week ago</span>
-                    <span className="bb-log-badge expired">EXPIRED</span>
-                  </div>
-                </div>
-
-                <div className="bb-login-history-row">
-                  <div className="bb-log-info-group">
-                    <div className="bb-log-icon-wrap">📱</div>
-                    <div className="bb-log-details">
-                      <strong>Safari on iPad Pro</strong>
-                      <small>Berlin, Germany • 92.122.3.45</small>
-                    </div>
-                  </div>
-                  <div className="bb-log-meta-group">
-                    <span className="bb-log-time">2 weeks ago</span>
-                    <span className="bb-log-badge expired">EXPIRED</span>
-                  </div>
-                </div>
+                ))}
+                {sessions.length <= 1 && <p>No other sessions.</p>}
               </div>
             </div>
           </div>
@@ -2428,7 +2132,7 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               <button
                 type="button"
                 className="bb-btn-logout-all"
-                onClick={handleLogoutAll}
+                onClick={() => void handleLogoutAll()} disabled={working}
               >
                 <span>↳</span> Log Out All Sessions
               </button>
@@ -2443,43 +2147,43 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             <div className="bb-telemetry-header-bar">
               <div className="bb-device-icon-box">💻</div>
               <div className="bb-current-session-info">
-                <strong>Google Chrome on macOS (Apple Silicon)</strong>
-                <small>IP Address: 192.168.1.15 • San Francisco, CA, USA</small>
+                <strong>{deviceName(detailsSession)}</strong>
+                <small>IP Address: {detailsSession?.ipAddress || "Unknown"}</small>
               </div>
             </div>
 
             <div className="bb-telemetry-table">
               <div className="bb-telem-row">
                 <span className="label">Device</span>
-                <strong className="val">Google Chrome on macOS - Apple Silicon</strong>
+                <strong className="val">{deviceName(detailsSession)}</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">IP Address</span>
-                <strong className="val">192.168.1.15</strong>
+                <strong className="val">{detailsSession?.ipAddress || "Unknown"}</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Location</span>
-                <strong className="val">San Francisco, CA, USA</strong>
+                <strong className="val">Not available</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Login Time</span>
-                <strong className="val">Sep 5, 2026 at 10:32 AM</strong>
+                <strong className="val">{detailsSession ? new Date(detailsSession.createdAt).toLocaleString() : "Not available"}</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Session Duration</span>
-                <strong className="val">3h 27m</strong>
+                <strong className="val">{detailsSession ? `${Math.max(0, Math.round((new Date(detailsSession.lastUsedAt).getTime() - new Date(detailsSession.createdAt).getTime()) / 60000))} minutes` : "Not available"}</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Operating System</span>
-                <strong className="val">macOS Sequoia 15.2</strong>
+                <strong className="val">{detailsSession?.platform || "Not available"}</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Screen Resolution</span>
-                <strong className="val">2560 × 1600</strong>
+                <strong className="val">Not recorded</strong>
               </div>
               <div className="bb-telem-row">
                 <span className="label">Status</span>
-                <span className="bb-telem-badge-active">Active</span>
+                <span className="bb-telem-badge-active">{detailsSession?.isActive ? "Active" : "Inactive"}</span>
               </div>
             </div>
           </div>
@@ -2716,7 +2420,7 @@ function SearchPreviewGrid({
             <div className="bb-member-tags-row">
               {member.matchingInterests.map((tag) => <span key={tag} className="bb-member-interest-chip">{tag}</span>)}
             </div>
-            <Link href="/get-started" className="bb-member-connect-btn bb-member-app-cta">Tiếp tục trên ứng dụng</Link>
+            <Link href="/get-started" className="bb-member-connect-btn bb-member-app-cta">Connect</Link>
           </article>
         ))}
       </div>
@@ -2728,6 +2432,11 @@ function SearchPreviewGrid({
 function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [viewMode, setViewMode] = useState<"directory" | "explore">("directory");
   const [searchQuery, setSearchQuery] = useState("");
+  const [skillFilter, setSkillFilter] = useState("Skills");
+  const [availFilter, setAvailFilter] = useState("Availability");
+  const [interestFilter, setInterestFilter] = useState("Interests");
+  const [openDropdown, setOpenDropdown] = useState<"skills" | "avail" | "interests" | null>(null);
+  const [likingPost, setLikingPost] = useState<string | null>(null);
   const [popularInterests, setPopularInterests] = useState<string[]>([]);
   const [searchResult, setSearchResult] = useState<SearchPreviewResult | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -2775,7 +2484,7 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
   }, []);
 
   useEffect(() => {
-    const query = searchQuery.trim();
+    const query = searchQuery.trim() || (interestFilter !== "Interests" ? interestFilter : popularInterests.find(tag => tag === "Coding") || popularInterests[0] || "");
     if (!query) {
       setSearchResult(null);
       setSearchError("");
@@ -2796,7 +2505,27 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [searchQuery]);
+  }, [searchQuery, interestFilter, popularInterests]);
+
+  const copyInviteLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/community`);
+      alert("Link copied! Share BeeBuddy with your friends.");
+    } catch {
+      alert("Unable to copy automatically. Share the address in your browser.");
+    }
+  };
+
+  const toggleLike = async (post: FeedPost) => {
+    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    if (likingPost) return;
+    setLikingPost(post.id); setFeedError("");
+    try {
+      const result = await postsApi.setLike(post.id, !post.likedByCurrentUser);
+      setFeedPosts(current => current.map(row => row.id === post.id ? { ...row, likesCount: result.likesCount, likedByCurrentUser: result.liked } : row));
+    } catch (cause) { setFeedError(cause instanceof Error ? cause.message : "Unable to update like."); }
+    finally { setLikingPost(null); }
+  };
 
   const onApprovedComment = (postId: string) => {
     setFeedPosts((current) => current.map((post) =>
@@ -2844,41 +2573,113 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
               </button>
             </div>
 
-            <div className="bb-figma-filter-bar bb-real-search-bar">
+            <div className="bb-figma-filter-bar">
+              {/* Skills */}
+              <div className="bb-filter-dropdown-wrap">
+                <button
+                  type="button"
+                  className={`bb-filter-pill-btn ${skillFilter !== "Skills" ? "is-selected" : ""}`}
+                  disabled title="Skills search is not available yet"
+                >
+                  <MapPin size={14} className="text-gray-500" />
+                  <span>{skillFilter}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+                {openDropdown === "skills" && (
+                  <div className="bb-filter-popup-menu">
+                    {["Skills", "Design", "UX", "Coding", "Research", "Management", "Content", "ML"].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={skillFilter === s ? "active" : ""}
+                        onClick={() => { setSkillFilter(s); setOpenDropdown(null); }}
+                      >
+                        {s === "Skills" ? "All Skills" : s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Availability */}
+              <div className="bb-filter-dropdown-wrap">
+                <button
+                  type="button"
+                  className={`bb-filter-pill-btn ${availFilter !== "Availability" ? "is-selected" : ""}`}
+                  disabled title="Availability search is not available yet"
+                >
+                  <Clock size={14} className="text-gray-500" />
+                  <span>{availFilter}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+                {openDropdown === "avail" && (
+                  <div className="bb-filter-popup-menu">
+                    {["Availability", "Available today", "This week"].map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        className={availFilter === a ? "active" : ""}
+                        onClick={() => { setAvailFilter(a); setOpenDropdown(null); }}
+                      >
+                        {a === "Availability" ? "Any Availability" : a}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Interests */}
+              <div className="bb-filter-dropdown-wrap">
+                <button
+                  type="button"
+                  className={`bb-filter-pill-btn ${interestFilter !== "Interests" ? "is-selected" : ""}`}
+                  onClick={() => setOpenDropdown(openDropdown === "interests" ? null : "interests")}
+                >
+                  <span>{interestFilter}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+                {openDropdown === "interests" && (
+                  <div className="bb-filter-popup-menu">
+                    {["Interests", ...popularInterests].map((i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={interestFilter === i ? "active" : ""}
+                        onClick={() => { setInterestFilter(i); setOpenDropdown(null); }}
+                      >
+                        {i === "Interests" ? "All Interests" : i}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Search Box */}
               <div className="bb-search-input-box">
                 <Search size={16} className="bb-search-box-icon" />
                 <input
                   type="text"
-                  placeholder="Ví dụ: Coding, Chạy bộ, Đọc sách..."
+                  placeholder="Search members..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bb-search-box-input"
-                  maxLength={80}
                 />
                 <div className="bb-search-box-divider" />
                 <button
                   type="button"
                   className="bb-search-box-sliders-btn"
-                  aria-label="Xóa tìm kiếm"
-                  onClick={() => setSearchQuery("")}
-                  title="Xóa tìm kiếm"
+                  aria-label="Reset filters"
+                  onClick={() => {
+                    setSkillFilter("Skills");
+                    setAvailFilter("Availability");
+                    setInterestFilter("Interests");
+                    setSearchQuery("");
+                  }}
+                  title="Reset filters"
                 >
                   <SlidersHorizontal size={16} />
                 </button>
               </div>
-            </div>
-
-            <div className="bb-discover-tag-chips bb-directory-popular-tags">
-              {popularInterests.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className={`bb-explore-tag-chip ${searchQuery.toLocaleLowerCase("vi-VN") === tag.toLocaleLowerCase("vi-VN") ? "is-active" : ""}`}
-                  onClick={() => setSearchQuery(tag)}
-                >
-                  {tag}
-                </button>
-              ))}
             </div>
 
             <SearchPreviewGrid
@@ -2898,10 +2699,7 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
               <button
                 type="button"
                 className="bb-growth-invite-btn"
-                onClick={() => {
-                  navigator.clipboard?.writeText?.(window.location.href);
-                  alert("Link copied! Share BeeBuddy with your friends.");
-                }}
+                onClick={() => void copyInviteLink()}
               >
                 Invite Friends
               </button>
@@ -2932,13 +2730,24 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <Search size={16} className="bb-search-box-icon" />
                 <input
                   type="text"
-                  placeholder="Tìm theo sở thích hoặc thói quen..."
+                  placeholder="Search members..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bb-search-box-input"
-                  maxLength={80}
                 />
               </div>
+
+              <div className="bb-filter-dropdown-wrap">
+                <button type="button" className="bb-filter-pill-btn" onClick={() => setOpenDropdown(openDropdown === "interests" ? null : "interests")}>
+                  <span>{interestFilter}</span><ChevronDown size={14} className="text-gray-400" />
+                </button>
+                {openDropdown === "interests" && <div className="bb-filter-popup-menu">
+                  {["Interests", ...popularInterests].map(interest => <button key={interest} type="button" className={interestFilter === interest ? "active" : ""}
+                    onClick={() => { setInterestFilter(interest); setSearchQuery(""); setOpenDropdown(null); }}>{interest === "Interests" ? "All Interests" : interest}</button>)}
+                </div>}
+              </div>
+              <button type="button" className="bb-filter-pill-btn" disabled title="Skills search is not available yet"><span>Skills</span><ChevronDown size={14} className="text-gray-400" /></button>
+              <button type="button" className="bb-filter-pill-btn" disabled title="Availability search is not available yet"><span>Availability</span><ChevronDown size={14} className="text-gray-400" /></button>
             </div>
 
             {/* Discover Friends by Interest */}
@@ -2989,7 +2798,7 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
                   <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng tin...</div>
                 )}
 
-                {feedError && feedPosts.length === 0 && (
+                {feedError && (
                   <div className="bb-feed-state-card is-error">
                     <p>{feedError}</p>
                     <button type="button" onClick={() => void loadFeed(1)}>Thử lại</button>
@@ -3042,9 +2851,9 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
                     )}
 
                     <div className="bb-post-actions-bar">
-                      <span className="bb-post-action-btn" aria-label={`${post.likesCount} lượt thích`}>
-                        <Heart size={16} /><span>{post.likesCount} lượt thích</span>
-                      </span>
+                      <button type="button" className={`bb-post-action-btn ${post.likedByCurrentUser ? "is-liked" : ""}`} disabled={likingPost !== null} onClick={() => void toggleLike(post)} aria-pressed={post.likedByCurrentUser}>
+                        <Heart size={16} /><span>{post.likesCount} likes</span>
+                      </button>
                       <button
                         type="button"
                         className="bb-post-action-btn"
@@ -3083,7 +2892,7 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
               <img src="/assets/home/figma-buzzy.png" alt="Buzzy" className="bb-explore-growth-buzzy" />
               <h3 className="bb-growth-title">The hive is buzzing!</h3>
               <p className="bb-growth-sub">Great things are built together. Invite friends to join our cozy community space and explore adventures side-by-side.</p>
-              <button type="button" className="bb-growth-invite-btn" onClick={() => alert("Invite link copied!")}>Invite Friends</button>
+              <button type="button" className="bb-growth-invite-btn" onClick={() => void copyInviteLink()}>Invite Friends</button>
             </div>
           </div>
         )}
@@ -3096,6 +2905,7 @@ function CommunityDirectory({ isLoggedIn }: { isLoggedIn: boolean }) {
         onClose={() => setIsCommentsOpen(false)}
         title={activeCommentsTitle}
         onApprovedComment={onApprovedComment}
+        showReportAction={false}
       />
     </div>
   );

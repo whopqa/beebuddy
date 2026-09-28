@@ -2,22 +2,37 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, type Transition } from "motion/react";
 import FigmaHeader from "./FigmaHeader";
 import { webAuth } from "@/lib/auth-client";
 
 const homeAsset = (name: string) => `/assets/home/${name}`;
+const FIGMA_HOME_DURATION = 42.5;
+
+const ringTransition: Transition = {
+  opacity: { duration: FIGMA_HOME_DURATION, times: [0, 0.1059, 0.2118, 0.3176, 0.4235, 1], ease: ["easeInOut", "easeInOut", "easeInOut", "easeInOut", "linear"], repeat: Infinity },
+  rotate: { duration: FIGMA_HOME_DURATION, times: [0, 0.4235, 1], ease: "linear", repeat: Infinity },
+};
+
+const avatarMotion: Record<number, { initialX: number; positions: number[]; transition: Transition }> = {
+  0: { initialX: 50, positions: [50, 50, -8, -8, 50, 50], transition: { x: { duration: FIGMA_HOME_DURATION, times: [0, 0.0071, 0.02, 0.0553, 0.0682, 1], ease: ["linear", [0.45, 1.45, 0.8, 1], "linear", "easeInOut", "linear"], repeat: Infinity } } },
+  1: { initialX: 25, positions: [25, -4, -4, 25, 25], transition: { x: { duration: FIGMA_HOME_DURATION, times: [0, 0.0129, 0.0624, 0.0753, 1], ease: [[0.45, 1.45, 0.8, 1], "linear", "easeInOut", "linear"], repeat: Infinity } } },
+  3: { initialX: -25, positions: [-25, -25, 4, 4, -25, -25], transition: { x: { duration: FIGMA_HOME_DURATION, times: [0, 0.0035, 0.0165, 0.0588, 0.0718, 1], ease: ["linear", [0.45, 1.45, 0.8, 1], "linear", "easeInOut", "linear"], repeat: Infinity } } },
+  4: { initialX: -50, positions: [-50, -50, 8, 8, -50, -50], transition: { x: { duration: FIGMA_HOME_DURATION, times: [0, 0.0106, 0.0235, 0.0518, 0.0647, 1], ease: ["linear", [0.45, 1.45, 0.8, 1], "linear", "easeInOut", "linear"], repeat: Infinity } } },
+};
 
 export default function LandingPage({ authenticated = false }: { authenticated?: boolean }) {
   const [isAuth, setIsAuth] = useState(authenticated);
-  const [activeFeatureCard, setActiveFeatureCard] = useState<number>(1);
-  const [activeTrait, setActiveTrait] = useState<string>("Friendly");
 
   useEffect(() => {
     let active = true;
     webAuth.me()
-      .then(() => { if (active) setIsAuth(true); })
-      .catch(() => { if (active) setIsAuth(false); });
+      .then(() => {
+        if (active) setIsAuth(true);
+      })
+      .catch(() => {
+        if (active) setIsAuth(false);
+      });
     return () => { active = false; };
   }, []);
 
@@ -37,30 +52,34 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
     [0, 0.5412, 0.6, 0.7412, 0.8, 1],
     [0, 0.7412, 0.8, 0.9412, 1],
   ];
+  // Figma 1:2, nodes 30:235 and 53:6/9/12/15 share one 42.5s timeline.
+  const heroFadeTransitions: Transition[] = [
+    { opacity: { duration: 42.5, times: heroTimes[0], ease: ["linear", [0.3, 0, 0.7, 1], "linear", [0.3, 0, 0.7, 1]], repeat: Infinity } },
+    { opacity: { duration: 42.5, times: heroTimes[1], ease: ["linear", [0.3, 0, 0.7, 1], "linear", [0.3, 0, 0.7, 1], "linear"], repeat: Infinity } },
+    { opacity: { duration: 42.5, times: heroTimes[2], ease: ["linear", [0.3, 0, 0.7, 1], "linear", [0.3, 0, 0.7, 1], "linear"], repeat: Infinity } },
+    { opacity: { duration: 42.5, times: heroTimes[3], ease: ["linear", [0.3, 0, 0.7, 1], "linear", [0.3, 0, 0.7, 1], "linear"], repeat: Infinity } },
+    { opacity: { duration: 42.5, times: heroTimes[4], ease: ["linear", [0.3, 0, 0.7, 1], "linear", [0.3, 0, 0.7, 1]], repeat: Infinity } },
+  ];
 
   return (
     <div className="bb-site bb-design-site">
       <FigmaHeader authenticated={isAuth} />
 
       <main className="bb-canvas" id="top">
-        {/* Floating Social Media Rail on Left (Figma media connect #30:150) */}
-        <aside className="bb-social-rail-container" aria-label="Social media">
-          <div className="bb-social-rail-dash-top" aria-hidden="true" />
-          <div className="bb-social-rail-capsule">
-            <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok" className="bb-social-link">
-              <img src="/assets/ui/tiktok.svg" alt="" />
-            </a>
-            <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="bb-social-link">
-              <img src="/assets/ui/instagram.png" alt="" />
-            </a>
-            <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="bb-social-link">
-              <img src="/assets/ui/facebook.svg" alt="" />
-            </a>
-          </div>
-          <div className="bb-social-rail-dash-bottom" aria-hidden="true" />
+        {/* Floating Social Media Rail on Left */}
+        <aside className="bb-social-rail" aria-label="Social media">
+          <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+            <img src="/assets/ui/facebook.svg" alt="" />
+          </a>
+          <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
+            <img src="/assets/ui/instagram.png" alt="" />
+          </a>
+          <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+            <img src="/assets/ui/tiktok.svg" alt="" />
+          </a>
         </aside>
 
-        {/* 1. HERO SECTION (Figma frame 54:3, 1440x800px) */}
+        {/* 1. HERO SECTION (Figma frame 54:3) */}
         <section className="bb-hero-design" aria-labelledby="hero-title">
           {heroImages.map((image, index) => (
             <motion.div
@@ -69,11 +88,7 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
               style={{ backgroundImage: `url(${homeAsset(image)})` }}
               initial={{ opacity: index === 0 ? 1 : 0 }}
               animate={reducedMotion ? { opacity: index === 0 ? 1 : 0 } : { opacity: heroOpacity[index] }}
-              transition={
-                reducedMotion
-                  ? { duration: 0 }
-                  : { duration: 42.5, repeat: Infinity, repeatType: "loop", times: heroTimes[index], ease: "linear" }
-              }
+              transition={reducedMotion ? { duration: 0 } : heroFadeTransitions[index]}
               aria-hidden={index !== 0}
             />
           ))}
@@ -81,41 +96,27 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
           <div className="bb-hero-shade" />
 
           <div className="bb-hero-design-copy">
-            <h1 id="hero-title" className="bb-hero-main-heading">
+            <h1 id="hero-title">
               CONNECT WITH PEOPLE<br />WHO MAKE EVERY<br />JOURNEY BETTER
             </h1>
-            <p className="bb-hero-subtitle">
+            <p>
               BeeBuddy brings like minded people together to share experiences build meaningful connections and grow through every journey
             </p>
             <div className="bb-hero-design-actions">
               <a className="bb-play-badge" href="/signup" aria-label="Get started on Google Play">
-                <div className="bb-play-icon-box">
-                  <img src={homeAsset("home-18.png")} alt="" />
-                </div>
-                <div className="bb-play-text-box">
-                  <small>GET IT ON</small>
-                  <span>Google Play</span>
-                </div>
+                <img src={homeAsset("home-18.png")} alt="" />
+                <span>
+                  <small>GET IT ON</small>Google Play
+                </span>
               </a>
               <Link className="bb-start-button" href={isAuth ? "/get-started" : "/signup"}>
-                <svg className="bb-paper-plane-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22 2L11 13" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" fill="white" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>GET STARTED</span>
+                GET STARTED <span>↗</span>
               </Link>
             </div>
           </div>
 
           <a href="#features" className="bb-scroll-cue" aria-label="Scroll down">
-            <span className="bb-scroll-cue-text">SCROLL</span>
-            <div className="bb-scroll-mouse-pill">
-              <motion.span
-                className="bb-scroll-mouse-dot"
-                animate={reducedMotion ? false : { y: [0, 8, 0], opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </div>
+            <img src={homeAsset("scroll_cue_hero.png")} alt="Scroll" className="bb-scroll-cue-img" />
           </a>
         </section>
 
@@ -123,55 +124,39 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
         <section className="bb-scenic-transition-band" id="features" aria-label="Core Features">
           <div className="bb-scenic-river-backdrop" style={{ backgroundImage: `url(${homeAsset("river_landscape_cards_bg.png")})` }} />
           <div className="bb-scenic-gradient-overlay" />
-          
-          <div className="bb-feature-action-container" onMouseLeave={() => setActiveFeatureCard(1)}>
+          <div className="bb-feature-action-container">
             <InteractiveFeatureCard
               icon="figma-people.png"
               title="Find Like-Minded Friends"
               subtitle="Connect with people who share your vibe and your values"
-              isActive={activeFeatureCard === 0}
-              onHover={() => setActiveFeatureCard(0)}
               href="/community"
             />
             <InteractiveFeatureCard
               icon="figma-globe.png"
               title="Shared Interests"
               subtitle="Discover groups and activities that spark real connections"
-              isActive={activeFeatureCard === 1}
-              onHover={() => setActiveFeatureCard(1)}
+              defaultActive
               href="#services"
             />
             <InteractiveFeatureCard
               icon="figma-chat.png"
               title="Real Experiences"
               subtitle="Turn conversations into moments you’ll always remember"
-              isActive={activeFeatureCard === 2}
-              onHover={() => setActiveFeatureCard(2)}
               href="/community"
             />
           </div>
-
-          {/* Golden bottom separator line from Figma [LINE] #110:81 */}
-          <div className="bb-scenic-golden-line" aria-hidden="true" />
         </section>
 
         {/* 3. ABOUT US SECTION (Figma frames 61:123, 61:76, 80:266) */}
         <section className="bb-intro-design" id="about" aria-labelledby="about-title">
           <div className="bb-intro-snow-backdrop" style={{ backgroundImage: `url(${homeAsset("about_snowy_mountains_bg.png")})` }} />
 
-          {/* Giant Faint Multi-Color Background Wordmark (Figma #61:69) */}
+          {/* Giant Faint Background Wordmark */}
           <div className="bb-giant-watermark" aria-hidden="true">Beebuddy</div>
 
-          {/* Floating Bee Mascot on the right with radial glow */}
-          <div className="bb-flying-bee-container" aria-hidden="true">
-            <div className="bb-flying-bee-radial-glow" />
-            <motion.div
-              className="bb-flying-bee-wrap"
-              animate={reducedMotion ? false : { y: [0, -14, 0], x: [0, 5, 0], rotate: [0, 2, -1, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <img src={homeAsset("bee_about_flying_transparent.png")} alt="" className="bb-flying-bee" />
-            </motion.div>
+          {/* Floating Bee Mascot on the right */}
+          <div className="bb-flying-bee-wrap" aria-hidden="true">
+            <img src={homeAsset("bee_about_flying_transparent.png")} alt="" className="bb-flying-bee" />
           </div>
 
           <div className="bb-intro-copy-card">
@@ -181,7 +166,7 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
             </div>
             <span className="bb-brand-year">Brand Identity 2026</span>
             <p>
-              <strong className="bb-highlight-orange">BeeBuddy</strong> is a social connection platform designed to help people meet like minded friends
+              <strong>BeeBuddy</strong> is a social connection platform designed to help people meet like minded friends
               build meaningful relationships and turn shared interests into real experiences. It creates a simple space
               where every connection can grow naturally and every journey can begin together.
             </p>
@@ -209,49 +194,26 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
         <section className="bb-buzzy-showcase" id="meet-buzzy" aria-labelledby="buzzy-showcase-title">
           <div className="bb-buzzy-left-column">
             <div className="bb-buzzy-character-stage">
-              <motion.img
+              <img
                 src={homeAsset("buzzy_meet_mascot.png")}
                 alt="Buzzy with headphones"
                 className="bb-buzzy-mascot-img"
-                animate={reducedMotion ? false : { y: [0, -12, 0] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
               />
               <div className="bb-buzzy-aura-glow" aria-hidden="true" />
             </div>
 
-            {/* Interactive Trait Pills in single unified capsule container matching Figma EL-a9979397 & EL-a3afd136 */}
+            {/* Interactive Trait Pills in single unified capsule container */}
             <div className="bb-buzzy-traits-container" aria-label="Buzzy personality traits">
-              <InteractiveTraitPill
-                icon="♥"
-                label="Friendly"
-                isSelected={activeTrait === "Friendly"}
-                onClick={() => setActiveTrait("Friendly")}
-              />
-              <InteractiveTraitPill
-                icon="☺"
-                label="Helpful"
-                isSelected={activeTrait === "Helpful"}
-                onClick={() => setActiveTrait("Helpful")}
-              />
-              <InteractiveTraitPill
-                icon="★"
-                label="Curious"
-                isSelected={activeTrait === "Curious"}
-                onClick={() => setActiveTrait("Curious")}
-              />
-              <InteractiveTraitPill
-                icon="🔍"
-                label="Fun"
-                isSelected={activeTrait === "Fun"}
-                onClick={() => setActiveTrait("Fun")}
-              />
+              <InteractiveTraitPill icon="♥" label="Friendly" defaultColor="#ff8500" />
+              <InteractiveTraitPill icon="☺" label="Helpful" defaultColor="#ff9900" />
+              <InteractiveTraitPill icon="★" label="Curious" defaultColor="#eab308" />
+              <InteractiveTraitPill icon="🔍" label="Fun" defaultColor="#f97316" />
             </div>
           </div>
 
           <div className="bb-buzzy-right-column">
             <div className="bb-buzzy-companion-tag">
-              <span className="bb-companion-tag-badge">♥</span>
-              <span className="bb-companion-tag-text">YOUR JOURNEY COMPANION</span>
+              <span>♥</span> YOUR JOURNEY COMPANION
             </div>
             <h2 id="buzzy-showcase-title" className="bb-buzzy-title-sunburst">
               Meet Buzzy
@@ -261,28 +223,38 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
                 <span className="ray ray-3" />
               </span>
             </h2>
-            <p className="bb-buzzy-desc">
+            <p>
               Buzzy is BeeBuddy’s friendly little companion who makes every connection feel warmer.
               From meeting new people to discovering shared activities, Buzzy is always there to make the
               journey feel easier, brighter and more welcoming.
             </p>
             <Link className="bb-buzzy-cta-pill" href="/meet-buzzy">
-              <span>Say Hi to Buzzy</span>
-              <span className="bb-buzzy-arrow">→</span>
+              Say Hi to Buzzy <span>→</span>
             </Link>
           </div>
         </section>
 
         {/* 5. SERVICES SECTION (Figma frames 119:286, 181:1165, 186:1179-1199 with staggered rows and vertical typography) */}
         <section className="bb-services-showcase" id="services" aria-labelledby="services-showcase-title">
+          <motion.div
+            className="bb-figma-traveling-ellipse"
+            initial={{ x: 0, y: 0 }}
+            animate={reducedMotion ? { x: 0, y: 0 } : { x: [0, 1426.149, -232.851, 1496.149, -457.851, -457.851], y: [0, -625.778, -660.778, 256.222, 210.222, 210.222] }}
+            transition={reducedMotion ? { duration: 0 } : { x: { duration: FIGMA_HOME_DURATION, times: [0, 0.2204, 0.4452, 0.5753, 0.6587, 1], ease: "linear", repeat: Infinity }, y: { duration: FIGMA_HOME_DURATION, times: [0, 0.2204, 0.4452, 0.5753, 0.6587, 1], ease: "linear", repeat: Infinity } }}
+            aria-hidden="true"
+          >
+            <div className="bb-figma-traveling-ellipse-static">
+              <img src={homeAsset("figma-ellipse-12.svg")} alt="" />
+            </div>
+          </motion.div>
           <div className="bb-services-inner">
             <h2 id="services-showcase-title" className="sr-only">Services</h2>
 
             <div className="bb-services-staggered-list">
-              <InteractiveServiceRow number="01" title="Find Your People" side="left" barGradient="gold-to-orange" />
-              <InteractiveServiceRow number="02" title="Shared Adventures" side="right" barGradient="orange-to-gold" />
-              <InteractiveServiceRow number="03" title="Stories That Stay" side="left" barGradient="gold-to-orange" />
-              <InteractiveServiceRow number="04" title="Build Your Circle" side="right" barGradient="orange-to-gold" />
+              <InteractiveServiceRow number="01" title="Find Your People" side="left" />
+              <InteractiveServiceRow number="02" title="Shared Adventures" side="right" />
+              <InteractiveServiceRow number="03" title="Stories That Stay" side="left" />
+              <InteractiveServiceRow number="04" title="Build Your Circle" side="right" />
             </div>
 
             {/* Giant Vertical Artwork from Figma on Far Right */}
@@ -291,10 +263,7 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
             </div>
           </div>
 
-          {/* Decorative Translucent Lens Ambient Circles */}
-          <div className="bb-lens-circle circle-1" aria-hidden="true" />
-          <div className="bb-lens-circle circle-2" aria-hidden="true" />
-          <div className="bb-lens-circle circle-3" aria-hidden="true" />
+          {/* Decorative Translucent Lens Circles */}
         </section>
 
         {/* 6. TICKER & SOLID ORANGE ACCENT BAND (Figma frames 159:687 & 157:102) */}
@@ -324,13 +293,27 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
         {/* 7. COMMUNITY SECTION (Figma frame 123:308, 157:50, 194:3365, 194:3387, 194:3288 with curved arrow path) */}
         <section className="bb-community-showcase" id="community" aria-labelledby="community-showcase-title">
           <div className="bb-community-header-block">
-            <h2 id="community-showcase-title" className="bb-community-title">Community</h2>
+            <h2 id="community-showcase-title">Community</h2>
             <div className="bb-member-proof-row">
               <div className="bb-member-avatar-stack">
-                <img src={homeAsset("fav-01.png")} alt="" />
-                <img src={homeAsset("fav-02.png")} alt="" />
-                <img src={homeAsset("fav-03.png")} alt="" />
-                <img src={homeAsset("fav-04.png")} alt="" />
+                {[1, 2, 3, 4, 5].map((number, index) => {
+                  const movement = avatarMotion[index];
+                  return movement ? (
+                    <motion.div
+                      key={number}
+                      className="bb-figma-member-avatar"
+                      initial={{ x: movement.initialX }}
+                      animate={reducedMotion ? { x: 0 } : { x: movement.positions }}
+                      transition={reducedMotion ? { duration: 0 } : movement.transition}
+                    >
+                      <img src={homeAsset(`figma-fav-${number}.png`)} alt="" />
+                    </motion.div>
+                  ) : (
+                    <div key={number} className="bb-figma-member-avatar">
+                      <img src={homeAsset(`figma-fav-${number}.png`)} alt="" />
+                    </div>
+                  );
+                })}
                 <span className="bb-stack-badge">+86</span>
               </div>
               <span className="bb-member-label">BeeBuddy member</span>
@@ -338,57 +321,73 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
 
             <div className="bb-community-subhead-row">
               <span className="bb-globe-icon-wrap" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="2" y1="12" x2="22" y2="12" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                </svg>
+                <img src={homeAsset("figma-globe.png")} alt="" className="bb-globe-img" />
               </span>
               <div>
-                <strong className="bb-community-subhead-title">Wherever you are, you’ll always find your people</strong>
-                <p className="bb-community-subhead-text">From local hangouts to global adventures - connections happen here</p>
+                <strong>Wherever you are, you’ll always find your people</strong>
+                <p>From local hangouts to global adventures - connections happen here</p>
               </div>
             </div>
           </div>
 
-          {/* Connected Cards Layout with SVG Dashed Curved Path (Figma 194:3348) */}
+          {/* Connected Cards Layout with SVG Dashed Curved Path */}
           <div className="bb-community-cards-stage">
+            <motion.div
+              className="bb-figma-community-orbit-left"
+              initial={{ opacity: 1, rotate: 28.72 }}
+              animate={reducedMotion ? { opacity: 1, rotate: 28.72 } : { opacity: [1, 0.7, 1, 0.7, 1, 1], rotate: [28.72, 388.72, 388.72] }}
+              transition={reducedMotion ? { duration: 0 } : ringTransition}
+              aria-hidden="true"
+            >
+              <img src={homeAsset("figma-ellipse-17.svg")} alt="" />
+            </motion.div>
             {/* SVG Connecting Flow Line with Arrow from Figma 194:3348 */}
             <div className="bb-community-curve-wrap" aria-hidden="true">
               <img src={homeAsset("community_curve_path.svg")} alt="" className="bb-community-curve-img" />
             </div>
 
-            {/* Card 1: Top Left (x: 90, y: 4231) - Radius: 0px 50px 0px 50px */}
+            {/* Card 1: Top Left (x: 90, y: 4231) */}
             <InteractiveCommunityCard
               className="card-top-left"
               image="figma-community-mountain.png"
               tag="Story Exchange"
               text="Share travel stories, tips, and snapshots that inspire the next journey"
-              variant="radius-tl-br"
             />
 
-            {/* Card 2: Middle Right (x: 793, y: 4526) - Radius: 50px 0px 50px 0px */}
+            {/* Card 2: Middle Right (x: 793, y: 4526) */}
             <InteractiveCommunityCard
               className="card-mid-right"
               image="figma-community-dinner.png"
               tag="Foodies Abroad"
               text="For food lovers exploring local flavors and shared meals"
-              variant="radius-tr-bl"
             />
 
-            {/* Card 3: Bottom Left (x: 90, y: 4755) - Radius: 0px 50px 0px 50px */}
+            {/* Card 3: Bottom Left (x: 90, y: 4755) */}
             <InteractiveCommunityCard
               className="card-bottom-left"
               image="figma-community-campfire.png"
               tag="Buddy Events"
               text="Curated gatherings, weekend plans, friendly activities"
-              variant="radius-tl-br"
             />
 
-            {/* Concentric Decorative Rings on Right (Figma #194:3347 & #243:266) */}
+            {/* Concentric Decorative Rings on Right */}
             <div className="bb-concentric-rings" aria-hidden="true">
-              <div className="ring ring-outer" />
-              <div className="ring ring-inner" />
+              <motion.div
+                className="bb-figma-ring-outer"
+                initial={{ opacity: 1, rotate: 0 }}
+                animate={reducedMotion ? { opacity: 1, rotate: 0 } : { opacity: [1, 0.7, 1, 0.7, 1, 1], rotate: [0, 360, 360] }}
+                transition={reducedMotion ? { duration: 0 } : ringTransition}
+              >
+                <img src={homeAsset("figma-ellipse-16.svg")} alt="" />
+              </motion.div>
+              <motion.div
+                className="bb-figma-ring-inner"
+                initial={{ opacity: 1, rotate: 0 }}
+                animate={reducedMotion ? { opacity: 1, rotate: 0 } : { opacity: [1, 0.7, 1, 0.7, 1, 1], rotate: [0, 360, 360] }}
+                transition={reducedMotion ? { duration: 0 } : ringTransition}
+              >
+                <img src={homeAsset("figma-ellipse-19.svg")} alt="" />
+              </motion.div>
             </div>
           </div>
         </section>
@@ -451,9 +450,9 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
               </div>
             </div>
 
-            {/* Glassmorphism Floating Newsletter Card with Peeking Buzzy (Figma #30:196 & #131:465) */}
+            {/* Glassmorphism Floating Newsletter Card with Peeking Buzzy */}
             <div className="bb-newsletter-stage">
-              <div className="bb-newsletter-buzzy-anchor" aria-hidden="true">
+              <div className="bb-newsletter-buzzy-anchor">
                 <img src={homeAsset("footer_peeking_buzzy.png")} alt="" className="bb-peeking-buzzy" />
               </div>
 
@@ -482,17 +481,13 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
                     className="bb-glass-input"
                   />
                   <button type="submit" className="bb-glass-submit">
-                    <span>START YOUR JOURNEY</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" />
-                    </svg>
+                    Start your journey <span>&gt;</span>
                   </button>
                 </form>
               </div>
             </div>
 
-            {/* Bottom Copyright & Legal Links (Figma #30:214) */}
+            {/* Bottom Copyright & Legal Links */}
             <div className="bb-footer-bottom-bar">
               <span className="bb-copyright">© 2026 BeeBuddy. All rights reserved</span>
               <div className="bb-bottom-links">
@@ -521,22 +516,24 @@ function InteractiveFeatureCard({
   icon,
   title,
   subtitle,
-  isActive = false,
-  onHover,
+  defaultActive = false,
   href,
 }: {
   icon: string;
   title: string;
   subtitle: string;
-  isActive?: boolean;
-  onHover?: () => void;
+  defaultActive?: boolean;
   href: string;
 }) {
+  const [hovered, setHovered] = useState(false);
+  const isActive = hovered || defaultActive;
+
   return (
     <Link
       href={href}
       className={`bb-feature-action-card ${isActive ? "is-active" : ""}`}
-      onMouseEnter={onHover}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div className="bb-feat-top-row">
         <img src={homeAsset(icon)} alt="" className="bb-feat-icon" />
@@ -545,11 +542,11 @@ function InteractiveFeatureCard({
       <motion.p
         initial={false}
         animate={{
-          height: isActive ? "auto" : 0,
-          opacity: isActive ? 1 : 0,
-          marginTop: isActive ? 8 : 0,
+          height: hovered ? "auto" : 0,
+          opacity: hovered ? 1 : 0,
+          marginTop: hovered ? 8 : 0,
         }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        transition={{ duration: 0.35, ease: "easeInOut" }}
         className="bb-feat-hover-subtitle"
       >
         {subtitle}
@@ -558,45 +555,30 @@ function InteractiveFeatureCard({
   );
 }
 
-/** Trait Pill with dedicated icon badge matching Figma EL-a9979397 & EL-a3afd136 */
-function InteractiveTraitPill({
-  icon,
-  label,
-  isSelected,
-  onClick,
-}: {
-  icon: string;
-  label: string;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
+/** Trait Pill with Mouse-in Scale and Glow */
+function InteractiveTraitPill({ icon, label, defaultColor }: { icon: string; label: string; defaultColor: string }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <motion.button
       type="button"
-      className={`bb-trait-pill ${isSelected ? "is-selected" : ""}`}
-      onClick={onClick}
-      whileHover={{ scale: 1.05, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.15 }}
+      className="bb-trait-pill"
+      style={{
+        background: hovered ? "linear-gradient(90deg, #ff8500, #ffb020)" : "linear-gradient(90deg, #ff9900, #ffc040)",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      whileHover={{ scale: 1.08, y: -2 }}
+      transition={{ duration: 0.2 }}
     >
-      <span className="bb-trait-icon-badge">{icon}</span>
+      <span className="bb-trait-icon">{icon}</span>
       <span className="bb-trait-label">{label}</span>
     </motion.button>
   );
 }
 
 /** Staggered Service Row with Mouse-in Line Expansion */
-function InteractiveServiceRow({
-  number,
-  title,
-  side,
-  barGradient,
-}: {
-  number: string;
-  title: string;
-  side: "left" | "right";
-  barGradient: "gold-to-orange" | "orange-to-gold";
-}) {
+function InteractiveServiceRow({ number, title, side }: { number: string; title: string; side: "left" | "right" }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -611,34 +593,32 @@ function InteractiveServiceRow({
         <span className="bb-service-title">{title}</span>
       </div>
       <motion.div
-        className={`bb-service-accent-bar ${barGradient}`}
-        initial={{ scaleX: 0.92 }}
-        animate={{ scaleX: hovered ? 1 : 0.92 }}
+        className="bb-service-accent-bar"
+        initial={{ scaleX: 0.85 }}
+        animate={{ scaleX: hovered ? 1 : 0.85 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
     </div>
   );
 }
 
-/** Community Story Card with exact asymmetric corner radius from Figma #194:3365, 3387, 3288 */
+/** Community Story Card with Mouse-in Image Zoom and Caption Lift */
 function InteractiveCommunityCard({
   image,
   tag,
   text,
   className,
-  variant,
 }: {
   image: string;
   tag: string;
   text: string;
   className: string;
-  variant: "radius-tl-br" | "radius-tr-bl";
 }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <article
-      className={`bb-community-card-unit ${className} ${variant} ${hovered ? "is-hovered" : ""}`}
+      className={`bb-community-card-unit ${className} ${hovered ? "is-hovered" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -652,14 +632,10 @@ function InteractiveCommunityCard({
         />
         <motion.div
           className="bb-community-caption-pill"
-          animate={{ y: hovered ? -2 : 0 }}
-          transition={{ duration: 0.2 }}
+          animate={{ y: hovered ? -3 : 0 }}
+          transition={{ duration: 0.25 }}
         >
-          <span className="bb-caption-bubble-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </span>
+          <span className="bb-caption-bubble-icon" aria-hidden="true">💬</span>
           <div className="bb-caption-text-wrap">
             <strong>{tag}</strong>
             <p>{text}</p>
@@ -691,11 +667,11 @@ function MarqueeStrip() {
       <motion.div
         className="bb-marquee-track"
         initial={{ x: 0 }}
-        animate={reducedMotion ? { x: 0 } : { x: [0, -1800] }}
+        animate={reducedMotion ? { x: 0 } : { x: [0, -3399] }}
         transition={
           reducedMotion
             ? { duration: 0 }
-            : { duration: 32, repeat: Infinity, repeatType: "loop", ease: "linear" }
+            : { x: { duration: FIGMA_HOME_DURATION, times: [0, 1], ease: "linear", repeat: Infinity } }
         }
       >
         {[...words, ...words, ...words].map((word, index) => (

@@ -169,6 +169,7 @@ export class AccountService {
       interests?: string[];
       habits?: string[];
       connectionGoal?: string;
+      occupation?: string;
     }
   ) {
     return prisma.$transaction(async (tx) => {
@@ -183,6 +184,7 @@ export class AccountService {
           interests: data.interests,
           habits: data.habits,
           connectionGoal: data.connectionGoal,
+          occupation: data.occupation,
         },
         include: { user: { select: profileUserSelect } },
       });

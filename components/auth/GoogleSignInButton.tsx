@@ -44,7 +44,7 @@ export function GoogleSignInButton({
       theme: "outline",
       size: "large",
       text: mode === "signup" ? "signup_with" : "continue_with",
-      shape: "pill",
+      shape: "rectangular",
       width: Math.min(Math.max(containerRef.current.clientWidth, 240), 400),
       locale: "vi",
     });

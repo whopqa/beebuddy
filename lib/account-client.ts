@@ -13,6 +13,7 @@ export type AccountProfile = {
   interests: string[];
   habits: string[];
   connectionGoal?: string | null;
+  occupation?: string | null;
   user: {
     id: string;
     email: string;

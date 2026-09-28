@@ -89,6 +89,7 @@ describe("AccountService.updateProfile", () => {
       interests: [" Coding ", "coding", "Board games"],
       habits: ["Dậy sớm"],
       location: "Hà Nội",
+      occupation: "Student",
       connectionGoal: "Tìm bạn chạy bộ",
     });
 
@@ -97,6 +98,7 @@ describe("AccountService.updateProfile", () => {
         interests: [" Coding ", "coding", "Board games"],
         habits: ["Dậy sớm"],
         location: "Hà Nội",
+        occupation: "Student",
         connectionGoal: "Tìm bạn chạy bộ",
       }),
     }));

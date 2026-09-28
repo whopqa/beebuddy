@@ -1967,7 +1967,6 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.bb-pref-box-title-row h2,
 .bb-pref-box-title-row h3 {
   font-size: 18px;
   font-weight: 800;
@@ -2032,60 +2031,6 @@
   color: #374151;
 }
 
-.bb-settings-account-summary {
-  margin-bottom: 20px;
-  padding: 24px 28px;
-}
-
-.bb-settings-save-state {
-  color: #ff7300;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.bb-figma-switch {
-  position: relative;
-  display: inline-flex;
-  width: 46px;
-  height: 25px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.bb-figma-switch input {
-  position: absolute;
-  opacity: 0;
-}
-
-.bb-figma-switch span {
-  width: 100%;
-  border: 1px solid #ff9000;
-  border-radius: 999px;
-  background: #eeeeee;
-  transition: 0.2s ease;
-}
-
-.bb-figma-switch span::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 4px;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  transition: 0.2s ease;
-}
-
-.bb-figma-switch input:checked + span {
-  background: linear-gradient(90deg, #ff7300, #fecc07);
-}
-
-.bb-figma-switch input:checked + span::after {
-  transform: translateX(19px);
-}
-
 /* --------------------------------------------------------------------------
    10. Account View & Edit (Figma 515:4234, 407:8037)
    -------------------------------------------------------------------------- */
@@ -2134,32 +2079,6 @@
   border: 3px solid #ff7300;
   flex-shrink: 0;
 }
-
-.bb-edit-avatar-control {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-}
-
-.bb-edit-avatar-control label,
-.bb-edit-avatar-control button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  background: none;
-  color: #ea580c;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.bb-edit-avatar-control button { color: #b42318; }
-.bb-edit-avatar-control input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.bb-edit-avatar-status { color: #6b7280; font-size: 13px; overflow-wrap: anywhere; text-align: right; }
 
 .bb-profile-user-fields {
   display: flex;
@@ -2561,35 +2480,6 @@
 .bb-edit-val-underlined {
   border-bottom: 1px solid #d1d5db;
   padding-bottom: 8px;
-}
-
-input.bb-edit-val-underlined,
-.bb-edit-text-input {
-  width: 100%;
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  outline: none;
-  background: transparent;
-  color: #374151;
-  text-align: right;
-  font: inherit;
-}
-
-textarea.bb-edit-text-input {
-  resize: vertical;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.bb-account-loading {
-  min-height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: #6b7280;
 }
 
 /* --------------------------------------------------------------------------

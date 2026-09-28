@@ -13,6 +13,7 @@ const updateProfileSchema = z.object({
   interests: z.array(z.string().min(1).max(50)).max(20).optional(),
   habits: z.array(z.string().min(1).max(50)).max(20).optional(),
   connectionGoal: z.string().max(300).optional(),
+  occupation: z.string().max(120).optional(),
 }).strict();
 
 const setAvatarSchema = z.object({ mediaAssetId: z.string().uuid().nullable() }).strict();

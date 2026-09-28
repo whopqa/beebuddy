@@ -67,7 +67,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
             <Link
               className="bb-topbar-search-btn"
               aria-label="Search"
-              href="/discover"
+              href="/community"
             >
               <Search size={16} className="text-[#a855f7]" />
             </Link>
@@ -75,8 +75,6 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
 
           {/* Center Navigation Links */}
           <nav className="bb-topbar-nav" id="site-navigation" aria-label="Main Navigation">
-            {isAuth && <Link href="/home" className="bb-topbar-nav-link">Dashboard</Link>}
-            <Link href="/feed" className="bb-topbar-nav-link">Feed</Link>
             <Link href={`${homePath}#about`} className="bb-topbar-nav-link">
               About
             </Link>
@@ -86,17 +84,13 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
             <Link href="/community" className="bb-topbar-nav-link">
               Community
             </Link>
-            <Link href="/discover" className="bb-topbar-nav-link">
-              Discover
-            </Link>
-            {isAuth && <Link href="/messages" className="bb-topbar-nav-link">Messages</Link>}
           </nav>
 
           {/* Right side: Authenticated (Bell + Avatar) vs Unauthenticated (Sign in + Create account) */}
           {!isAuth ? (
             <div className="bb-topbar-actions">
               <Link href="/login" className="bb-topbar-signin">
-                <span>Sign in</span>
+                Sign in
               </Link>
               <Link href="/signup" className="bb-topbar-signup">
                 Create account
@@ -123,7 +117,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
                   aria-label="Account menu"
                 >
                   <img
-                    src="/assets/home/figma-buzzy.png"
+                    src={user?.profile?.avatarUrl || "/assets/home/figma-buzzy.png"}
                     alt="User Avatar"
                     className="bb-topbar-avatar-img"
                   />
@@ -186,13 +180,9 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
               <div className="bb-drawer-section">
                 <span className="bb-drawer-label">MAIN</span>
                 <Link href={homePath} onClick={() => setDrawerOpen(false)}>Home</Link>
-                {isAuth && <Link href="/home" onClick={() => setDrawerOpen(false)}>My Dashboard</Link>}
-                <Link href="/feed" onClick={() => setDrawerOpen(false)}>Main Feed</Link>
                 <Link href={`${homePath}#about`} onClick={() => setDrawerOpen(false)}>About Us</Link>
                 <Link href={`${homePath}#services`} onClick={() => setDrawerOpen(false)}>Services</Link>
                 <Link href="/community" onClick={() => setDrawerOpen(false)}>Community Members</Link>
-                <Link href="/discover" onClick={() => setDrawerOpen(false)}>Discover People</Link>
-                {isAuth && <Link href="/messages" onClick={() => setDrawerOpen(false)}>Messages</Link>}
                 <Link href="/meet-buzzy" onClick={() => setDrawerOpen(false)}>Meet Buzzy</Link>
               </div>
 

@@ -24,6 +24,7 @@ export default function CommentsModal({
   onClose,
   title = "Bình luận",
   onApprovedComment,
+  showReportAction = true,
 }: {
   isOpen: boolean;
   postId: string | null;
@@ -31,6 +32,7 @@ export default function CommentsModal({
   onClose: () => void;
   title?: string;
   onApprovedComment?: (postId: string) => void;
+  showReportAction?: boolean;
 }) {
   const [comments, setComments] = useState<PostComment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -146,7 +148,7 @@ export default function CommentsModal({
                   {comment.status === "FLAGGED" && (
                     <span className="bb-comment-review-badge">Đang chờ kiểm duyệt</span>
                   )}
-                  {isLoggedIn && (
+                  {isLoggedIn && showReportAction && (
                     <button type="button" className="bb-comment-report-btn" onClick={() => handleReport(comment.id)}>
                       <Flag size={12} /> Báo cáo
                     </button>
