@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Bell,
+  ClipboardList,
 } from "lucide-react";
 import { webAuth } from "@/lib/auth-client";
 import type { WebUser } from "@/lib/auth-types";
@@ -38,6 +39,11 @@ const navItems = [
     name: "Kiểm duyệt & Từ cấm",
     href: "/admin/moderation",
     icon: ShieldAlert,
+  },
+  {
+    name: "Audit Log",
+    href: "/admin/audit-logs",
+    icon: ClipboardList,
   },
 ];
 

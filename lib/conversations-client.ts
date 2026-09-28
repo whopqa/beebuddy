@@ -27,8 +27,25 @@ export type Message = {
   clientMessageId?: string | null;
   createdAt: string;
   editedAt?: string | null;
+  readByUserIds?: string[];
   senderUser?: ConversationPerson | null;
+  attachments?: Array<{
+    id: string;
+    sortOrder: number;
+    mediaAsset: {
+      id: string;
+      sourceUrl?: string | null;
+      mimeType: string;
+      byteSize?: number | string | null;
+    };
+  }>;
 };
+
+export type ConversationRealtimeEvent =
+  | { type: "connected"; userId: string; occurredAt: string }
+  | { type: "message.created"; conversationId: string; message: Message; occurredAt: string }
+  | { type: "message.read"; conversationId: string; userId: string; messageId: string; readAt: string; readThroughCreatedAt: string; occurredAt: string }
+  | { type: "conversation.updated"; conversationId: string; occurredAt: string };
 
 export type Conversation = {
   id: string;
@@ -44,6 +61,8 @@ export type ConversationListItem = {
   conversationId: string;
   userId: string;
   unreadCount: number;
+  canMessage?: boolean;
+  messagingRestriction?: "CONNECTION_REQUIRED" | "BLOCKED" | null;
   conversation: Conversation;
 };
 
@@ -91,6 +110,16 @@ export const conversationsApi = {
     method: "POST",
     body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }),
   }),
+  sendImages: (conversationId: string, mediaAssetIds: string[], body?: string) =>
+    request<Message>(`/${encodeURIComponent(conversationId)}/messages/media`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: "IMAGE",
+        mediaAssetIds,
+        body: body?.trim() || undefined,
+        clientMessageId: crypto.randomUUID(),
+      }),
+    }),
   markRead: (conversationId: string, messageId: string) => request<unknown>(`/${encodeURIComponent(conversationId)}/read`, {
     method: "POST",
     body: JSON.stringify({ messageId }),

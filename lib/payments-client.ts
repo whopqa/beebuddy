@@ -17,8 +17,10 @@ export type Checkout = {
   amount: number;
   currency: string;
   description: string;
-  qrCodeUrl: string;
   checkoutUrl: string;
+  paymentLinkId: string;
+  qrCode?: string;
+  expiresAt: string;
   instructions: string;
 };
 
@@ -28,9 +30,14 @@ export type PaymentStatus = {
   tier: "VIP" | "PRO";
   amount: string | number;
   currency: string;
-  status: string;
+  durationMonths: number;
+  paymentMethod: string;
+  status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED" | "EXPIRED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+  checkoutUrl?: string | null;
+  transactionRef?: string | null;
   paidAt?: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 export async function getSubscriptionPlans() {
@@ -60,5 +67,8 @@ export const createCheckout = (tier: "VIP" | "PRO", durationMonths = 1) =>
 
 export const getPaymentStatus = (orderCode: number) =>
   authenticatedRequest<PaymentStatus>(`status/${orderCode}`);
+
+export const cancelCheckout = (orderCode: number) =>
+  authenticatedRequest<{ orderCode: number; status: PaymentStatus["status"] }>(`cancel/${orderCode}`, { method: "POST" });
 
 export const getMyPayments = () => authenticatedRequest<PaymentStatus[]>("my-history");

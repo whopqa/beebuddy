@@ -9,14 +9,97 @@ const createCommentSchema = z.object({
 });
 
 const reportCommentSchema = z.object({
-  reason: z.string().min(3, "Vui lòng cung cấp lý do báo cáo"),
+  reason: z.string().trim().min(3, "Vui lòng cung cấp lý do báo cáo").max(1000),
 });
 
-const createCommunityPostSchema = z.object({
-  content: z.string().trim().min(1, "Nội dung bài viết không được rỗng").max(10000),
+const postMutationSchema = z.object({
+  content: z.string().trim().max(10000).default(""),
+  visibility: z.enum(["PUBLIC", "CONNECTIONS", "SELECTED", "PRIVATE"]).default("PUBLIC"),
+  mediaAssetIds: z.array(z.string().uuid()).max(4).default([]),
+  selectedUserIds: z.array(z.string().uuid()).max(200).default([]),
+}).strict().refine((value) => Boolean(value.content || value.mediaAssetIds.length), {
+  message: "Bài viết phải có nội dung hoặc ít nhất một ảnh",
+}).refine((value) => value.visibility !== "SELECTED" || value.selectedUserIds.length > 0, {
+  message: "Bài viết SELECTED cần ít nhất một người được xem",
+});
+
+const reportPostSchema = z.object({
+  reason: z.string().trim().min(3, "Vui lòng cung cấp lý do báo cáo").max(1000),
 }).strict();
 
+const createCommunityPostSchema = z.object({
+  content: z.string().trim().max(10000).default(""),
+  mediaAssetIds: z.array(z.string().uuid()).max(4).default([]),
+}).strict().refine((value) => Boolean(value.content || value.mediaAssetIds.length), {
+  message: "Bài viết phải có nội dung hoặc ít nhất một ảnh",
+});
+
 export class PostsController {
+  public static async createPost(req: Request, res: Response) {
+    const parsed = postMutationSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try {
+      return sendSuccess(res, await PostsService.createPost({
+        authorId: req.user!.id,
+        ...parsed.data,
+      }), "Đăng bài thành công", 201);
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async updatePost(req: Request, res: Response) {
+    const parsed = postMutationSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try {
+      return sendSuccess(res, await PostsService.updatePost({
+        postId: req.params.postId,
+        authorId: req.user!.id,
+        ...parsed.data,
+      }), "Cập nhật bài viết thành công");
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async deletePost(req: Request, res: Response) {
+    try {
+      return sendSuccess(res, await PostsService.deletePost(req.params.postId, req.user!.id), "Đã xóa bài viết");
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async likePost(req: Request, res: Response) {
+    try {
+      return sendSuccess(res, await PostsService.setPostLike(req.params.postId, req.user!.id, true));
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async unlikePost(req: Request, res: Response) {
+    try {
+      return sendSuccess(res, await PostsService.setPostLike(req.params.postId, req.user!.id, false));
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
+  public static async reportPost(req: Request, res: Response) {
+    const parsed = reportPostSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try {
+      return sendSuccess(res, await PostsService.reportPost({
+        postId: req.params.postId,
+        reporterId: req.user!.id,
+        reason: parsed.data.reason,
+      }), "Báo cáo bài viết thành công");
+    } catch (error) {
+      return sendError(res, error, getErrorStatus(error));
+    }
+  }
+
   public static async getCommunityFeed(req: Request, res: Response) {
     try {
       return sendSuccess(res, await PostsService.getCommunityFeed({
@@ -38,6 +121,7 @@ export class PostsController {
         communityId: req.params.communityId,
         authorId: req.user!.id,
         content: parsed.data.content,
+        mediaAssetIds: parsed.data.mediaAssetIds,
       }), "Đăng bài vào community thành công", 201);
     } catch (error) {
       return sendError(res, error, getErrorStatus(error));

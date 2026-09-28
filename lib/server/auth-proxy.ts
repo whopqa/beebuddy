@@ -107,6 +107,40 @@ export async function forwardAuthenticatedRequest(endpoint: string, init: Reques
   }
 }
 
+export async function forwardAuthenticatedStream(endpoint: string) {
+  const cookieStore = cookies();
+  let accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
+  const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
+  let refreshedTokens: { accessToken: string; refreshToken: string } | null = null;
+
+  const call = (token: string) => fetch(`${backendApiUrl()}${endpoint}`, {
+    headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+
+  try {
+    let upstream = accessToken ? await call(accessToken) : null;
+    if ((!upstream || upstream.status === 401) && refreshToken) {
+      const refreshResponse = await fetch(`${backendApiUrl()}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-Platform": "web" },
+        body: JSON.stringify({ refreshToken }),
+        cache: "no-store",
+      });
+      const refreshBody = await refreshResponse.json().catch(() => null);
+      if (refreshResponse.ok && refreshBody?.data) {
+        refreshedTokens = refreshBody.data;
+        accessToken = refreshedTokens!.accessToken;
+        upstream = await call(accessToken!);
+      }
+    }
+    if (!upstream) return { status: 401, upstream: null, refreshedTokens };
+    return { status: upstream.status, upstream, refreshedTokens };
+  } catch {
+    return { status: 503, upstream: null, refreshedTokens };
+  }
+}
+
 /**
  * Forward a read request that may be made by either a guest or a signed-in user.
  *
@@ -165,5 +199,40 @@ export async function forwardOptionalAuthenticatedRequest(endpoint: string, init
       payload: { success: false, error: "Không thể kết nối BeeBuddy API" },
       refreshedTokens,
     };
+  }
+}
+
+export async function forwardOptionalAuthenticatedBinary(endpoint: string) {
+  const cookieStore = cookies();
+  let accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
+  const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
+  let refreshedTokens: { accessToken: string; refreshToken: string } | null = null;
+
+  const call = (token?: string) => fetch(`${backendApiUrl()}${endpoint}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  try {
+    let upstream = await call(accessToken);
+    if (upstream.status === 401 && refreshToken) {
+      const refreshResponse = await fetch(`${backendApiUrl()}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-Platform": "web" },
+        body: JSON.stringify({ refreshToken }),
+        cache: "no-store",
+      });
+      const refreshBody = await refreshResponse.json().catch(() => null);
+      if (refreshResponse.ok && refreshBody?.data) {
+        refreshedTokens = refreshBody.data;
+        accessToken = refreshedTokens!.accessToken;
+        upstream = await call(accessToken);
+      }
+    }
+    return { upstream, refreshedTokens };
+  } catch {
+    return { upstream: null, refreshedTokens };
   }
 }

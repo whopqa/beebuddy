@@ -25,6 +25,14 @@ export const webAuth = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  googleSignIn: (
+    credential: string,
+    consent: { acceptTerms: boolean; acceptPrivacy: boolean; consentSessionId?: string }
+  ) =>
+    request<AuthPayload>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential, ...consent }),
+    }),
   register: (
     fullName: string,
     email: string,

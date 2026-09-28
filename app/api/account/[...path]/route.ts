@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearAuthCookies, forwardAuthenticatedRequest, setAuthCookies } from "@/lib/server/auth-proxy";
 
-const allowed = new Set(["profile", "settings", "password", "sessions"]);
+const allowed = new Set(["profile", "avatar", "settings", "password", "sessions"]);
 
 async function handle(request: NextRequest, { params }: { params: { path: string[] } }) {
   const endpoint = params.path.join("/");

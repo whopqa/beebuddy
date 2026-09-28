@@ -4,7 +4,7 @@ import type { FeedPage, FeedPost } from "./posts-client";
 export type CommunityVisibility = "PUBLIC" | "PRIVATE" | "INVITE_ONLY";
 export type CommunityJoinPolicy = "OPEN" | "APPROVAL" | "INVITE_ONLY";
 export type CommunityMemberRole = "OWNER" | "MODERATOR" | "MEMBER";
-export type CommunityMemberStatus = "ACTIVE" | "LEFT" | "BANNED";
+export type CommunityMemberStatus = "INVITED" | "ACTIVE" | "LEFT" | "REMOVED" | "BANNED";
 
 export type CommunityMembership = {
   role: CommunityMemberRole;
@@ -42,6 +42,46 @@ export type CommunityMember = CommunityMembership & {
 export type CommunityDetail = Omit<CommunitySummary, "members"> & {
   coverMedia?: { sourceUrl: string } | null;
   members: CommunityMember[];
+  viewerMembership?: CommunityMembership | null;
+};
+
+export type CommunityJoinRequest = {
+  id: string;
+  requesterId: string;
+  message?: string | null;
+  createdAt: string;
+  requester: { id: string; email: string; profile?: WebUser["profile"] | null };
+};
+
+export type CommunityInvite = {
+  id: string;
+  inviteeId: string;
+  expiresAt: string;
+  createdAt: string;
+  invitee: { id: string; email: string; profile?: WebUser["profile"] | null };
+};
+
+export type IncomingCommunityInvite = {
+  id: string;
+  expiresAt: string;
+  community: CommunitySummary;
+  invitedBy: { id: string; profile?: WebUser["profile"] | null };
+};
+
+export type CommunityManagement = CommunityDetail & {
+  status: "ACTIVE" | "ARCHIVED" | "SUSPENDED" | "DELETED";
+  managerRole: "OWNER" | "MODERATOR";
+  avatarMedia?: { id: string; sourceUrl: string } | null;
+  coverMedia?: { id: string; sourceUrl: string } | null;
+  joinRequests: CommunityJoinRequest[];
+  invites: CommunityInvite[];
+};
+
+export type UpdateCommunityInput = Omit<Partial<CreateCommunityInput>, "description"> & {
+  description?: string | null;
+  status?: "ACTIVE" | "ARCHIVED";
+  avatarMediaId?: string | null;
+  coverMediaId?: string | null;
 };
 
 export type CommunityPage = {
@@ -105,11 +145,39 @@ export const communitiesApi = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+  management: (communityId: string) => request<CommunityManagement>(`/${encodeURIComponent(communityId)}/management`),
+  update: (communityId: string, input: UpdateCommunityInput) => request<CommunityDetail>(`/${encodeURIComponent(communityId)}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  }),
+  remove: (communityId: string) => request<{ id: string; deletedAt: string }>(`/${encodeURIComponent(communityId)}`, { method: "DELETE" }),
+  manageMember: (communityId: string, userId: string, action: "PROMOTE" | "DEMOTE" | "REMOVE" | "BAN" | "RESTORE") =>
+    request<CommunityMember>(`/${encodeURIComponent(communityId)}/members/${encodeURIComponent(userId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ action }),
+    }),
+  invite: (communityId: string, inviteeId: string) => request<unknown>(`/${encodeURIComponent(communityId)}/invites`, {
+    method: "POST",
+    body: JSON.stringify({ inviteeId }),
+  }),
+  respondJoinRequest: (communityId: string, requestId: string, accept: boolean) => request<unknown>(`/${encodeURIComponent(communityId)}/join-requests/${encodeURIComponent(requestId)}/respond`, {
+    method: "POST",
+    body: JSON.stringify({ accept }),
+  }),
+  transferOwnership: (communityId: string, newOwnerId: string) => request<unknown>(`/${encodeURIComponent(communityId)}/transfer-owner`, {
+    method: "POST",
+    body: JSON.stringify({ newOwnerId }),
+  }),
+  invitations: () => request<IncomingCommunityInvite[]>("/invitations"),
+  respondInvite: (inviteId: string, accept: boolean) => request<unknown>(`/invites/${encodeURIComponent(inviteId)}/respond`, {
+    method: "POST",
+    body: JSON.stringify({ accept }),
+  }),
   feed: (communityId: string, page = 1, limit = 10) =>
     request<FeedPage>(`/${encodeURIComponent(communityId)}/posts?page=${page}&limit=${limit}`),
-  createPost: (communityId: string, content: string) =>
+  createPost: (communityId: string, content: string, mediaAssetIds: string[] = []) =>
     request<{ post: FeedPost; warning?: string | null }>(`/${encodeURIComponent(communityId)}/posts`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, mediaAssetIds }),
     }),
 };

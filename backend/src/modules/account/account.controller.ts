@@ -6,7 +6,6 @@ import { ProfileAudience, ProfileSection } from "@prisma/client";
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(1).max(100).optional(),
-  avatarUrl: z.string().url().or(z.literal("")).optional(),
   bio: z.string().max(500).optional(),
   gender: z.string().max(50).optional(),
   dateOfBirth: z.string().date().optional(),
@@ -15,6 +14,8 @@ const updateProfileSchema = z.object({
   habits: z.array(z.string().min(1).max(50)).max(20).optional(),
   connectionGoal: z.string().max(300).optional(),
 }).strict();
+
+const setAvatarSchema = z.object({ mediaAssetId: z.string().uuid().nullable() }).strict();
 
 const updateSettingsSchema = z.object({
   profileVisibility: z.enum(["PUBLIC", "CONNECTIONS", "ONLY_ME"]).optional(),
@@ -83,6 +84,17 @@ export class AccountController {
       return sendSuccess(res, null, "Đổi mật khẩu thành công");
     } catch (err: any) {
       return sendError(res, err.message, 400);
+    }
+  }
+
+  public static async setAvatar(req: Request, res: Response) {
+    const parsed = setAvatarSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try {
+      const profile = await AccountService.setAvatar(req.user!.id, parsed.data.mediaAssetId);
+      return sendSuccess(res, profile, parsed.data.mediaAssetId ? "Cập nhật ảnh đại diện thành công" : "Đã gỡ ảnh đại diện");
+    } catch (error) {
+      return sendError(res, error, 400);
     }
   }
 

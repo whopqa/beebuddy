@@ -52,6 +52,50 @@ export type FlaggedComment = {
   reports: Array<{ id: string; reason: string; reasonCode?: string | null; details?: string | null }>;
 };
 
+export type FlaggedPost = {
+  id: string;
+  content: string;
+  status: string;
+  audience: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  mediaUrls: string[];
+  commentsCount: number;
+  reactionsCount: number;
+  author: { email: string; profile?: { fullName: string; avatarUrl?: string | null } | null };
+  reports: Array<{ id: string; source: string; reason: string; reasonCode?: string | null; status: string; createdAt: string; reporter?: { email: string; profile?: { fullName: string } | null } | null }>;
+};
+
+export type AdminReport = {
+  id: string;
+  source: string;
+  reason: string;
+  reasonCode?: string | null;
+  details?: string | null;
+  status: "OPEN" | "TRIAGED" | "RESOLVED" | "DISMISSED";
+  createdAt: string;
+  resolvedAt?: string | null;
+  reporter?: { email: string; profile?: { fullName: string } | null } | null;
+  targetUser?: { email: string; profile?: { fullName: string } | null } | null;
+  post?: { id: string; content: string; status: string; author: { email: string; profile?: { fullName: string } | null } } | null;
+  comment?: { id: string; content: string; status: string; author: { email: string; profile?: { fullName: string } | null } } | null;
+  moderationCase?: { id: string; caseType: string; priority: string; status: string } | null;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  actorType: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  beforeData?: unknown;
+  afterData?: unknown;
+  metadata?: unknown;
+  createdAt: string;
+  actorUser?: { email: string; profile?: { fullName: string } | null } | null;
+};
+
 export type BadWord = { id: string; pattern: string; category: string; isActive: boolean; createdAt: string };
 export type PageResult<T, K extends string> = { total: number; page: number; limit: number; totalPages: number } & Record<K, T[]>;
 
@@ -77,6 +121,11 @@ export const adminApi = {
   payments: (query = "") => request<PageResult<AdminPayment, "payments">>(`payments${query ? `?${query}` : ""}`),
   comments: () => request<PageResult<FlaggedComment, "comments">>("moderation/comments?limit=50"),
   moderateComment: (id: string, action: "APPROVE" | "HIDE") => request<FlaggedComment>(`moderation/comments/${id}`, { method: "PUT", body: JSON.stringify({ action }) }),
+  posts: () => request<PageResult<FlaggedPost, "posts">>("moderation/posts?limit=50"),
+  moderatePost: (id: string, action: "APPROVE" | "HIDE") => request<FlaggedPost>(`moderation/posts/${id}`, { method: "PUT", body: JSON.stringify({ action }) }),
+  reports: (status = "OPEN") => request<PageResult<AdminReport, "reports">>(`moderation/reports?limit=100&status=${encodeURIComponent(status)}`),
+  resolveReport: (id: string, action: "RESOLVE" | "DISMISS", note?: string) => request<AdminReport>(`moderation/reports/${id}`, { method: "PUT", body: JSON.stringify({ action, note }) }),
+  auditLogs: (query = "") => request<PageResult<AuditLogEntry, "logs">>(`audit-logs${query ? `?${query}` : ""}`),
   badwords: () => request<BadWord[]>("badwords"),
   addBadword: (pattern: string, category: string) => request<BadWord>("badwords", { method: "POST", body: JSON.stringify({ pattern, category }) }),
   deleteBadword: (id: string) => request<null>(`badwords/${id}`, { method: "DELETE" }),

@@ -27,3 +27,11 @@ export async function POST(request: NextRequest, { params }: { params: { path: s
   const body = await request.text();
   return toResponse(await forwardAuthenticatedRequest(endpoint(params), { method: "POST", body }));
 }
+
+export async function PUT(request: NextRequest, { params }: { params: { path: string[] } }) {
+  return toResponse(await forwardAuthenticatedRequest(endpoint(params), { method: "PUT", body: await request.text() }));
+}
+
+export async function DELETE(_request: NextRequest, { params }: { params: { path: string[] } }) {
+  return toResponse(await forwardAuthenticatedRequest(endpoint(params), { method: "DELETE" }));
+}

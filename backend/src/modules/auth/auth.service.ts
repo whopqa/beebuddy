@@ -17,6 +17,7 @@ import { prisma } from "../../lib/prisma";
 import { ENV } from "../../config/environment";
 import { AuthUserPayload } from "../../common/middlewares/auth.middleware";
 import { AuthEmailService } from "./auth-email.service";
+import { GoogleIdentityService } from "./google-identity.service";
 
 type TokenUser = {
   id: string;
@@ -397,6 +398,237 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tier: user.tier,
+        profile: user.profile,
+      },
+      ...tokens,
+    };
+  }
+
+  public static async loginWithGoogle(
+    data: {
+      credential: string;
+      acceptTerms: boolean;
+      acceptPrivacy: boolean;
+      consentSessionId?: string;
+    },
+    metadata: SessionMetadata = {}
+  ) {
+    const google = await GoogleIdentityService.verifyCredential(data.credential);
+    if (!google.googleIsAuthoritativeForEmail) {
+      throw new Error("BeeBuddy chỉ hỗ trợ Google Sign-In với Gmail hoặc Google Workspace đã xác minh");
+    }
+
+    const existingIdentity = await prisma.authIdentity.findUnique({
+      where: {
+        provider_providerSubject: {
+          provider: AuthProvider.GOOGLE,
+          providerSubject: google.subject,
+        },
+      },
+      include: { user: { include: { profile: true } } },
+    });
+
+    if (existingIdentity) {
+      if (existingIdentity.user.isBanned) {
+        throw new Error(`Tài khoản của bạn đã bị khóa: ${existingIdentity.user.banReason || "Vi phạm chính sách"}`);
+      }
+      if (existingIdentity.user.email.toLowerCase() !== google.email) {
+        throw new Error("Email Google không còn khớp với tài khoản BeeBuddy đã liên kết");
+      }
+
+      const sessionId = randomUUID();
+      const tokens = this.signTokens(existingIdentity.user, sessionId);
+      await prisma.$transaction(async (tx) => {
+        await tx.authIdentity.update({
+          where: { id: existingIdentity.id },
+          data: {
+            providerEmail: google.email,
+            verifiedAt: new Date(),
+            lastUsedAt: new Date(),
+          },
+        });
+        if (!existingIdentity.user.isVerified) {
+          await tx.user.update({ where: { id: existingIdentity.userId }, data: { isVerified: true } });
+        }
+        await tx.userSession.create({
+          data: this.sessionCreateData(existingIdentity.userId, sessionId, tokens.refreshToken, metadata),
+        });
+      });
+
+      return {
+        user: {
+          id: existingIdentity.user.id,
+          email: existingIdentity.user.email,
+          role: existingIdentity.user.role,
+          tier: existingIdentity.user.tier,
+          isVerified: true,
+          profile: existingIdentity.user.profile,
+        },
+        ...tokens,
+      };
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: google.email },
+      include: {
+        profile: true,
+        authIdentities: { where: { provider: AuthProvider.GOOGLE } },
+      },
+    });
+
+    if (existingUser) {
+      if (existingUser.isBanned) {
+        throw new Error(`Tài khoản của bạn đã bị khóa: ${existingUser.banReason || "Vi phạm chính sách"}`);
+      }
+      if (existingUser.authIdentities.length > 0) {
+        throw new Error("Tài khoản này đã liên kết với một Google Account khác");
+      }
+
+      const sessionId = randomUUID();
+      const tokens = this.signTokens(existingUser, sessionId);
+      await prisma.$transaction(async (tx) => {
+        await tx.authIdentity.create({
+          data: {
+            userId: existingUser.id,
+            provider: AuthProvider.GOOGLE,
+            providerSubject: google.subject,
+            providerEmail: google.email,
+            verifiedAt: new Date(),
+            lastUsedAt: new Date(),
+          },
+        });
+        await tx.user.update({ where: { id: existingUser.id }, data: { isVerified: true } });
+        await tx.authIdentity.updateMany({
+          where: { userId: existingUser.id, provider: AuthProvider.EMAIL, verifiedAt: null },
+          data: { verifiedAt: new Date() },
+        });
+        await tx.oneTimeToken.updateMany({
+          where: {
+            userId: existingUser.id,
+            type: OneTimeTokenType.EMAIL_VERIFICATION,
+            consumedAt: null,
+          },
+          data: { consumedAt: new Date() },
+        });
+        await tx.userSession.create({
+          data: this.sessionCreateData(existingUser.id, sessionId, tokens.refreshToken, metadata),
+        });
+      });
+
+      return {
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          role: existingUser.role,
+          tier: existingUser.tier,
+          isVerified: true,
+          profile: existingUser.profile,
+        },
+        ...tokens,
+      };
+    }
+
+    if (!data.acceptTerms || !data.acceptPrivacy) {
+      throw new Error("Bạn phải đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư để tạo tài khoản bằng Google");
+    }
+
+    const { user, tokens } = await prisma.$transaction(async (tx) => {
+      const legalDocuments = await tx.legalDocument.findMany({
+        where: {
+          type: { in: [LegalDocumentType.TERMS, LegalDocumentType.PRIVACY] },
+          effectiveAt: { lte: new Date() },
+          retiredAt: null,
+        },
+        orderBy: { effectiveAt: "desc" },
+      });
+      const termsDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.TERMS);
+      const privacyDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.PRIVACY);
+      if (!termsDocument || !privacyDocument) {
+        throw new Error("Chưa cấu hình đủ tài liệu TERMS/PRIVACY đang hiệu lực");
+      }
+      const consentedAt = new Date();
+      const createdUser = await tx.user.create({
+        data: {
+          email: google.email,
+          isVerified: true,
+          authIdentities: {
+            create: {
+              provider: AuthProvider.GOOGLE,
+              providerSubject: google.subject,
+              providerEmail: google.email,
+              verifiedAt: consentedAt,
+              lastUsedAt: consentedAt,
+            },
+          },
+          profile: {
+            create: {
+              fullName: google.fullName,
+              username: google.email.split("@")[0] + "_" + Math.floor(Math.random() * 1000),
+              avatarUrl: google.avatarUrl,
+            },
+          },
+          settings: { create: {} },
+          visibilityRules: { create: DEFAULT_PROFILE_VISIBILITY },
+          consents: {
+            create: [
+              {
+                consentType: "TERMS",
+                isAccepted: true,
+                sessionId: data.consentSessionId || null,
+                legalDocumentId: termsDocument.id,
+                decision: ConsentDecision.ACCEPTED,
+                consentedAt,
+                ipAddress: metadata.ipAddress,
+                userAgent: metadata.userAgent,
+              },
+              {
+                consentType: "PRIVACY",
+                isAccepted: true,
+                sessionId: data.consentSessionId || null,
+                legalDocumentId: privacyDocument.id,
+                decision: ConsentDecision.ACCEPTED,
+                consentedAt,
+                ipAddress: metadata.ipAddress,
+                userAgent: metadata.userAgent,
+              },
+            ],
+          },
+        },
+        include: { profile: true },
+      });
+
+      const freePlan = await tx.plan.findFirst({
+        where: { tier: SubscriptionTier.FREE, isActive: true },
+        orderBy: { version: "desc" },
+      });
+      if (!freePlan) throw new Error("Chưa cấu hình gói FREE đang hoạt động");
+      const now = new Date();
+      await tx.subscription.create({
+        data: {
+          userId: createdUser.id,
+          planId: freePlan.id,
+          status: SubscriptionStatus.ACTIVE,
+          source: SubscriptionSource.ADMIN,
+          startsAt: now,
+          currentPeriodStart: now,
+        },
+      });
+
+      const sessionId = randomUUID();
+      const createdTokens = this.signTokens(createdUser, sessionId);
+      await tx.userSession.create({
+        data: this.sessionCreateData(createdUser.id, sessionId, createdTokens.refreshToken, metadata),
+      });
+      return { user: createdUser, tokens: createdTokens };
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tier: user.tier,
+        isVerified: true,
         profile: user.profile,
       },
       ...tokens,

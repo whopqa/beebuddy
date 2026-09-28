@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma";
 import { AuthService } from "../src/modules/auth/auth.service";
 import { AuthEmailService } from "../src/modules/auth/auth-email.service";
+import { GoogleIdentityService } from "../src/modules/auth/google-identity.service";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -155,6 +156,101 @@ describe("AuthService.register", () => {
       acceptTerms: false,
       acceptPrivacy: true,
     })).rejects.toThrow(/phải đồng ý/);
+  });
+});
+
+describe("AuthService.loginWithGoogle", () => {
+  const googleIdentity = {
+    subject: "google-subject-1",
+    email: "member@gmail.com",
+    emailVerified: true,
+    fullName: "Google Member",
+    avatarUrl: "https://example.com/avatar.jpg",
+    googleIsAuthoritativeForEmail: true,
+  };
+
+  it("logs in an existing linked Google identity and creates a revocable session", async () => {
+    vi.spyOn(GoogleIdentityService, "verifyCredential").mockResolvedValue(googleIdentity);
+    vi.spyOn(prisma.authIdentity, "findUnique").mockResolvedValue({
+      id: "google-identity-1",
+      userId: "user-google",
+      user: {
+        id: "user-google",
+        email: googleIdentity.email,
+        role: Role.USER,
+        tier: SubscriptionTier.FREE,
+        isVerified: true,
+        isBanned: false,
+        banReason: null,
+        profile: { fullName: googleIdentity.fullName },
+      },
+    } as never);
+    const tx = {
+      authIdentity: { update: vi.fn().mockResolvedValue({}) },
+      user: { update: vi.fn().mockResolvedValue({}) },
+      userSession: { create: vi.fn().mockResolvedValue({}) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await AuthService.loginWithGoogle({
+      credential: "signed-google-id-token",
+      acceptTerms: false,
+      acceptPrivacy: false,
+    });
+
+    expect(result.user.email).toBe(googleIdentity.email);
+    expect(result.accessToken).toBeTruthy();
+    expect(tx.authIdentity.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "google-identity-1" },
+      data: expect.objectContaining({ lastUsedAt: expect.any(Date) }),
+    }));
+    expect(tx.userSession.create).toHaveBeenCalledOnce();
+  });
+
+  it("creates a verified user, legal consents, FREE subscription and session on first Google sign-in", async () => {
+    vi.spyOn(GoogleIdentityService, "verifyCredential").mockResolvedValue(googleIdentity);
+    vi.spyOn(prisma.authIdentity, "findUnique").mockResolvedValue(null);
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(null);
+    const tx = {
+      legalDocument: { findMany: vi.fn().mockResolvedValue([
+        { id: "terms-v1", type: LegalDocumentType.TERMS },
+        { id: "privacy-v1", type: LegalDocumentType.PRIVACY },
+      ]) },
+      user: { create: vi.fn().mockResolvedValue({
+        id: "new-google-user",
+        email: googleIdentity.email,
+        role: Role.USER,
+        tier: SubscriptionTier.FREE,
+        isVerified: true,
+        profile: { fullName: googleIdentity.fullName },
+      }) },
+      plan: { findFirst: vi.fn().mockResolvedValue({ id: "free-plan" }) },
+      subscription: { create: vi.fn().mockResolvedValue({}) },
+      userSession: { create: vi.fn().mockResolvedValue({}) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await AuthService.loginWithGoogle({
+      credential: "signed-google-id-token",
+      acceptTerms: true,
+      acceptPrivacy: true,
+      consentSessionId: "consent-session-123",
+    });
+
+    expect(result.user.isVerified).toBe(true);
+    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        email: googleIdentity.email,
+        isVerified: true,
+        authIdentities: { create: expect.objectContaining({ provider: AuthProvider.GOOGLE }) },
+        consents: { create: expect.arrayContaining([
+          expect.objectContaining({ consentType: "TERMS", legalDocumentId: "terms-v1" }),
+          expect.objectContaining({ consentType: "PRIVACY", legalDocumentId: "privacy-v1" }),
+        ]) },
+      }),
+    }));
+    expect(tx.subscription.create).toHaveBeenCalledOnce();
+    expect(tx.userSession.create).toHaveBeenCalledOnce();
   });
 });
 

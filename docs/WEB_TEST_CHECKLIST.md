@@ -51,6 +51,16 @@ Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã x�
 7. Xác nhận các phiên đăng nhập trước khi reset đều bị thu hồi.
 8. Thử mở lại cùng liên kết reset; hệ thống phải báo token đã dùng hoặc hết hạn.
 
+### Google Sign-In
+
+1. Tạo OAuth client loại **Web application** trong Google Cloud Console.
+2. Thêm `http://localhost:3000` vào **Authorized JavaScript origins**.
+3. Điền cùng một client ID vào `NEXT_PUBLIC_GOOGLE_CLIENT_ID` trong `.env.local` của web và `GOOGLE_CLIENT_ID` trong `backend/.env`.
+4. Khởi động lại cả backend và web; nút Google chỉ xuất hiện khi web có client ID.
+5. Ở `/signup`, tích đồng ý TERMS/PRIVACY rồi đăng ký bằng Google; tài khoản phải được tạo ở trạng thái verified và có gói FREE.
+6. Đăng xuất rồi dùng cùng Google Account ở `/login`; hệ thống phải dùng lại user/identity cũ và tạo session mới.
+7. Nếu email Gmail đã có tài khoản BeeBuddy, lần đăng nhập Google đầu tiên phải liên kết identity vào đúng user thay vì tạo user trùng.
+
 ## 4. Luồng user chính
 
 ### Dashboard — `/home`
@@ -75,6 +85,22 @@ Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã x�
 2. Tham gia/rời một community công khai.
 3. Tạo bài viết trong community.
 4. Mở chi tiết bài, thêm bình luận và kiểm tra số liệu cập nhật.
+5. Với owner, bấm `Quản lý`: sửa tên/mô tả/quyền riêng tư/cách tham gia, tải ảnh đại diện và ảnh bìa.
+6. Đổi community sang `Cần phê duyệt`; dùng User 2 gửi yêu cầu, owner duyệt hoặc từ chối trong bảng quản lý.
+7. Owner nâng một member thành moderator rồi hạ quyền; moderator không được thay đổi vai trò hoặc chuyển owner.
+8. Thử xóa, cấm và khôi phục member; số lượng thành viên phải cập nhật đúng.
+9. Owner mời một người đã kết nối; tài khoản được mời thấy khối `Lời mời tham gia` và có thể chấp nhận/từ chối.
+10. Thử lưu trữ, chuyển owner và xóa mềm community bằng dữ liệu development.
+
+### Bảng tin chính — `/feed`
+
+1. Đăng một bài chỉ có nội dung, sau đó tải lại trang và xác nhận bài vẫn xuất hiện.
+2. Đăng một bài có từ 1 đến 4 ảnh; xác nhận thứ tự ảnh và bố cục hiển thị đúng.
+3. Sửa nội dung, xóa bớt/thêm ảnh và đổi quyền xem; tải lại để xác nhận dữ liệu mới.
+4. Với quyền `Người được chọn`, chọn ít nhất một kết nối; tài khoản không được chọn không được thấy bài.
+5. Dùng User 2 thích/bỏ thích bài của User 1; số lượt thích phải tăng/giảm đúng và giữ nguyên sau khi reload.
+6. Dùng User 2 báo cáo bài của User 1; không thể tự báo cáo bài của mình và báo cáo trùng đang mở không tạo thêm bản ghi.
+7. User 1 xóa bài và xác nhận bài biến mất khỏi bảng tin; user khác không được sửa/xóa bài đó.
 
 ### Tin nhắn — `/messages`
 
@@ -82,6 +108,10 @@ Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã x�
 2. Gửi tin nhắn từ User 1.
 3. Kiểm tra User 2 nhận được thông báo và tin nhắn xuất hiện sau lần polling tiếp theo.
 4. Trả lời từ User 2 và kiểm tra ở User 1.
+5. Mở hai trình duyệt cạnh nhau: tin nhắn mới phải xuất hiện ngay, không cần bấm làm mới hoặc chờ polling.
+6. Khi User 2 đang mở cuộc trò chuyện, dưới tin nhắn của User 1 phải chuyển từ `Đã gửi` sang `Đã xem`.
+7. Đóng User 2, gửi nhiều tin từ User 1, sau đó mở lại User 2; toàn bộ tin đến mốc mới nhất phải có read receipt.
+8. Tắt backend vài giây: nhãn realtime chuyển sang `Đang kết nối lại`; khi backend hoạt động, EventSource tự kết nối lại và polling 30 giây vẫn là fallback.
 
 ### Tài khoản — `/account`, `/settings`, `/security`
 
@@ -106,8 +136,11 @@ Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã x�
 1. Dashboard: số user, thuê bao, doanh thu và kiểm duyệt phải lấy từ database.
 2. Users: tìm kiếm; đổi tier của một user; khóa với lý do; xác nhận user bị từ chối đăng nhập; sau đó mở khóa lại.
 3. Payments: tìm đơn vừa tạo bằng email hoặc `orderCode`; lọc trạng thái `PENDING`.
-4. Moderation: thêm rồi xóa một từ cấm thử nghiệm.
-5. Nếu có bình luận bị report/flagged, thử Approve hoặc Hide và xác nhận hàng đợi cập nhật.
+4. Moderation / Bài viết: kiểm tra bài vừa bị User 2 báo cáo, thử `Duyệt` hoặc `Ẩn` và xác nhận bài rời hàng đợi.
+5. Moderation / Bình luận: với bình luận bị report/flagged, thử `Duyệt` hoặc `Ẩn` và xác nhận hàng đợi cập nhật.
+6. Moderation / Báo cáo: thử `Bỏ qua` và `Đã xử lý`; một báo cáo đã đóng không được xử lý lần hai.
+7. Moderation / Từ cấm: thêm rồi xóa một từ cấm thử nghiệm.
+8. Audit Log: lọc `POST`, kiểm tra thao tác duyệt/ẩn có actor admin, trạng thái trước/sau và đúng target ID.
 
 ## 6. Kết quả tự động hiện tại
 
@@ -121,10 +154,20 @@ npx.cmd tsc --noEmit
 npm.cmd run build
 ```
 
-Kỳ vọng: backend compile; 38/38 test pass; web TypeScript pass; Next.js build đủ 46 trang/route; mobile typecheck và lint pass.
+Kỳ vọng: backend compile; 50/50 test pass; web TypeScript pass; Next.js build đủ 50 trang/route; mobile typecheck và lint pass.
 
 ## 7. Phạm vi chưa phải luồng production hoàn chỉnh
 
-- Google/Apple OAuth chưa có provider credentials nên nút social login chỉ thông báo chưa kết nối.
+- Google Sign-In đã có trên web nhưng chỉ hiển thị sau khi cấu hình OAuth client ID; Apple Sign-In được chủ động bỏ qua vì chưa có Apple Developer credentials.
 - Thanh toán local tạo đơn và QR thật theo cấu hình development, nhưng không giả lập webhook thành công.
-- Call audio/video, upload media và push notification worker chưa có giao diện vận hành hoàn chỉnh.
+- Upload ảnh cho avatar, bài viết community và tin nhắn đã có; voice/video media, call audio/video và push notification worker chưa có giao diện vận hành hoàn chỉnh.
+
+## 8. Upload ảnh (avatar, bảng tin, community, tin nhắn)
+
+1. Mở `/account/edit`, chọn ảnh JPEG/PNG/WebP/GIF dưới 5 MB, lưu và reload `/account`; avatar mới phải còn hiển thị.
+2. Đổi tên file văn bản hoặc SVG thành `.png` rồi thử upload; API phải từ chối do chữ ký file không hợp lệ.
+3. Vào `/feed`, chọn tối đa 4 ảnh, đăng bài và reload; ảnh phải hiển thị theo đúng thứ tự, đồng thời vẫn sửa/xóa được bài.
+4. Vào một community đã tham gia, chọn tối đa 4 ảnh, đăng bài và reload; ảnh phải hiển thị theo đúng thứ tự.
+5. Vào `/messages`, chọn tối đa 4 ảnh, có thể thêm lời nhắn rồi gửi; cả hai thành viên cuộc trò chuyện phải xem được ảnh.
+6. Người không có quyền xem bài hoặc không thuộc cuộc trò chuyện gọi URL ảnh tương ứng phải nhận 403.
+7. File development được lưu dưới `backend/uploads`; thư mục này bị Git bỏ qua. Trước production phải thay adapter local bằng object storage bền vững.

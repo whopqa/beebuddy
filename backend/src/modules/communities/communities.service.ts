@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import {
+  AuditActorType,
   CommunityInviteStatus,
   CommunityJoinPolicy,
   CommunityJoinRequestStatus,
@@ -8,6 +9,7 @@ import {
   CommunityStatus,
   CommunityVisibility,
   NotificationType,
+  MediaProcessingStatus,
   Prisma,
 } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
@@ -40,6 +42,38 @@ async function requireCommunityManager(
     throw new AppError("Bạn không có quyền quản lý community này", 403);
   }
   return member;
+}
+
+async function requireCommunityOwner(
+  tx: Prisma.TransactionClient,
+  communityId: string,
+  userId: string
+) {
+  const community = await tx.community.findUnique({ where: { id: communityId } });
+  if (!community || community.deletedAt || community.status === CommunityStatus.DELETED) {
+    throw new AppError("Không tìm thấy community", 404);
+  }
+  if (community.ownerId !== userId) throw new AppError("Chỉ chủ cộng đồng được thực hiện thao tác này", 403);
+  return community;
+}
+
+async function validateCommunityMedia(
+  tx: Prisma.TransactionClient,
+  ownerId: string,
+  mediaIds: Array<string | null | undefined>
+) {
+  const ids = Array.from(new Set(mediaIds.filter((id): id is string => Boolean(id))));
+  if (!ids.length) return;
+  const count = await tx.mediaAsset.count({
+    where: {
+      id: { in: ids },
+      ownerId,
+      processingStatus: MediaProcessingStatus.READY,
+      deletedAt: null,
+      mimeType: { startsWith: "image/" },
+    },
+  });
+  if (count !== ids.length) throw new AppError("Ảnh cộng đồng không hợp lệ hoặc không thuộc chủ cộng đồng", 409);
 }
 
 export class CommunitiesService {
@@ -91,14 +125,17 @@ export class CommunitiesService {
     const viewerMembership = userId
       ? await prisma.communityMember.findUnique({
           where: { communityId_userId: { communityId: community.id, userId } },
-          select: { status: true },
+          select: { role: true, status: true },
         })
       : null;
     const isMember = viewerMembership?.status === CommunityMemberStatus.ACTIVE;
+    if (community.status !== CommunityStatus.ACTIVE && !isMember) {
+      throw new AppError("Community hiện không hoạt động", 404);
+    }
     if (community.visibility !== CommunityVisibility.PUBLIC && !isMember) {
       throw new AppError("Community này không công khai", 403);
     }
-    return community;
+    return { ...community, viewerMembership };
   }
 
   public static async create(userId: string, data: {
@@ -158,11 +195,13 @@ export class CommunitiesService {
           create: { communityId, requesterId: userId, message },
         });
       }
-      return tx.communityMember.upsert({
+      const member = await tx.communityMember.upsert({
         where: { communityId_userId: { communityId, userId } },
         update: { status: CommunityMemberStatus.ACTIVE, role: CommunityMemberRole.MEMBER, leftAt: null },
         create: { communityId, userId, role: CommunityMemberRole.MEMBER },
       });
+      await tx.community.update({ where: { id: communityId }, data: { membersCount: { increment: 1 } } });
+      return member;
     });
   }
 
@@ -177,10 +216,12 @@ export class CommunitiesService {
       if (member.role === CommunityMemberRole.OWNER) {
         throw new AppError("Hãy chuyển quyền sở hữu trước khi rời community", 409);
       }
-      return tx.communityMember.update({
+      const updated = await tx.communityMember.update({
         where: { id: member.id },
         data: { status: CommunityMemberStatus.LEFT, leftAt: new Date() },
       });
+      await tx.community.update({ where: { id: communityId }, data: { membersCount: { decrement: 1 } } });
+      return updated;
     });
   }
 
@@ -200,7 +241,19 @@ export class CommunitiesService {
         data: { role: CommunityMemberRole.MEMBER },
       });
       await tx.communityMember.update({ where: { id: nextOwner.id }, data: { role: CommunityMemberRole.OWNER } });
-      return tx.community.update({ where: { id: communityId }, data: { ownerId: newOwnerId } });
+      const updated = await tx.community.update({ where: { id: communityId }, data: { ownerId: newOwnerId } });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.USER,
+          actorUserId: ownerId,
+          action: "TRANSFER_COMMUNITY_OWNER",
+          targetType: "COMMUNITY",
+          targetId: communityId,
+          beforeData: { ownerId },
+          afterData: { ownerId: newOwnerId },
+        },
+      });
+      return updated;
     });
   }
 
@@ -253,12 +306,19 @@ export class CommunitiesService {
       if (!community || community.status !== CommunityStatus.ACTIVE || blocked) {
         throw new AppError("Community hoặc lời mời không còn khả dụng", 409);
       }
+      const existing = await tx.communityMember.findUnique({
+        where: { communityId_userId: { communityId: invite.communityId, userId } },
+      });
       await tx.communityInvite.update({ where: { id: invite.id }, data: { status: CommunityInviteStatus.ACCEPTED, respondedAt: new Date() } });
-      return tx.communityMember.upsert({
+      const member = await tx.communityMember.upsert({
         where: { communityId_userId: { communityId: invite.communityId, userId } },
         update: { status: CommunityMemberStatus.ACTIVE, role: CommunityMemberRole.MEMBER, leftAt: null },
         create: { communityId: invite.communityId, userId, role: CommunityMemberRole.MEMBER },
       });
+      if (existing?.status !== CommunityMemberStatus.ACTIVE) {
+        await tx.community.update({ where: { id: invite.communityId }, data: { membersCount: { increment: 1 } } });
+      }
+      return member;
     });
   }
 
@@ -279,11 +339,17 @@ export class CommunitiesService {
         where: { OR: [{ blockerId: actorId, blockedId: request.requesterId }, { blockerId: request.requesterId, blockedId: actorId }] },
       });
       if (blocked) throw new AppError("Không thể duyệt thành viên do quan hệ block", 403);
+      const existing = await tx.communityMember.findUnique({
+        where: { communityId_userId: { communityId: request.communityId, userId: request.requesterId } },
+      });
       const member = await tx.communityMember.upsert({
         where: { communityId_userId: { communityId: request.communityId, userId: request.requesterId } },
         update: { status: CommunityMemberStatus.ACTIVE, role: CommunityMemberRole.MEMBER, leftAt: null },
         create: { communityId: request.communityId, userId: request.requesterId },
       });
+      if (existing?.status !== CommunityMemberStatus.ACTIVE) {
+        await tx.community.update({ where: { id: request.communityId }, data: { membersCount: { increment: 1 } } });
+      }
       await NotificationService.create(tx, {
         recipientId: request.requesterId,
         actorId,
@@ -293,6 +359,189 @@ export class CommunitiesService {
         payload: { communityId: request.communityId, requestId: request.id },
         dedupeKey: `community-join-approved:${request.id}`,
       });
+      return { accepted: true, member };
+    });
+  }
+
+  public static async getManagement(actorId: string, communityId: string) {
+    return prisma.$transaction(async (tx) => {
+      const manager = await requireCommunityManager(tx, communityId, actorId);
+      const community = await tx.community.findUniqueOrThrow({
+        where: { id: communityId },
+        include: {
+          avatarMedia: { select: { id: true, sourceUrl: true } },
+          coverMedia: { select: { id: true, sourceUrl: true } },
+          members: {
+            orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+            include: { user: { select: { id: true, email: true, profile: true } } },
+          },
+          joinRequests: {
+            where: { status: CommunityJoinRequestStatus.PENDING },
+            orderBy: { createdAt: "asc" },
+            include: { requester: { select: { id: true, email: true, profile: true } } },
+          },
+          invites: {
+            where: { status: CommunityInviteStatus.PENDING, expiresAt: { gt: new Date() } },
+            orderBy: { createdAt: "desc" },
+            include: { invitee: { select: { id: true, email: true, profile: true } } },
+          },
+        },
+      });
+      return { ...community, managerRole: manager.role };
+    });
+  }
+
+  public static async updateCommunity(actorId: string, communityId: string, data: {
+    name?: string;
+    description?: string | null;
+    visibility?: CommunityVisibility;
+    joinPolicy?: CommunityJoinPolicy;
+    status?: "ACTIVE" | "ARCHIVED";
+    avatarMediaId?: string | null;
+    coverMediaId?: string | null;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const before = await requireCommunityOwner(tx, communityId, actorId);
+      await validateCommunityMedia(tx, actorId, [data.avatarMediaId, data.coverMediaId]);
+      const updated = await tx.community.update({
+        where: { id: communityId },
+        data: {
+          ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+          ...(data.description !== undefined ? { description: data.description?.trim() || null } : {}),
+          ...(data.visibility !== undefined ? { visibility: data.visibility } : {}),
+          ...(data.joinPolicy !== undefined ? { joinPolicy: data.joinPolicy } : {}),
+          ...(data.status !== undefined ? { status: data.status as CommunityStatus } : {}),
+          ...(data.avatarMediaId !== undefined ? { avatarMediaId: data.avatarMediaId } : {}),
+          ...(data.coverMediaId !== undefined ? { coverMediaId: data.coverMediaId } : {}),
+        },
+        include: { avatarMedia: { select: { id: true, sourceUrl: true } }, coverMedia: { select: { id: true, sourceUrl: true } } },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.USER,
+          actorUserId: actorId,
+          action: "UPDATE_COMMUNITY",
+          targetType: "COMMUNITY",
+          targetId: communityId,
+          beforeData: { name: before.name, visibility: before.visibility, joinPolicy: before.joinPolicy, status: before.status },
+          afterData: { name: updated.name, visibility: updated.visibility, joinPolicy: updated.joinPolicy, status: updated.status },
+        },
+      });
+      return updated;
+    });
+  }
+
+  public static async manageMember(
+    actorId: string,
+    communityId: string,
+    targetUserId: string,
+    action: "PROMOTE" | "DEMOTE" | "REMOVE" | "BAN" | "RESTORE"
+  ) {
+    if (actorId === targetUserId) throw new AppError("Không thể áp dụng thao tác này cho chính bạn", 400);
+    return prisma.$transaction(async (tx) => {
+      const manager = await requireCommunityManager(tx, communityId, actorId);
+      const target = await tx.communityMember.findUnique({
+        where: { communityId_userId: { communityId, userId: targetUserId } },
+      });
+      if (!target) throw new AppError("Không tìm thấy thành viên", 404);
+      if (target.role === CommunityMemberRole.OWNER) throw new AppError("Không thể thay đổi chủ cộng đồng", 409);
+      if ((action === "PROMOTE" || action === "DEMOTE") && manager.role !== CommunityMemberRole.OWNER) {
+        throw new AppError("Chỉ chủ cộng đồng được thay đổi vai trò", 403);
+      }
+      if (manager.role === CommunityMemberRole.MODERATOR && target.role !== CommunityMemberRole.MEMBER) {
+        throw new AppError("Điều hành viên chỉ có thể quản lý thành viên thường", 403);
+      }
+
+      const wasActive = target.status === CommunityMemberStatus.ACTIVE;
+      const data = action === "PROMOTE"
+        ? { role: CommunityMemberRole.MODERATOR }
+        : action === "DEMOTE"
+          ? { role: CommunityMemberRole.MEMBER }
+          : action === "BAN"
+            ? { status: CommunityMemberStatus.BANNED, leftAt: new Date() }
+            : action === "REMOVE"
+              ? { status: CommunityMemberStatus.REMOVED, leftAt: new Date() }
+              : { status: CommunityMemberStatus.ACTIVE, role: CommunityMemberRole.MEMBER, leftAt: null };
+      const updated = await tx.communityMember.update({ where: { id: target.id }, data });
+      const isActive = updated.status === CommunityMemberStatus.ACTIVE;
+      if (wasActive !== isActive) {
+        await tx.community.update({
+          where: { id: communityId },
+          data: { membersCount: wasActive ? { decrement: 1 } : { increment: 1 } },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.USER,
+          actorUserId: actorId,
+          action: `${action}_COMMUNITY_MEMBER`,
+          targetType: "COMMUNITY_MEMBER",
+          targetId: target.id,
+          beforeData: { role: target.role, status: target.status },
+          afterData: { role: updated.role, status: updated.status },
+          metadata: { communityId, targetUserId },
+        },
+      });
+      return updated;
+    });
+  }
+
+  public static async deleteCommunity(actorId: string, communityId: string) {
+    return prisma.$transaction(async (tx) => {
+      const before = await requireCommunityOwner(tx, communityId, actorId);
+      const deletedAt = new Date();
+      const updated = await tx.community.update({
+        where: { id: communityId },
+        data: { status: CommunityStatus.DELETED, deletedAt },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.USER,
+          actorUserId: actorId,
+          action: "DELETE_COMMUNITY",
+          targetType: "COMMUNITY",
+          targetId: communityId,
+          beforeData: { status: before.status },
+          afterData: { status: updated.status, deletedAt: deletedAt.toISOString() },
+        },
+      });
+      return { id: communityId, deletedAt };
+    });
+  }
+
+  public static async listInvitations(userId: string) {
+    return prisma.communityInvite.findMany({
+      where: { inviteeId: userId, status: CommunityInviteStatus.PENDING, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        community: { include: { avatarMedia: { select: { sourceUrl: true } } } },
+        invitedBy: { select: { id: true, profile: true } },
+      },
+    });
+  }
+
+  public static async respondInvite(userId: string, inviteId: string, accept: boolean) {
+    return prisma.$transaction(async (tx) => {
+      const invite = await tx.communityInvite.findUnique({ where: { id: inviteId } });
+      if (!invite || invite.inviteeId !== userId || invite.status !== CommunityInviteStatus.PENDING || invite.expiresAt <= new Date()) {
+        throw new AppError("Lời mời không còn hiệu lực", 409);
+      }
+      if (!accept) {
+        await tx.communityInvite.update({ where: { id: inviteId }, data: { status: CommunityInviteStatus.DECLINED, respondedAt: new Date() } });
+        return { accepted: false };
+      }
+      const community = await tx.community.findUnique({ where: { id: invite.communityId } });
+      if (!community || community.status !== CommunityStatus.ACTIVE || community.deletedAt) throw new AppError("Community không còn khả dụng", 409);
+      const existing = await tx.communityMember.findUnique({ where: { communityId_userId: { communityId: invite.communityId, userId } } });
+      await tx.communityInvite.update({ where: { id: inviteId }, data: { status: CommunityInviteStatus.ACCEPTED, respondedAt: new Date() } });
+      const member = await tx.communityMember.upsert({
+        where: { communityId_userId: { communityId: invite.communityId, userId } },
+        update: { status: CommunityMemberStatus.ACTIVE, role: CommunityMemberRole.MEMBER, leftAt: null },
+        create: { communityId: invite.communityId, userId },
+      });
+      if (existing?.status !== CommunityMemberStatus.ACTIVE) {
+        await tx.community.update({ where: { id: invite.communityId }, data: { membersCount: { increment: 1 } } });
+      }
       return { accepted: true, member };
     });
   }

@@ -23,6 +23,13 @@ const loginSchema = z.object({
   password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
+const googleLoginSchema = z.object({
+  credential: z.string().min(100, "Google credential không hợp lệ").max(10_000),
+  acceptTerms: z.boolean().default(false),
+  acceptPrivacy: z.boolean().default(false),
+  consentSessionId: z.string().min(8).max(100).optional(),
+});
+
 const tokenSchema = z.object({
   refreshToken: z.string().min(1, "Thiếu refresh token"),
 });
@@ -83,6 +90,17 @@ export class AuthController {
 
       const result = await AuthService.login(parsed.data, sessionMetadata(req));
       return sendSuccess(res, result, "Đăng nhập thành công");
+    } catch (err: any) {
+      return sendError(res, err.message, 401);
+    }
+  }
+
+  public static async loginWithGoogle(req: Request, res: Response) {
+    try {
+      const parsed = googleLoginSchema.safeParse(req.body);
+      if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+      const result = await AuthService.loginWithGoogle(parsed.data, sessionMetadata(req));
+      return sendSuccess(res, result, "Đăng nhập bằng Google thành công");
     } catch (err: any) {
       return sendError(res, err.message, 401);
     }

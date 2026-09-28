@@ -22,6 +22,12 @@ router.get("/payments", AdminController.getPayments);
 // 4. Quản lý Kiểm duyệt Bình luận & Từ cấm
 router.get("/moderation/comments", AdminController.getFlaggedComments);
 router.put("/moderation/comments/:id", AdminController.moderateComment);
+router.get("/moderation/posts", AdminController.getFlaggedPosts);
+router.put("/moderation/posts/:id", AdminController.moderatePost);
+router.get("/moderation/reports", AdminController.getReports);
+router.put("/moderation/reports/:id", AdminController.resolveReport);
+
+router.get("/audit-logs", AdminController.getAuditLogs);
 
 // 5. Quản lý Từ cấm
 router.get("/badwords", AdminController.getBadwords);

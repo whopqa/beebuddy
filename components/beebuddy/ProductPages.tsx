@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   MessageSquare,
   Users,
@@ -23,6 +23,7 @@ import {
   Check,
   User as UserIcon,
   Bell,
+  Camera,
 } from "lucide-react";
 import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
@@ -36,13 +37,16 @@ import type { WebUser } from "@/lib/auth-types";
 import { accountApi, type AccountProfile, type AccountSettings } from "@/lib/account-client";
 import { postsApi, type FeedPost } from "@/lib/posts-client";
 import {
+  cancelCheckout,
   createCheckout,
   getPaymentStatus,
   getSubscriptionPlans,
   type Checkout,
+  type PaymentStatus as PaymentStatusRecord,
   type SubscriptionPlan,
 } from "@/lib/payments-client";
 import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
+import { uploadImage } from "@/lib/media-client";
 
 export type ProductView =
   | "get-started"
@@ -829,8 +833,13 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
   const [draft, setDraft] = useState<AccountDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [error, setError] = useState("");
   const authenticated = isLoggedIn || Boolean(profile);
+  const avatarPreview = useMemo(() => avatarFile ? URL.createObjectURL(avatarFile) : null, [avatarFile]);
+
+  useEffect(() => () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview); }, [avatarPreview]);
 
   useEffect(() => {
     let active = true;
@@ -853,10 +862,15 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
     setSaving(true);
     setError("");
     try {
+      if (avatarFile) {
+        const uploadedAvatar = await uploadImage(avatarFile, "avatar");
+        await accountApi.setAvatar(uploadedAvatar.id);
+      } else if (removeAvatar) {
+        await accountApi.setAvatar(null);
+      }
       const split = (value: string) => Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean)));
       const updated = await accountApi.updateProfile({
         fullName: draft.fullName.trim(),
-        avatarUrl: draft.avatarUrl.trim(),
         bio: draft.bio.trim(),
         gender: draft.gender.trim(),
         dateOfBirth: draft.dateOfBirth || undefined,
@@ -1070,7 +1084,21 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
               </div>
               <div className="bb-profile-identity-row">
-                <img src={draft.avatarUrl || "/assets/home/figma-buzzy.png"} alt="" className="bb-profile-avatar-circle" />
+                <div className="bb-edit-avatar-control">
+                  <img src={removeAvatar ? "/assets/home/figma-buzzy.png" : avatarPreview || draft.avatarUrl || "/assets/home/figma-buzzy.png"} alt="Ảnh đại diện xem trước" className="bb-profile-avatar-circle" />
+                  <label><Camera size={16} /> Chọn ảnh<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+                      setError("Ảnh đại diện phải là JPEG/PNG/WebP/GIF và không vượt quá 5 MB.");
+                      return;
+                    }
+                    setError("");
+                    setRemoveAvatar(false);
+                    setAvatarFile(file);
+                  }} /></label>
+                  {(draft.avatarUrl || avatarFile) && <button type="button" onClick={() => { setAvatarFile(null); setRemoveAvatar(true); }}>Gỡ ảnh</button>}
+                </div>
                 <div className="bb-profile-user-fields">
                   <div className="bb-field-pair"><span className="label">Full Name</span><strong className="val">{draft.fullName}</strong></div>
                   <div className="bb-field-pair"><span className="label">Email</span><strong className="val text-[#ff7300]">{profile.user.email}</strong></div>
@@ -1111,8 +1139,8 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                   <input className="bb-edit-val-underlined" value={draft.interests} onChange={(event) => updateDraft("interests", event.target.value)} placeholder="Design, Coffee, Hiking" />
                 </div>
                 <div className="bb-edit-row">
-                  <div><strong>Avatar URL</strong><p>Link to your profile picture</p></div>
-                  <input className="bb-edit-val-underlined" type="url" value={draft.avatarUrl} onChange={(event) => updateDraft("avatarUrl", event.target.value)} placeholder="https://..." />
+                  <div><strong>Profile picture</strong><p>JPEG, PNG, WebP or GIF · maximum 5 MB</p></div>
+                  <span className="bb-edit-avatar-status">{avatarFile ? avatarFile.name : removeAvatar ? "Will be removed" : draft.avatarUrl ? "Current image" : "Not set"}</span>
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Habits</strong><p>Daily routines and rituals</p></div>
@@ -1179,6 +1207,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [currentTier, setCurrentTier] = useState<string | null>(null);
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [paymentStatus, setPaymentStatus] = useState("PENDING");
+  const [returnedPayment, setReturnedPayment] = useState<PaymentStatusRecord | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1199,6 +1228,37 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const rawOrderCode = new URLSearchParams(window.location.search).get("orderCode");
+    const orderCode = Number(rawOrderCode);
+    if (!rawOrderCode || !Number.isSafeInteger(orderCode) || orderCode <= 0) return;
+
+    let active = true;
+    setCheckoutLoading("RETURN");
+    getPaymentStatus(orderCode)
+      .then((payment) => {
+        if (!active) return;
+        setReturnedPayment(payment);
+        setPaymentStatus(payment.status);
+        if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
+      })
+      .catch((cause) => active && setError(cause instanceof Error ? cause.message : "Không thể xác minh thanh toán PayOS"))
+      .finally(() => active && setCheckoutLoading(null));
+    return () => { active = false; };
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!checkout || paymentStatus !== "PENDING") return;
+    const timer = window.setInterval(() => {
+      getPaymentStatus(checkout.orderCode).then((payment) => {
+        setPaymentStatus(payment.status);
+        if (payment.status === "COMPLETED") setCurrentTier(payment.tier);
+      }).catch(() => undefined);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [checkout, paymentStatus]);
 
   const price = (value: number) =>
     value === 0 ? "Miễn phí" : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
@@ -1230,6 +1290,19 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       setCheckoutLoading(null);
     }
   };
+  const cancelCurrentCheckout = async () => {
+    if (!checkout) return;
+    setCheckoutLoading(checkout.tier);
+    setError("");
+    try {
+      const result = await cancelCheckout(checkout.orderCode);
+      setPaymentStatus(result.status);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể hủy đơn thanh toán");
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   return (
     <main className="bb-canvas bb-billing-canvas">
@@ -1251,6 +1324,20 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
           </div>
 
           {loading && <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng giá...</div>}
+          {returnedPayment && (
+            <div className={`bb-billing-return-notice is-${returnedPayment.status.toLowerCase()}`} role="status">
+              <strong>
+                {returnedPayment.status === "COMPLETED"
+                  ? "Thanh toán thành công"
+                  : returnedPayment.status === "CANCELLED"
+                    ? "Bạn đã hủy thanh toán"
+                    : returnedPayment.status === "PENDING"
+                      ? "PayOS đang chờ thanh toán"
+                      : `Trạng thái thanh toán: ${returnedPayment.status}`}
+              </strong>
+              <span>Đơn #{returnedPayment.orderCode} · Gói {returnedPayment.tier}</span>
+            </div>
+          )}
           {error && !loading && (
             <div className="bb-feed-state-card is-error">
               <p>{error}</p>
@@ -1321,12 +1408,21 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <div><dt>Trạng thái</dt><dd className={`is-${paymentStatus.toLowerCase()}`}>{paymentStatus}</dd></div>
                 </dl>
                 <div className="bb-billing-live-actions">
+                  <a href={checkout.checkoutUrl} rel="noreferrer">Mở cổng PayOS</a>
                   <button type="button" onClick={() => void refreshPayment()} disabled={checkoutLoading !== null}>Kiểm tra trạng thái</button>
+                  {paymentStatus === "PENDING" && (
+                    <button type="button" className="secondary" onClick={() => void cancelCurrentCheckout()} disabled={checkoutLoading !== null}>Hủy đơn</button>
+                  )}
                   <button type="button" className="secondary" onClick={() => setCheckout(null)}>Đóng</button>
                 </div>
-                <small>Trong môi trường development, đơn sẽ giữ PENDING cho đến khi backend nhận webhook PayOS có chữ ký hợp lệ.</small>
+                <small>Trạng thái được đồng bộ từ PayOS qua webhook và kiểm tra định kỳ. Không đóng trang ngân hàng trước khi có kết quả.</small>
               </div>
-              <img src={checkout.qrCodeUrl} alt={`Mã VietQR cho đơn ${checkout.orderCode}`} />
+              <div className="bb-payos-checkout-panel">
+                <Shield size={32} />
+                <strong>Thanh toán bảo mật qua PayOS</strong>
+                <span>Trang PayOS sẽ hiển thị mã VietQR chính xác của đơn hàng.</span>
+                <a href={checkout.checkoutUrl} rel="noreferrer">Thanh toán ngay →</a>
+              </div>
             </section>
           )}
         </div>

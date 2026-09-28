@@ -7,13 +7,18 @@ import {
   CalendarDays,
   Globe2,
   Heart,
+  ImagePlus,
   LoaderCircle,
   LockKeyhole,
   MessageCircle,
   Plus,
   Search,
   Send,
+  Settings,
   ShieldCheck,
+  Trash2,
+  UserMinus,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -21,14 +26,18 @@ import type { WebUser } from "@/lib/auth-types";
 import {
   communitiesApi,
   type CommunityDetail,
+  type CommunityManagement,
+  type IncomingCommunityInvite,
   type CreatedCommunity,
   type CommunityJoinPolicy,
   type CommunityMembership,
   type CommunitySummary,
   type CommunityVisibility,
 } from "@/lib/communities-client";
+import { connectionsApi, type Connection } from "@/lib/connections-client";
 import type { FeedPost } from "@/lib/posts-client";
 import CommentsModal from "./CommentsModal";
+import { uploadImage } from "@/lib/media-client";
 
 type HubView = "communities" | "detail";
 
@@ -86,8 +95,14 @@ export default function CommunityHub({
   const [actionPending, setActionPending] = useState(false);
   const [notice, setNotice] = useState("");
   const [composer, setComposer] = useState("");
+  const [postImages, setPostImages] = useState<File[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [showManagement, setShowManagement] = useState(false);
+  const [invitations, setInvitations] = useState<IncomingCommunityInvite[]>([]);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const postImagePreviews = useMemo(() => postImages.map((file) => URL.createObjectURL(file)), [postImages]);
+
+  useEffect(() => () => postImagePreviews.forEach((url) => URL.revokeObjectURL(url)), [postImagePreviews]);
 
   const loadCommunities = useCallback(async (cursor?: string) => {
     cursor ? setLoadingMore(true) : setLoading(true);
@@ -104,7 +119,11 @@ export default function CommunityHub({
     }
   }, []);
 
-  useEffect(() => { void loadCommunities(); }, [loadCommunities, isLoggedIn]);
+  useEffect(() => {
+    void loadCommunities();
+    if (isLoggedIn) void communitiesApi.invitations().then(setInvitations).catch(() => setInvitations([]));
+    else setInvitations([]);
+  }, [loadCommunities, isLoggedIn]);
 
   const visibleCommunities = useMemo(() => {
     const keyword = query.trim().toLocaleLowerCase("vi");
@@ -125,7 +144,7 @@ export default function CommunityHub({
     try {
       const detail = await communitiesApi.detail(community.slug);
       setSelected(detail);
-      const exactMembership = detail.members.find((member) => member.userId === currentUser?.id);
+      const exactMembership = detail.viewerMembership || detail.members.find((member) => member.userId === currentUser?.id);
       if (exactMembership) setSelectedMembership(exactMembership);
       setFeedLoading(true);
       const page = await communitiesApi.feed(community.id);
@@ -177,12 +196,14 @@ export default function CommunityHub({
 
   const handlePost = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selected || !composer.trim() || actionPending) return;
+    if (!selected || (!composer.trim() && postImages.length === 0) || actionPending) return;
     setActionPending(true);
     setError("");
     try {
-      await communitiesApi.createPost(selected.id, composer.trim());
+      const uploaded = await Promise.all(postImages.map((file) => uploadImage(file, "post")));
+      await communitiesApi.createPost(selected.id, composer.trim(), uploaded.map((asset) => asset.id));
       setComposer("");
+      setPostImages([]);
       const page = await communitiesApi.feed(selected.id);
       setFeed(page.posts);
       setNotice("Bài viết đã được đăng vào cộng đồng.");
@@ -197,6 +218,17 @@ export default function CommunityHub({
     setFeed((current) => current.map((post) => post.id === postId
       ? { ...post, commentsCount: post.commentsCount + 1 }
       : post));
+  };
+
+  const respondInvitation = async (invite: IncomingCommunityInvite, accept: boolean) => {
+    setActionPending(true); setError("");
+    try {
+      await communitiesApi.respondInvite(invite.id, accept);
+      setInvitations((rows) => rows.filter((row) => row.id !== invite.id));
+      setNotice(accept ? `Bạn đã tham gia ${invite.community.name}.` : "Đã từ chối lời mời.");
+      await loadCommunities();
+    } catch (err) { setError(err instanceof Error ? err.message : "Không thể phản hồi lời mời"); }
+    finally { setActionPending(false); }
   };
 
   return (
@@ -230,6 +262,8 @@ export default function CommunityHub({
               </label>
             </div>
 
+            {invitations.length > 0 && <div className="bb-community-invitations"><h3><UserPlus size={18} /> Lời mời tham gia</h3>{invitations.map((invite) => <article key={invite.id}><img src={invite.community.avatarMedia?.sourceUrl || invite.invitedBy.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{invite.community.name}</strong><span>{invite.invitedBy.profile?.fullName || "Một quản trị viên"} đã mời bạn</span></div><button disabled={actionPending} onClick={() => void respondInvitation(invite, true)}>Tham gia</button><button disabled={actionPending} className="is-muted" onClick={() => void respondInvitation(invite, false)}>Từ chối</button></article>)}</div>}
+
             {error && <div className="bb-community-alert is-error">{error}</div>}
             {loading ? (
               <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={28} /> Đang tải cộng đồng...</div>
@@ -244,7 +278,7 @@ export default function CommunityHub({
                 {visibleCommunities.map((community) => {
                   const membership = membershipOf(community, currentUser?.id);
                   return (
-                    <article key={community.id} className="bb-community-card">
+                    <article key={community.id} className="bb-community-directory-card">
                       <div className="bb-community-card-cover" style={{ backgroundImage: `url(${fallbackCover})` }}>
                         <span className="bb-community-privacy-badge">
                           {community.visibility === "PUBLIC" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}
@@ -286,13 +320,26 @@ export default function CommunityHub({
           feedLoading={feedLoading}
           actionPending={actionPending}
           composer={composer}
+          postImages={postImages}
+          postImagePreviews={postImagePreviews}
           error={error}
           notice={notice}
           onBack={backToDirectory}
           onMembership={() => void handleMembership()}
           onComposer={setComposer}
+          onPostImages={(files) => {
+            const next = files.slice(0, 4);
+            const invalid = next.find((file) => !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024);
+            if (invalid) {
+              setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 5 MB.");
+              return;
+            }
+            setError("");
+            setPostImages(next);
+          }}
           onPost={handlePost}
           onComments={setCommentPostId}
+          onManage={() => setShowManagement(true)}
         />
       )}
 
@@ -304,6 +351,21 @@ export default function CommunityHub({
             await loadCommunities();
             await openCommunity(community);
           }}
+        />
+      )}
+
+      {showManagement && selected && currentUser && (
+        <CommunityManagementModal
+          communityId={selected.id}
+          currentUserId={currentUser.id}
+          onClose={() => setShowManagement(false)}
+          onUpdated={async () => {
+            const detail = await communitiesApi.detail(selected.slug);
+            setSelected(detail);
+            setSelectedMembership(detail.viewerMembership || detail.members.find((member) => member.userId === currentUser.id));
+            await loadCommunities();
+          }}
+          onDeleted={() => { setShowManagement(false); backToDirectory(); void loadCommunities(); }}
         />
       )}
 
@@ -327,13 +389,17 @@ function CommunityDetailView({
   feedLoading,
   actionPending,
   composer,
+  postImages,
+  postImagePreviews,
   error,
   notice,
   onBack,
   onMembership,
   onComposer,
+  onPostImages,
   onPost,
   onComments,
+  onManage,
 }: {
   selected: CommunityDetail | null;
   membership?: CommunityMembership;
@@ -343,13 +409,17 @@ function CommunityDetailView({
   feedLoading: boolean;
   actionPending: boolean;
   composer: string;
+  postImages: File[];
+  postImagePreviews: string[];
   error: string;
   notice: string;
   onBack: () => void;
   onMembership: () => void;
   onComposer: (value: string) => void;
+  onPostImages: (files: File[]) => void;
   onPost: (event: FormEvent) => void;
   onComments: (postId: string) => void;
+  onManage: () => void;
 }) {
   if (!selected) {
     return (
@@ -362,6 +432,7 @@ function CommunityDetailView({
 
   const isMember = membership?.status === "ACTIVE";
   const isOwner = membership?.role === "OWNER" || selected.ownerId === currentUser?.id;
+  const isManager = isOwner || membership?.role === "MODERATOR";
 
   return (
     <section className="bb-community-detail-shell">
@@ -381,8 +452,8 @@ function CommunityDetailView({
         <div className="bb-community-detail-action">
           {!isLoggedIn ? (
             <Link className="bb-community-primary-btn" href="/login">Đăng nhập để tham gia</Link>
-          ) : isOwner ? (
-            <span className="bb-community-owner-chip"><ShieldCheck size={16} /> Bạn là chủ cộng đồng</span>
+          ) : isManager ? (
+            <div className="bb-community-manager-actions"><span className="bb-community-owner-chip"><ShieldCheck size={16} /> {isOwner ? "Bạn là chủ cộng đồng" : "Bạn là điều hành viên"}</span><button className="bb-community-secondary-btn" type="button" onClick={onManage}><Settings size={16} /> Quản lý</button></div>
           ) : selected.joinPolicy === "INVITE_ONLY" && !isMember ? (
             <span className="bb-community-owner-chip"><LockKeyhole size={16} /> Cần lời mời</span>
           ) : (
@@ -402,7 +473,24 @@ function CommunityDetailView({
               <img src={currentUser?.profile?.avatarUrl || fallbackAvatar} alt="" />
               <div>
                 <textarea value={composer} onChange={(event) => onComposer(event.target.value)} maxLength={10000} placeholder={`Chia sẻ điều gì đó với ${selected.name}...`} />
-                <button type="submit" disabled={!composer.trim() || actionPending}><Send size={16} /> {actionPending ? "Đang đăng" : "Đăng bài"}</button>
+                {postImagePreviews.length > 0 && (
+                  <div className="bb-community-composer-previews">
+                    {postImagePreviews.map((url, index) => <img key={url} src={url} alt={`Ảnh đã chọn ${index + 1}`} />)}
+                  </div>
+                )}
+                <div className="bb-community-composer-actions">
+                  <label className="bb-community-image-picker">
+                    <ImagePlus size={17} /> Chọn ảnh ({postImages.length}/4)
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      multiple
+                      onChange={(event) => onPostImages(Array.from(event.target.files || []))}
+                    />
+                  </label>
+                  {postImages.length > 0 && <button className="is-secondary" type="button" onClick={() => onPostImages([])}>Bỏ ảnh</button>}
+                  <button type="submit" disabled={(!composer.trim() && postImages.length === 0) || actionPending}><Send size={16} /> {actionPending ? "Đang đăng" : "Đăng bài"}</button>
+                </div>
               </div>
             </form>
           )}
@@ -443,6 +531,107 @@ function CommunityDetailView({
       </div>
     </section>
   );
+}
+
+function CommunityManagementModal({ communityId, currentUserId, onClose, onUpdated, onDeleted }: {
+  communityId: string;
+  currentUserId: string;
+  onClose: () => void;
+  onUpdated: () => void | Promise<void>;
+  onDeleted: () => void;
+}) {
+  const [data, setData] = useState<CommunityManagement | null>(null);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState<CommunityVisibility>("PUBLIC");
+  const [joinPolicy, setJoinPolicy] = useState<CommunityJoinPolicy>("OPEN");
+  const [status, setStatus] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
+  const [inviteeId, setInviteeId] = useState("");
+  const [pending, setPending] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const load = useCallback(async () => {
+    const [management, connectionRows] = await Promise.all([
+      communitiesApi.management(communityId),
+      connectionsApi.list().catch(() => []),
+    ]);
+    setData(management);
+    setConnections(connectionRows.filter((item) => item.status === "ACCEPTED"));
+    setName(management.name); setDescription(management.description || ""); setVisibility(management.visibility); setJoinPolicy(management.joinPolicy);
+    setStatus(management.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE");
+  }, [communityId]);
+  useEffect(() => { void load().catch((cause) => setError(cause instanceof Error ? cause.message : "Không thể tải trang quản lý")); }, [load]);
+
+  const saveSettings = async (event: FormEvent) => {
+    event.preventDefault(); setPending("settings"); setError(""); setNotice("");
+    try {
+      const [avatarAsset, coverAsset] = await Promise.all([
+        avatar ? uploadImage(avatar, "avatar") : Promise.resolve(null),
+        cover ? uploadImage(cover, "avatar") : Promise.resolve(null),
+      ]);
+      await communitiesApi.update(communityId, {
+        name: name.trim(), description: description.trim() || null, visibility, joinPolicy, status,
+        ...(avatarAsset ? { avatarMediaId: avatarAsset.id } : {}),
+        ...(coverAsset ? { coverMediaId: coverAsset.id } : {}),
+      });
+      setAvatar(null); setCover(null); setNotice("Đã lưu cài đặt cộng đồng."); await load(); await onUpdated();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể cập nhật cộng đồng"); }
+    finally { setPending(""); }
+  };
+
+  const memberAction = async (userId: string, action: "PROMOTE" | "DEMOTE" | "REMOVE" | "BAN" | "RESTORE") => {
+    if ((action === "REMOVE" || action === "BAN") && !window.confirm(action === "BAN" ? "Cấm thành viên này khỏi cộng đồng?" : "Xóa thành viên này khỏi cộng đồng?")) return;
+    setPending(userId); setError("");
+    try { await communitiesApi.manageMember(communityId, userId, action); setNotice("Đã cập nhật thành viên."); await load(); await onUpdated(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể cập nhật thành viên"); }
+    finally { setPending(""); }
+  };
+
+  const respondRequest = async (requestId: string, accept: boolean) => {
+    setPending(requestId); setError("");
+    try { await communitiesApi.respondJoinRequest(communityId, requestId, accept); setNotice(accept ? "Đã duyệt thành viên." : "Đã từ chối yêu cầu."); await load(); await onUpdated(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể xử lý yêu cầu"); }
+    finally { setPending(""); }
+  };
+
+  const invite = async () => {
+    if (!inviteeId) return; setPending("invite"); setError("");
+    try { await communitiesApi.invite(communityId, inviteeId); setNotice("Đã gửi lời mời tham gia."); setInviteeId(""); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể gửi lời mời"); }
+    finally { setPending(""); }
+  };
+
+  const transfer = async (userId: string) => {
+    if (!window.confirm("Chuyển quyền sở hữu? Sau thao tác này bạn sẽ trở thành thành viên thường.")) return;
+    setPending(userId); setError("");
+    try { await communitiesApi.transferOwnership(communityId, userId); await onUpdated(); onClose(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể chuyển quyền"); }
+    finally { setPending(""); }
+  };
+
+  const removeCommunity = async () => {
+    if (!window.confirm("Xóa cộng đồng này? Bài viết sẽ không còn xuất hiện và thao tác không thể hoàn tác trên giao diện.")) return;
+    setPending("delete"); setError("");
+    try { await communitiesApi.remove(communityId); onDeleted(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể xóa cộng đồng"); setPending(""); }
+  };
+
+  const invitedIds = new Set(data?.invites.map((invite) => invite.inviteeId) || []);
+  const memberIds = new Set(data?.members.filter((member) => member.status === "ACTIVE").map((member) => member.userId) || []);
+  const candidates = connections.map((connection) => connection.requesterId === currentUserId ? connection.addressee : connection.requester)
+    .filter((person) => !memberIds.has(person.id) && !invitedIds.has(person.id));
+
+  return <div className="bb-community-modal-overlay" role="dialog" aria-modal="true" onMouseDown={onClose}><div className="bb-community-management-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><h2>Quản lý cộng đồng</h2><p>Cài đặt, thành viên, lời mời và yêu cầu tham gia.</p></div><button onClick={onClose}><X size={20} /></button></header>{error && <div className="bb-community-alert is-error">{error}</div>}{notice && <div className="bb-community-alert is-success">{notice}</div>}{!data ? <div className="bb-community-empty"><LoaderCircle className="bb-spin" /> Đang tải...</div> : <div className="bb-community-management-content">
+    {data.managerRole === "OWNER" && <form className="bb-community-manage-section" onSubmit={saveSettings}><h3><Settings size={18} /> Cài đặt chung</h3><div className="bb-community-form-grid"><label>Tên<input value={name} onChange={(event) => setName(event.target.value)} minLength={3} maxLength={100} /></label><label>Trạng thái<select value={status} onChange={(event) => setStatus(event.target.value as "ACTIVE" | "ARCHIVED")}><option value="ACTIVE">Hoạt động</option><option value="ARCHIVED">Lưu trữ</option></select></label><label>Quyền riêng tư<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="PUBLIC">Công khai</option><option value="PRIVATE">Riêng tư</option><option value="INVITE_ONLY">Chỉ lời mời</option></select></label><label>Cách tham gia<select value={joinPolicy} onChange={(event) => setJoinPolicy(event.target.value as CommunityJoinPolicy)}><option value="OPEN">Tự do</option><option value="APPROVAL">Cần duyệt</option><option value="INVITE_ONLY">Chỉ lời mời</option></select></label></div><label>Mô tả<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} /></label><div className="bb-community-form-grid"><label>Ảnh đại diện<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setAvatar(event.target.files?.[0] || null)} /></label><label>Ảnh bìa<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setCover(event.target.files?.[0] || null)} /></label></div><button className="bb-community-primary-btn" disabled={pending === "settings"}>{pending === "settings" ? "Đang lưu..." : "Lưu cài đặt"}</button></form>}
+    <section className="bb-community-manage-section"><h3><UserPlus size={18} /> Mời kết nối</h3><div className="bb-community-invite-row"><select value={inviteeId} onChange={(event) => setInviteeId(event.target.value)}><option value="">Chọn một người đã kết nối</option>{candidates.map((person) => <option key={person.id} value={person.id}>{person.profile?.fullName || person.profile?.username || "Thành viên BeeBuddy"}</option>)}</select><button disabled={!inviteeId || pending === "invite"} onClick={() => void invite()}>Gửi lời mời</button></div>{data.invites.length > 0 && <p className="bb-community-manage-note">{data.invites.length} lời mời đang chờ phản hồi.</p>}</section>
+    {data.joinRequests.length > 0 && <section className="bb-community-manage-section"><h3><Users size={18} /> Yêu cầu tham gia ({data.joinRequests.length})</h3>{data.joinRequests.map((request) => <div className="bb-community-manage-row" key={request.id}><img src={request.requester.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{request.requester.profile?.fullName || request.requester.email}</strong><span>{request.message || "Không kèm lời nhắn"}</span></div><button disabled={pending === request.id} onClick={() => void respondRequest(request.id, true)}>Duyệt</button><button className="is-danger" disabled={pending === request.id} onClick={() => void respondRequest(request.id, false)}>Từ chối</button></div>)}</section>}
+    <section className="bb-community-manage-section"><h3><Users size={18} /> Thành viên ({data.members.filter((member) => member.status === "ACTIVE").length})</h3>{data.members.map((member) => <div className="bb-community-manage-row" key={member.id}><img src={member.user.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{member.user.profile?.fullName || "Thành viên BeeBuddy"}</strong><span>{member.role} · {member.status}</span></div>{member.role !== "OWNER" && <>{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, member.role === "MODERATOR" ? "DEMOTE" : "PROMOTE")}>{member.role === "MODERATOR" ? "Hạ quyền" : "Điều hành viên"}</button>}{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void transfer(member.userId)}>Chuyển owner</button>}{member.status === "ACTIVE" ? <><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "REMOVE")}><UserMinus size={14} /> Xóa</button><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "BAN")}>Cấm</button></> : <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "RESTORE")}>Khôi phục</button>}</>}</div>)}</section>
+    {data.managerRole === "OWNER" && <section className="bb-community-manage-section is-danger-zone"><h3><Trash2 size={18} /> Vùng nguy hiểm</h3><p>Xóa mềm cộng đồng và ẩn toàn bộ nội dung khỏi người dùng.</p><button disabled={pending === "delete"} onClick={() => void removeCommunity()}>Xóa cộng đồng</button></section>}
+  </div>}</div></div>;
 }
 
 function CreateCommunityModal({

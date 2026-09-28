@@ -27,7 +27,7 @@ export class PaymentsController {
       const plans = await PaymentsService.getPlans();
       return sendSuccess(res, plans);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -46,7 +46,7 @@ export class PaymentsController {
 
       return sendSuccess(res, checkout, "Tạo đơn hàng thanh toán thành công", 201);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 
@@ -83,7 +83,7 @@ export class PaymentsController {
   public static async getPaymentStatus(req: Request, res: Response) {
     try {
       const orderCode = Number(req.params.orderCode);
-      if (isNaN(orderCode)) {
+      if (!Number.isSafeInteger(orderCode) || orderCode <= 0) {
         return sendError(res, "Mã đơn hàng không hợp lệ", 400);
       }
 
@@ -98,7 +98,20 @@ export class PaymentsController {
 
       return sendSuccess(res, payment);
     } catch (err: any) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, getErrorStatus(err));
+    }
+  }
+
+  public static async cancelCheckout(req: Request, res: Response) {
+    try {
+      const orderCode = Number(req.params.orderCode);
+      if (!Number.isSafeInteger(orderCode) || orderCode <= 0) {
+        return sendError(res, "Mã đơn hàng không hợp lệ", 400);
+      }
+      const result = await PaymentsService.cancelCheckout(orderCode, req.user!.id);
+      return sendSuccess(res, result, "Đã hủy đơn thanh toán");
+    } catch (err: any) {
+      return sendError(res, err.message, getErrorStatus(err));
     }
   }
 }

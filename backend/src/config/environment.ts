@@ -27,12 +27,16 @@ const environmentSchema = z.object({
   EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),
   AUTH_TOKEN_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(15).max(3600).default(60),
+  GOOGLE_CLIENT_ID: z.string().default(""),
+  MEDIA_UPLOAD_DIR: z.string().min(1).default("uploads"),
+  MEDIA_IMAGE_MAX_BYTES: z.coerce.number().int().min(1024).max(20 * 1024 * 1024).default(5 * 1024 * 1024),
   PUSH_TOKEN_ENCRYPTION_KEY: z.string().min(32).default("beebuddy_local_push_token_key_change_me"),
   PAYOS_CLIENT_ID: z.string().default(""),
   PAYOS_API_KEY: z.string().default(""),
   PAYOS_CHECKSUM_KEY: z.string().default(""),
   PAYOS_RETURN_URL: z.string().url().default("http://localhost:3000/billing?status=success"),
   PAYOS_CANCEL_URL: z.string().url().default("http://localhost:3000/billing?status=cancelled"),
+  PAYOS_PAYMENT_LINK_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
 });
 
 const unsafeProductionValues = new Set([
@@ -77,6 +81,9 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
     if (!value.CLIENT_URL.startsWith("https://")) {
       errors.push("CLIENT_URL production phải sử dụng HTTPS");
     }
+    if (!value.PAYOS_RETURN_URL.startsWith("https://") || !value.PAYOS_CANCEL_URL.startsWith("https://")) {
+      errors.push("PAYOS_RETURN_URL và PAYOS_CANCEL_URL production phải sử dụng HTTPS");
+    }
 
     if (value.EMAIL_DELIVERY_MODE !== "smtp") {
       errors.push("EMAIL_DELIVERY_MODE production phải là smtp");
@@ -113,6 +120,13 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
       PASSWORD_RESET_TTL_MINUTES: value.PASSWORD_RESET_TTL_MINUTES,
       RESEND_COOLDOWN_SECONDS: value.AUTH_TOKEN_RESEND_COOLDOWN_SECONDS,
     },
+    GOOGLE: {
+      CLIENT_ID: value.GOOGLE_CLIENT_ID,
+    },
+    MEDIA: {
+      UPLOAD_DIR: value.MEDIA_UPLOAD_DIR,
+      IMAGE_MAX_BYTES: value.MEDIA_IMAGE_MAX_BYTES,
+    },
     PUSH_TOKEN_ENCRYPTION_KEY: value.PUSH_TOKEN_ENCRYPTION_KEY,
     PAYOS: {
       CLIENT_ID: value.PAYOS_CLIENT_ID,
@@ -120,6 +134,7 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
       CHECKSUM_KEY: value.PAYOS_CHECKSUM_KEY,
       RETURN_URL: value.PAYOS_RETURN_URL,
       CANCEL_URL: value.PAYOS_CANCEL_URL,
+      PAYMENT_LINK_TTL_MINUTES: value.PAYOS_PAYMENT_LINK_TTL_MINUTES,
     },
   };
 }

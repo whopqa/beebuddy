@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   clearAuthCookies,
+  forwardAuthenticatedRequest,
   forwardOptionalAuthenticatedRequest,
   setAuthCookies,
 } from "@/lib/server/auth-proxy";
 
-export async function GET(request: NextRequest) {
-  const query = request.nextUrl.searchParams.toString();
-  const result = await forwardOptionalAuthenticatedRequest(`/posts${query ? `?${query}` : ""}`);
+function toResponse(result: Awaited<ReturnType<typeof forwardAuthenticatedRequest>>) {
   const response = NextResponse.json(result.payload, { status: result.status });
   if (result.refreshedTokens) setAuthCookies(response, result.refreshedTokens);
   if (result.status === 401) clearAuthCookies(response);
   return response;
+}
+
+export async function GET(request: NextRequest) {
+  const query = request.nextUrl.searchParams.toString();
+  const result = await forwardOptionalAuthenticatedRequest(`/posts${query ? `?${query}` : ""}`);
+  return toResponse(result);
+}
+
+export async function POST(request: NextRequest) {
+  return toResponse(await forwardAuthenticatedRequest("/posts", {
+    method: "POST",
+    body: await request.text(),
+  }));
 }

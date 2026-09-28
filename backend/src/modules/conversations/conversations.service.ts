@@ -19,6 +19,39 @@ import { AppError } from "../../common/errors/app-error";
 import { EntitlementService } from "../../common/services/entitlement.service";
 import { NotificationService } from "../../common/services/notification.service";
 import { ModerationAdapterService } from "../../common/services/moderation-adapter.service";
+import { ConversationEventsService } from "./conversation-events.service";
+
+const messageDetailsInclude = {
+  senderUser: { select: { id: true, profile: true } },
+  replyToMessage: { select: { id: true, body: true, senderUserId: true } },
+  attachments: {
+    orderBy: { sortOrder: "asc" as const },
+    include: {
+      mediaAsset: {
+        select: { id: true, sourceUrl: true, mimeType: true, processingStatus: true },
+      },
+    },
+  },
+  reactions: true,
+  readReceipts: { select: { userId: true, readAt: true } },
+} satisfies Prisma.MessageInclude;
+
+async function activeConversationUserIds(conversationId: string) {
+  const members = await prisma.conversationMember.findMany({
+    where: { conversationId, status: ConversationMemberStatus.ACTIVE },
+    select: { userId: true },
+  });
+  return members.map((member) => member.userId);
+}
+
+async function hydratedMessage(messageId: string) {
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    include: messageDetailsInclude,
+  });
+  if (!message) throw new AppError("Không tìm thấy tin nhắn", 404);
+  return { ...message, readByUserIds: message.readReceipts.map((receipt) => receipt.userId) };
+}
 
 function pairKey(first: string, second: string) {
   return [first, second].sort().join(":");
@@ -180,8 +213,40 @@ export class ConversationsService {
     });
     const hasMore = memberships.length > take;
     const items = hasMore ? memberships.slice(0, take) : memberships;
+    const directPairKeys = items
+      .filter((membership) => membership.conversation.type === ConversationType.DIRECT)
+      .map((membership) => membership.conversation.directPairKey)
+      .filter((key): key is string => Boolean(key));
+    const [directConnections, userBlocks] = await Promise.all([
+      directPairKeys.length
+        ? prisma.connection.findMany({
+            where: { pairKey: { in: directPairKeys } },
+            select: { pairKey: true, status: true },
+          })
+        : Promise.resolve([]),
+      directPairKeys.length
+        ? prisma.userBlock.findMany({
+            where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+            select: { blockerId: true, blockedId: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const connectionStatusByPair = new Map(directConnections.map((connection) => [connection.pairKey, connection.status]));
+    const blockedPairs = new Set(userBlocks.map((block) => pairKey(block.blockerId, block.blockedId)));
     const hydrated = await Promise.all(items.map(async (membership) => ({
       ...membership,
+      canMessage: membership.conversation.type !== ConversationType.DIRECT || (
+        Boolean(membership.conversation.directPairKey) &&
+        connectionStatusByPair.get(membership.conversation.directPairKey!) === ConnectionStatus.ACCEPTED &&
+        !blockedPairs.has(membership.conversation.directPairKey!)
+      ),
+      messagingRestriction: membership.conversation.type !== ConversationType.DIRECT
+        ? null
+        : blockedPairs.has(membership.conversation.directPairKey ?? "")
+          ? "BLOCKED"
+          : connectionStatusByPair.get(membership.conversation.directPairKey ?? "") !== ConnectionStatus.ACCEPTED
+            ? "CONNECTION_REQUIRED"
+            : null,
       unreadCount: await prisma.message.count({
         where: {
           conversationId: membership.conversationId,
@@ -207,16 +272,17 @@ export class ConversationsService {
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      include: {
-        senderUser: { select: { id: true, profile: true } },
-        replyToMessage: { select: { id: true, body: true, senderUserId: true } },
-        attachments: { orderBy: { sortOrder: "asc" }, include: { mediaAsset: true } },
-        reactions: true,
-      },
+      include: messageDetailsInclude,
     });
     const hasMore = messages.length > take;
     const items = hasMore ? messages.slice(0, take) : messages;
-    return { items, nextCursor: hasMore ? items.at(-1)?.id ?? null : null };
+    return {
+      items: items.map((message) => ({
+        ...message,
+        readByUserIds: message.readReceipts.map((receipt) => receipt.userId),
+      })),
+      nextCursor: hasMore ? items.at(-1)?.id ?? null : null,
+    };
   }
 
   public static async sendMessage(userId: string, conversationId: string, data: {
@@ -224,7 +290,7 @@ export class ConversationsService {
     clientMessageId: string;
     replyToMessageId?: string;
   }) {
-    return prisma.$transaction(async (tx) => {
+    const saved = await prisma.$transaction(async (tx) => {
       const membership = await requireActiveMember(tx, conversationId, userId);
       if (membership.conversation.type === ConversationType.DIRECT) {
         const other = await tx.conversationMember.findFirst({
@@ -270,6 +336,10 @@ export class ConversationsService {
         update: { readAt: message.createdAt },
         create: { messageId: message.id, userId, readAt: message.createdAt },
       });
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: message.createdAt },
+      });
       const recipients = await tx.conversationMember.findMany({
         where: { conversationId, status: ConversationMemberStatus.ACTIVE, userId: { not: userId } },
         select: { userId: true, mutedUntil: true },
@@ -287,10 +357,18 @@ export class ConversationsService {
       }
       return message;
     });
+    const message = await hydratedMessage(saved.id);
+    ConversationEventsService.publish(await activeConversationUserIds(conversationId), {
+      type: "message.created",
+      conversationId,
+      message,
+      occurredAt: new Date().toISOString(),
+    });
+    return message;
   }
 
   public static async markRead(userId: string, conversationId: string, messageId: string) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       await requireActiveMember(tx, conversationId, userId);
       const message = await tx.message.findUnique({ where: { id: messageId } });
       if (!message || message.conversationId !== conversationId) {
@@ -307,12 +385,37 @@ export class ConversationsService {
           data: { lastReadMessageId: messageId, lastReadAt: message.createdAt },
         });
       }
-      return tx.messageReadReceipt.upsert({
-        where: { messageId_userId: { messageId, userId } },
-        update: { readAt: new Date() },
-        create: { messageId, userId },
+      const readableMessages = await tx.message.findMany({
+        where: {
+          conversationId,
+          deletedAt: null,
+          senderUserId: { not: userId },
+          OR: [
+            { createdAt: { lt: message.createdAt } },
+            { createdAt: message.createdAt, id: { lte: message.id } },
+          ],
+        },
+        select: { id: true },
       });
+      const readAt = new Date();
+      if (readableMessages.length) {
+        await tx.messageReadReceipt.createMany({
+          data: readableMessages.map((item) => ({ messageId: item.id, userId, readAt })),
+          skipDuplicates: true,
+        });
+      }
+      return { conversationId, messageId, userId, readAt, readThroughCreatedAt: message.createdAt };
     });
+    ConversationEventsService.publish(await activeConversationUserIds(conversationId), {
+      type: "message.read",
+      conversationId,
+      userId,
+      messageId,
+      readAt: result.readAt.toISOString(),
+      readThroughCreatedAt: result.readThroughCreatedAt.toISOString(),
+      occurredAt: new Date().toISOString(),
+    });
+    return result;
   }
 
   public static async react(userId: string, messageId: string, type: ReactionType) {
@@ -426,7 +529,7 @@ export class ConversationsService {
     body?: string;
     clientMessageId: string;
   }) {
-    return prisma.$transaction(async (tx) => {
+    const saved = await prisma.$transaction(async (tx) => {
       const membership = await requireActiveMember(tx, conversationId, userId);
       if (data.type === MessageType.VOICE) await EntitlementService.require(tx, userId, "voice_message.send");
       if (membership.conversation.type === ConversationType.DIRECT) {
@@ -458,9 +561,30 @@ export class ConversationsService {
           clientMessageId: data.clientMessageId,
           attachments: { create: ids.map((mediaAssetId, sortOrder) => ({ mediaAssetId, sortOrder })) },
         },
-        include: { attachments: { include: { mediaAsset: true } } },
+        include: {
+          attachments: {
+            include: {
+              mediaAsset: {
+                select: { id: true, sourceUrl: true, mimeType: true, processingStatus: true },
+              },
+            },
+          },
+        },
       });
       if (message.body) await ModerationAdapterService.enqueue(tx, "MESSAGE", message.id, message.body);
+      await tx.conversationMember.update({
+        where: { conversationId_userId: { conversationId, userId } },
+        data: { lastReadMessageId: message.id, lastReadAt: message.createdAt },
+      });
+      await tx.messageReadReceipt.upsert({
+        where: { messageId_userId: { messageId: message.id, userId } },
+        update: { readAt: message.createdAt },
+        create: { messageId: message.id, userId, readAt: message.createdAt },
+      });
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: message.createdAt },
+      });
       const recipients = await tx.conversationMember.findMany({ where: { conversationId, status: ConversationMemberStatus.ACTIVE, userId: { not: userId } }, select: { userId: true } });
       for (const recipient of recipients) {
         await NotificationService.create(tx, {
@@ -472,6 +596,14 @@ export class ConversationsService {
       }
       return message;
     });
+    const message = await hydratedMessage(saved.id);
+    ConversationEventsService.publish(await activeConversationUserIds(conversationId), {
+      type: "message.created",
+      conversationId,
+      message,
+      occurredAt: new Date().toISOString(),
+    });
+    return message;
   }
 
   public static async startCall(userId: string, conversationId: string, type: CallType, quality = "STANDARD") {

@@ -16,8 +16,54 @@ const inviteSchema = z.object({ inviteeId: z.string().uuid() }).strict();
 const acceptInviteSchema = z.object({ token: z.string().min(20).max(200) }).strict();
 const respondSchema = z.object({ accept: z.boolean() }).strict();
 const transferSchema = z.object({ newOwnerId: z.string().uuid() }).strict();
+const updateSchema = z.object({
+  name: z.string().trim().min(3).max(100).optional(),
+  description: z.string().trim().max(2000).nullable().optional(),
+  visibility: z.nativeEnum(CommunityVisibility).optional(),
+  joinPolicy: z.nativeEnum(CommunityJoinPolicy).optional(),
+  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+  avatarMediaId: z.string().uuid().nullable().optional(),
+  coverMediaId: z.string().uuid().nullable().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, "Không có dữ liệu cần cập nhật");
+const manageMemberSchema = z.object({ action: z.enum(["PROMOTE", "DEMOTE", "REMOVE", "BAN", "RESTORE"]) }).strict();
+const respondInviteSchema = z.object({ accept: z.boolean() }).strict();
 
 export class CommunitiesController {
+  public static async invitations(req: Request, res: Response) {
+    try { return sendSuccess(res, await CommunitiesService.listInvitations(req.user!.id)); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
+
+  public static async respondInvite(req: Request, res: Response) {
+    const parsed = respondInviteSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try { return sendSuccess(res, await CommunitiesService.respondInvite(req.user!.id, req.params.inviteId, parsed.data.accept)); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
+
+  public static async management(req: Request, res: Response) {
+    try { return sendSuccess(res, await CommunitiesService.getManagement(req.user!.id, req.params.communityId)); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
+
+  public static async update(req: Request, res: Response) {
+    const parsed = updateSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try { return sendSuccess(res, await CommunitiesService.updateCommunity(req.user!.id, req.params.communityId, parsed.data), "Đã cập nhật cộng đồng"); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
+
+  public static async manageMember(req: Request, res: Response) {
+    const parsed = manageMemberSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
+    try { return sendSuccess(res, await CommunitiesService.manageMember(req.user!.id, req.params.communityId, req.params.userId, parsed.data.action)); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
+
+  public static async remove(req: Request, res: Response) {
+    try { return sendSuccess(res, await CommunitiesService.deleteCommunity(req.user!.id, req.params.communityId), "Đã xóa cộng đồng"); }
+    catch (error) { return sendError(res, error, getErrorStatus(error)); }
+  }
   public static async list(req: Request, res: Response) {
     try {
       const data = await CommunitiesService.list(

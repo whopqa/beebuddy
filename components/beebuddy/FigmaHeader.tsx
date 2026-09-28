@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -76,6 +76,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
           {/* Center Navigation Links */}
           <nav className="bb-topbar-nav" id="site-navigation" aria-label="Main Navigation">
             {isAuth && <Link href="/home" className="bb-topbar-nav-link">Dashboard</Link>}
+            <Link href="/feed" className="bb-topbar-nav-link">Feed</Link>
             <Link href={`${homePath}#about`} className="bb-topbar-nav-link">
               About
             </Link>
@@ -95,7 +96,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
           {!isAuth ? (
             <div className="bb-topbar-actions">
               <Link href="/login" className="bb-topbar-signin">
-                Sign in
+                <span>Sign in</span>
               </Link>
               <Link href="/signup" className="bb-topbar-signup">
                 Create account
@@ -186,6 +187,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
                 <span className="bb-drawer-label">MAIN</span>
                 <Link href={homePath} onClick={() => setDrawerOpen(false)}>Home</Link>
                 {isAuth && <Link href="/home" onClick={() => setDrawerOpen(false)}>My Dashboard</Link>}
+                <Link href="/feed" onClick={() => setDrawerOpen(false)}>Main Feed</Link>
                 <Link href={`${homePath}#about`} onClick={() => setDrawerOpen(false)}>About Us</Link>
                 <Link href={`${homePath}#services`} onClick={() => setDrawerOpen(false)}>Services</Link>
                 <Link href="/community" onClick={() => setDrawerOpen(false)}>Community Members</Link>

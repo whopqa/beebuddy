@@ -141,3 +141,24 @@ describe("AccountService.updateProfilePrivacy", () => {
     });
   });
 });
+
+describe("AccountService.setAvatar", () => {
+  it("only links a ready image owned by the current user", async () => {
+    vi.spyOn(prisma.mediaAsset, "findFirst").mockResolvedValue({
+      sourceUrl: "http://localhost:3000/api/media/asset-1/content",
+    } as never);
+    const update = vi.spyOn(prisma.profile, "update").mockResolvedValue({
+      userId: "user-1",
+      avatarUrl: "http://localhost:3000/api/media/asset-1/content",
+    } as never);
+
+    await AccountService.setAvatar("user-1", "00000000-0000-4000-8000-000000000001");
+
+    expect(prisma.mediaAsset.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ ownerId: "user-1", processingStatus: "READY" }),
+    }));
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { avatarUrl: "http://localhost:3000/api/media/asset-1/content" },
+    }));
+  });
+});

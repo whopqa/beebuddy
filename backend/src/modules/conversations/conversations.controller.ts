@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getErrorStatus } from "../../common/errors/app-error";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { ConversationsService } from "./conversations.service";
+import { ConversationEventsService } from "./conversation-events.service";
 
 const directSchema = z.object({ userId: z.string().uuid() }).strict();
 const groupSchema = z.object({
@@ -39,6 +40,24 @@ function parsedOrError<T>(schema: z.ZodType<T>, body: unknown, res: Response): T
 }
 
 export class ConversationsController {
+  static async events(req: Request, res: Response) {
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const write = (event: unknown) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+    write({ type: "connected", userId: req.user!.id, occurredAt: new Date().toISOString() });
+    const unsubscribe = ConversationEventsService.subscribe(req.user!.id, write);
+    const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 20_000);
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+      res.end();
+    });
+  }
   static async list(req: Request, res: Response) {
     try { return sendSuccess(res, await ConversationsService.list(req.user!.id, typeof req.query.cursor === "string" ? req.query.cursor : undefined, Number(req.query.limit) || 20)); }
     catch (error) { return sendError(res, error, getErrorStatus(error)); }

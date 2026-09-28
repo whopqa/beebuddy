@@ -162,7 +162,6 @@ export class AccountService {
     userId: string,
     data: {
       fullName?: string;
-      avatarUrl?: string;
       bio?: string;
       gender?: string;
       dateOfBirth?: string;
@@ -177,7 +176,6 @@ export class AccountService {
         where: { userId },
         data: {
           fullName: data.fullName,
-          avatarUrl: data.avatarUrl,
           bio: data.bio,
           gender: data.gender,
           dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
@@ -197,6 +195,32 @@ export class AccountService {
       }
 
       return updated;
+    });
+  }
+
+  public static async setAvatar(userId: string, mediaAssetId: string | null) {
+    if (!mediaAssetId) {
+      return prisma.profile.update({
+        where: { userId },
+        data: { avatarUrl: null },
+        include: { user: { select: profileUserSelect } },
+      });
+    }
+    const asset = await prisma.mediaAsset.findFirst({
+      where: {
+        id: mediaAssetId,
+        ownerId: userId,
+        processingStatus: "READY",
+        deletedAt: null,
+        mimeType: { startsWith: "image/" },
+      },
+      select: { sourceUrl: true },
+    });
+    if (!asset?.sourceUrl) throw new Error("Ảnh không tồn tại, chưa sẵn sàng hoặc không thuộc tài khoản");
+    return prisma.profile.update({
+      where: { userId },
+      data: { avatarUrl: asset.sourceUrl },
+      include: { user: { select: profileUserSelect } },
     });
   }
 

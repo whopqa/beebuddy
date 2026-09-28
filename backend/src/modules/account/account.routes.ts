@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.get("/profile", AccountController.getProfile);
 router.put("/profile", AccountController.updateProfile);
+router.put("/avatar", AccountController.setAvatar);
 router.get("/privacy", AccountController.getProfilePrivacy);
 router.put("/privacy", AccountController.updateProfilePrivacy);
 router.put("/password", AccountController.changePassword);

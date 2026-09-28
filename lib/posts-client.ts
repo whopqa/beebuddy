@@ -16,11 +16,22 @@ export type FeedPost = {
   id: string;
   content: string;
   mediaUrls: string[];
+  mediaAssets: Array<{ id: string; sourceUrl?: string | null }>;
   visibility: PostVisibility;
   likesCount: number;
   commentsCount: number;
+  likedByCurrentUser: boolean;
+  canEdit: boolean;
+  selectedUserIds: string[];
   createdAt: string;
   author: FeedAuthor;
+};
+
+export type PostMutationInput = {
+  content: string;
+  visibility: PostVisibility;
+  mediaAssetIds?: string[];
+  selectedUserIds?: string[];
 };
 
 export type FeedPage = {
@@ -67,6 +78,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const postsApi = {
   feed: (page = 1, limit = 10) => request<FeedPage>(`?page=${page}&limit=${limit}`),
+  create: (input: PostMutationInput) => request<{ postId: string; warning?: string | null }>("", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }),
+  update: (postId: string, input: PostMutationInput) => request<{ postId: string; warning?: string | null }>(`/${encodeURIComponent(postId)}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  }),
+  remove: (postId: string) => request<{ id: string; deletedAt: string }>(`/${encodeURIComponent(postId)}`, { method: "DELETE" }),
+  setLike: (postId: string, liked: boolean) => request<{ liked: boolean; likesCount: number }>(`/${encodeURIComponent(postId)}/like`, { method: liked ? "PUT" : "DELETE" }),
+  reportPost: (postId: string, reason: string) => request<unknown>(`/${encodeURIComponent(postId)}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  }),
   comments: (postId: string) => request<PostComment[]>(`/${encodeURIComponent(postId)}/comments`),
   createComment: (postId: string, content: string) =>
     request<CreateCommentResult>(`/${encodeURIComponent(postId)}/comments`, {

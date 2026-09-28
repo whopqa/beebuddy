@@ -5,8 +5,11 @@ import {
   CommunityStatus,
   CommunityVisibility,
   ConnectionStatus,
+  AuditActorType,
+  Prisma,
   PostStatus,
   PostVisibility,
+  ReactionType,
   ReportSource,
   ReportStatus,
 } from "@prisma/client";
@@ -14,6 +17,29 @@ import { BadwordsFilter } from "../../common/filters/badwords.filter";
 import { AppError } from "../../common/errors/app-error";
 import { buildVisiblePostWhere, canViewPost } from "../../common/policies/post-access.policy";
 import { ModerationAdapterService } from "../../common/services/moderation-adapter.service";
+
+async function assertOwnedImageAssets(
+  tx: Prisma.TransactionClient,
+  ownerId: string,
+  mediaAssetIds: string[]
+) {
+  const uniqueIds = Array.from(new Set(mediaAssetIds));
+  if (!uniqueIds.length) return uniqueIds;
+  const assets = await tx.mediaAsset.findMany({
+    where: {
+      id: { in: uniqueIds },
+      ownerId,
+      processingStatus: "READY",
+      deletedAt: null,
+      mimeType: { startsWith: "image/" },
+    },
+    select: { id: true },
+  });
+  if (assets.length !== uniqueIds.length) {
+    throw new AppError("Ảnh không tồn tại, chưa sẵn sàng hoặc không thuộc người đăng", 409);
+  }
+  return uniqueIds;
+}
 
 export class PostsService {
   private static async getSocialAccess(userId: string) {
@@ -42,7 +68,7 @@ export class PostsService {
     return { connectedUserIds, blockedUserIds };
   }
 
-  private static async assertCanViewPost(postId: string, currentUserId?: string) {
+  public static async assertCanViewPost(postId: string, currentUserId?: string) {
     const post = await prisma.post.findUnique({
       where: { id: postId },
       select: {
@@ -213,8 +239,16 @@ export class PostsService {
           media: {
             orderBy: { sortOrder: "asc" },
             include: {
-              mediaAsset: { select: { sourceUrl: true } },
+              mediaAsset: { select: { id: true, sourceUrl: true } },
             },
+          },
+          reactions: {
+            where: { userId: params.userId ?? "__guest__" },
+            select: { id: true },
+            take: 1,
+          },
+          audienceUsers: {
+            select: { userId: true },
           },
         },
       }),
@@ -231,9 +265,15 @@ export class PostsService {
         mediaUrls: post.media.length
           ? post.media.flatMap((item) => item.mediaAsset.sourceUrl ? [item.mediaAsset.sourceUrl] : [])
           : post.mediaUrls,
+        mediaAssets: post.media.map((item) => ({ id: item.mediaAsset.id, sourceUrl: item.mediaAsset.sourceUrl })),
         visibility: post.audience,
         likesCount: post._count.reactions,
         commentsCount: post._count.comments,
+        likedByCurrentUser: post.reactions.length > 0,
+        canEdit: Boolean(params.userId && params.userId === post.authorId),
+        selectedUserIds: params.userId === post.authorId
+          ? post.audienceUsers.map((item) => item.userId)
+          : [],
         createdAt: post.createdAt,
         author: {
           id: post.author.id,
@@ -245,6 +285,192 @@ export class PostsService {
         },
       })),
     };
+  }
+
+  public static async createPost(data: {
+    authorId: string;
+    content: string;
+    visibility: "PUBLIC" | "CONNECTIONS" | "SELECTED" | "PRIVATE";
+    mediaAssetIds: string[];
+    selectedUserIds: string[];
+  }) {
+    const audience = data.visibility as PostVisibility;
+    const selectedUserIds = Array.from(new Set(data.selectedUserIds)).filter((id) => id !== data.authorId);
+    if (audience === PostVisibility.SELECTED && !selectedUserIds.length) {
+      throw new AppError("Bài viết SELECTED cần ít nhất một người được xem", 400);
+    }
+    const filterResult = data.content
+      ? await BadwordsFilter.checkContent(data.content)
+      : { isClean: true, reason: "" };
+
+    return prisma.$transaction(async (tx) => {
+      const mediaAssetIds = await assertOwnedImageAssets(tx, data.authorId, data.mediaAssetIds);
+      const post = await tx.post.create({
+        data: {
+          authorId: data.authorId,
+          content: data.content,
+          visibility: audience,
+          audience,
+          status: PostStatus.PUBLISHED,
+          publishedAt: new Date(),
+          media: mediaAssetIds.length
+            ? { create: mediaAssetIds.map((mediaAssetId, sortOrder) => ({ mediaAssetId, sortOrder })) }
+            : undefined,
+          audienceUsers: audience === PostVisibility.SELECTED
+            ? { create: selectedUserIds.map((userId) => ({ userId })) }
+            : undefined,
+        },
+      });
+      if (post.content) await ModerationAdapterService.enqueue(tx, "POST", post.id, post.content);
+      if (!filterResult.isClean) {
+        const moderationCase = await tx.moderationCase.create({
+          data: { caseType: "POST_CONTENT", summary: filterResult.reason },
+        });
+        await tx.report.create({
+          data: {
+            postId: post.id,
+            moderationCaseId: moderationCase.id,
+            source: ReportSource.RULE,
+            reason: `Hệ thống tự động gắn cờ: ${filterResult.reason}`,
+            reasonCode: "BADWORD_RULE",
+            status: ReportStatus.OPEN,
+          },
+        });
+      }
+      return {
+        postId: post.id,
+        warning: filterResult.isClean ? null : "Bài viết đã được chuyển vào hàng đợi kiểm duyệt.",
+      };
+    });
+  }
+
+  public static async updatePost(data: {
+    postId: string;
+    authorId: string;
+    content: string;
+    visibility: "PUBLIC" | "CONNECTIONS" | "SELECTED" | "PRIVATE";
+    mediaAssetIds: string[];
+    selectedUserIds: string[];
+  }) {
+    const audience = data.visibility as PostVisibility;
+    const selectedUserIds = Array.from(new Set(data.selectedUserIds)).filter((id) => id !== data.authorId);
+    if (audience === PostVisibility.SELECTED && !selectedUserIds.length) {
+      throw new AppError("Bài viết SELECTED cần ít nhất một người được xem", 400);
+    }
+    const filterResult = data.content
+      ? await BadwordsFilter.checkContent(data.content)
+      : { isClean: true, reason: "" };
+
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.post.findUnique({ where: { id: data.postId } });
+      if (!existing || existing.deletedAt || existing.status === PostStatus.REMOVED) {
+        throw new AppError("Không tìm thấy bài viết", 404);
+      }
+      if (existing.authorId !== data.authorId) throw new AppError("Bạn không có quyền sửa bài viết này", 403);
+      const mediaAssetIds = await assertOwnedImageAssets(tx, data.authorId, data.mediaAssetIds);
+      const post = await tx.post.update({
+        where: { id: data.postId },
+        data: {
+          content: data.content,
+          visibility: audience,
+          audience,
+          media: {
+            deleteMany: {},
+            ...(mediaAssetIds.length ? { create: mediaAssetIds.map((mediaAssetId, sortOrder) => ({ mediaAssetId, sortOrder })) } : {}),
+          },
+          audienceUsers: {
+            deleteMany: {},
+            ...(audience === PostVisibility.SELECTED ? { create: selectedUserIds.map((userId) => ({ userId })) } : {}),
+          },
+        },
+      });
+      if (post.content) await ModerationAdapterService.enqueue(tx, "POST", post.id, post.content);
+      if (!filterResult.isClean) {
+        const openRuleReport = await tx.report.findFirst({
+          where: { postId: post.id, source: ReportSource.RULE, status: { in: [ReportStatus.OPEN, ReportStatus.TRIAGED] } },
+        });
+        if (!openRuleReport) {
+          const moderationCase = await tx.moderationCase.create({ data: { caseType: "POST_CONTENT", summary: filterResult.reason } });
+          await tx.report.create({
+            data: {
+              postId: post.id,
+              moderationCaseId: moderationCase.id,
+              source: ReportSource.RULE,
+              reason: `Hệ thống tự động gắn cờ: ${filterResult.reason}`,
+              reasonCode: "BADWORD_RULE",
+            },
+          });
+        }
+      }
+      return { postId: post.id, warning: filterResult.isClean ? null : "Bài viết đang chờ kiểm duyệt." };
+    });
+  }
+
+  public static async deletePost(postId: string, authorId: string) {
+    return prisma.$transaction(async (tx) => {
+      const post = await tx.post.findUnique({ where: { id: postId } });
+      if (!post || post.deletedAt || post.status === PostStatus.REMOVED) throw new AppError("Không tìm thấy bài viết", 404);
+      if (post.authorId !== authorId) throw new AppError("Bạn không có quyền xóa bài viết này", 403);
+      const deletedAt = new Date();
+      await tx.post.update({ where: { id: postId }, data: { status: PostStatus.REMOVED, deletedAt } });
+      await tx.auditLog.create({
+        data: {
+          actorType: AuditActorType.USER,
+          actorUserId: authorId,
+          action: "DELETE_POST",
+          targetType: "POST",
+          targetId: postId,
+          beforeData: { status: post.status },
+          afterData: { status: PostStatus.REMOVED, deletedAt: deletedAt.toISOString() },
+        },
+      });
+      return { id: postId, deletedAt };
+    });
+  }
+
+  public static async setPostLike(postId: string, userId: string, liked: boolean) {
+    await this.assertCanViewPost(postId, userId);
+    return prisma.$transaction(async (tx) => {
+      if (liked) {
+        await tx.postReaction.upsert({
+          where: { postId_userId: { postId, userId } },
+          update: { type: ReactionType.LIKE },
+          create: { postId, userId, type: ReactionType.LIKE },
+        });
+      } else {
+        await tx.postReaction.deleteMany({ where: { postId, userId } });
+      }
+      return { liked, likesCount: await tx.postReaction.count({ where: { postId } }) };
+    });
+  }
+
+  public static async reportPost(data: { postId: string; reporterId: string; reason: string }) {
+    const post = await this.assertCanViewPost(data.postId, data.reporterId);
+    if (post.authorId === data.reporterId) throw new AppError("Bạn không thể báo cáo bài viết của chính mình", 400);
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.report.findFirst({
+        where: {
+          postId: data.postId,
+          reporterId: data.reporterId,
+          status: { in: [ReportStatus.OPEN, ReportStatus.TRIAGED] },
+        },
+      });
+      if (existing) return existing;
+      const moderationCase = await tx.moderationCase.create({
+        data: { caseType: "POST_REPORT", summary: data.reason },
+      });
+      return tx.report.create({
+        data: {
+          postId: data.postId,
+          reporterId: data.reporterId,
+          moderationCaseId: moderationCase.id,
+          source: ReportSource.USER,
+          reason: data.reason,
+          reasonCode: "USER_REPORT",
+          status: ReportStatus.OPEN,
+        },
+      });
+    });
   }
 
   public static async getCommunityFeed(params: { communityId: string; userId?: string; page?: number; limit?: number }) {
@@ -265,8 +491,10 @@ export class PostsService {
     return this.getFeed(params);
   }
 
-  public static async createCommunityPost(data: { communityId: string; authorId: string; content: string }) {
-    const filterResult = await BadwordsFilter.checkContent(data.content);
+  public static async createCommunityPost(data: { communityId: string; authorId: string; content: string; mediaAssetIds?: string[] }) {
+    const filterResult = data.content.trim()
+      ? await BadwordsFilter.checkContent(data.content)
+      : { isClean: true, violatedWords: [] as string[], reason: "" };
     return prisma.$transaction(async (tx) => {
       const [community, membership] = await Promise.all([
         tx.community.findUnique({ where: { id: data.communityId } }),
@@ -280,6 +508,22 @@ export class PostsService {
       if (!membership || membership.status !== CommunityMemberStatus.ACTIVE) {
         throw new AppError("Chỉ thành viên đang hoạt động mới có thể đăng bài", 403);
       }
+      const mediaAssetIds = Array.from(new Set(data.mediaAssetIds ?? []));
+      if (mediaAssetIds.length) {
+        const assets = await tx.mediaAsset.findMany({
+          where: {
+            id: { in: mediaAssetIds },
+            ownerId: data.authorId,
+            processingStatus: "READY",
+            deletedAt: null,
+            mimeType: { startsWith: "image/" },
+          },
+          select: { id: true },
+        });
+        if (assets.length !== mediaAssetIds.length) {
+          throw new AppError("Ảnh không tồn tại, chưa sẵn sàng hoặc không thuộc người đăng", 409);
+        }
+      }
       const post = await tx.post.create({
         data: {
           communityId: data.communityId,
@@ -289,9 +533,12 @@ export class PostsService {
           audience: PostVisibility.PUBLIC,
           status: PostStatus.PUBLISHED,
           publishedAt: new Date(),
+          media: mediaAssetIds.length
+            ? { create: mediaAssetIds.map((mediaAssetId, sortOrder) => ({ mediaAssetId, sortOrder })) }
+            : undefined,
         },
       });
-      await ModerationAdapterService.enqueue(tx, "POST", post.id, post.content);
+      if (post.content) await ModerationAdapterService.enqueue(tx, "POST", post.id, post.content);
       if (!filterResult.isClean) {
         await tx.report.create({
           data: {

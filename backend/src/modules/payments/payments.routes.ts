@@ -11,6 +11,7 @@ router.get("/status/:orderCode", authenticate, PaymentsController.getPaymentStat
 
 // Authenticated User routes
 router.post("/create-checkout", authenticate, PaymentsController.createCheckout);
+router.post("/cancel/:orderCode", authenticate, PaymentsController.cancelCheckout);
 router.get("/my-history", authenticate, PaymentsController.getMyPayments);
 
 export const paymentsRoutes = router;

@@ -4,6 +4,7 @@ import { ConversationsController } from "./conversations.controller";
 
 const router = Router();
 router.use(authenticate);
+router.get("/events", ConversationsController.events);
 router.get("/", ConversationsController.list);
 router.post("/direct", ConversationsController.direct);
 router.post("/groups", ConversationsController.group);

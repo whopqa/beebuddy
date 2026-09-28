@@ -61,6 +61,8 @@ export const accountApi = {
   profile: () => request<AccountProfile>("profile"),
   updateProfile: (data: Partial<Omit<AccountProfile, "id" | "userId" | "user">>) =>
     request<AccountProfile>("profile", { method: "PUT", body: JSON.stringify(data) }),
+  setAvatar: (mediaAssetId: string | null) =>
+    request<AccountProfile>("avatar", { method: "PUT", body: JSON.stringify({ mediaAssetId }) }),
   settings: () => request<AccountSettings>("settings"),
   updateSettings: (data: Partial<AccountSettings>) =>
     request<AccountSettings>("settings", { method: "PUT", body: JSON.stringify(data) }),

@@ -2135,6 +2135,32 @@
   flex-shrink: 0;
 }
 
+.bb-edit-avatar-control {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.bb-edit-avatar-control label,
+.bb-edit-avatar-control button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: #ea580c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bb-edit-avatar-control button { color: #b42318; }
+.bb-edit-avatar-control input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.bb-edit-avatar-status { color: #6b7280; font-size: 13px; overflow-wrap: anywhere; text-align: right; }
+
 .bb-profile-user-fields {
   display: flex;
   gap: 32px;
