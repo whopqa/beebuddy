@@ -26,6 +26,9 @@ export class AuthEmailService {
         host: ENV.EMAIL.SMTP_HOST,
         port: ENV.EMAIL.SMTP_PORT,
         secure: ENV.EMAIL.SMTP_SECURE,
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 10_000,
         auth: {
           user: ENV.EMAIL.SMTP_USER,
           pass: ENV.EMAIL.SMTP_PASSWORD,
@@ -38,6 +41,32 @@ export class AuthEmailService {
   private static async deliver(message: EmailMessage) {
     if (ENV.EMAIL.DELIVERY_MODE === "console") {
       console.info(`[BeeBuddy email:console] to=${message.to} subject=${message.subject}\n${message.text}`);
+      return;
+    }
+
+    if (ENV.EMAIL.DELIVERY_MODE === "resend") {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ENV.EMAIL.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: ENV.EMAIL.FROM,
+          to: [message.to],
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        const result: unknown = await response.json().catch(() => null);
+        const detail = result && typeof result === "object" && "message" in result && typeof result.message === "string"
+          ? `: ${result.message}`
+          : "";
+        throw new Error(`Resend từ chối gửi email (HTTP ${response.status})${detail}`);
+      }
       return;
     }
 

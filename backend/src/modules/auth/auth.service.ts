@@ -644,7 +644,7 @@ export class AuthService {
 
     const genericResult = {
       requested: true,
-      message: "Nếu tài khoản tồn tại và chưa được xác minh, mã mới đã được gửi đến email.",
+      message: "Nếu tài khoản tồn tại và chưa được xác minh, hệ thống sẽ gửi mã mới đến email khi dịch vụ email hoạt động.",
     };
     if (!user || user.isVerified) return genericResult;
 

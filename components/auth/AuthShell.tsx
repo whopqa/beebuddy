@@ -51,15 +51,19 @@ export default function AuthShell({
   initialEmail = "",
   resetToken = "",
   developmentCode = "",
+  deliveryFailed = false,
 }: {
   mode: AuthMode;
   initialEmail?: string;
   resetToken?: string;
   developmentCode?: string;
+  deliveryFailed?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(deliveryFailed
+    ? "Tài khoản đã được tạo nhưng chưa gửi được mã xác minh. Vui lòng thử Gửi lại mã sau khi kiểm tra cấu hình email."
+    : "");
   const [notice, setNotice] = useState("");
   const [developmentActionUrl, setDevelopmentActionUrl] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -112,6 +116,7 @@ export default function AuthShell({
         });
         const params = new URLSearchParams({ email: result.user.email });
         if (result.developmentCode) params.set("devCode", result.developmentCode);
+        if (!result.verificationSent) params.set("deliveryFailed", "1");
         router.replace(`/verify-code?${params.toString()}`);
       } else if (mode === "verify") {
         await webAuth.confirmEmailVerification(form.email.trim(), code.join(""));
@@ -376,7 +381,7 @@ export default function AuthShell({
               <button className="auth-submit bb-figma-btn-primary" disabled={loading}>
                 {loading ? "Please wait..." : submitLabel}
               </button>
-              {mode === "verify" && (error || notice) && (
+              {mode === "verify" && (
                 <button
                   type="button"
                   className="auth-switch-link"

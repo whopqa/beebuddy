@@ -40,7 +40,7 @@ Nên dùng cửa sổ thường cho User 1 và cửa sổ ẩn danh/trình duy�
 
 ## 3. Xác minh email và reset mật khẩu
 
-Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã xác minh và đường dẫn reset ra terminal, đồng thời web hiển thị tiện ích local để test nhanh. Production bắt buộc cấu hình SMTP theo `backend/.env.example`.
+Mặc định development dùng `EMAIL_DELIVERY_MODE=console`: backend in mã xác minh và đường dẫn reset ra terminal, đồng thời web hiển thị tiện ích local để test nhanh. Production cần SMTP hoặc Resend API theo `backend/.env.example`; trên Railway Trial/Free/Hobby phải dùng HTTPS API vì SMTP bị chặn.
 
 1. Mở `/signup`, tạo tài khoản bằng email chưa tồn tại và mật khẩu tối thiểu 8 ký tự có chữ và số.
 2. Xác nhận được chuyển tới `/verify-code`; nhập mã 6 số trong terminal backend.

@@ -32,6 +32,37 @@ describe("parseEnvironment", () => {
     expect(environment.EMAIL.SMTP_SECURE).toBe(false);
   });
 
+  it("accepts Resend in production without SMTP credentials", () => {
+    const environment = parseEnvironment({
+      ...validEnvironment,
+      EMAIL_DELIVERY_MODE: "resend",
+      EMAIL_FROM: "BeeBuddy <onboarding@resend.dev>",
+      RESEND_API_KEY: "re_production_test_key",
+      SMTP_HOST: "",
+      SMTP_USER: "",
+      SMTP_PASSWORD: "",
+    });
+    expect(environment.EMAIL.DELIVERY_MODE).toBe("resend");
+    expect(environment.EMAIL.RESEND_API_KEY).toBe("re_production_test_key");
+  });
+
+  it("rejects Resend in production without an API key", () => {
+    expect(() => parseEnvironment({
+      ...validEnvironment,
+      EMAIL_DELIVERY_MODE: "resend",
+      RESEND_API_KEY: "",
+    })).toThrow(/RESEND_API_KEY/);
+  });
+
+  it("rejects the local-only sender when using Resend", () => {
+    expect(() => parseEnvironment({
+      ...validEnvironment,
+      EMAIL_DELIVERY_MODE: "resend",
+      RESEND_API_KEY: "re_production_test_key",
+      EMAIL_FROM: "BeeBuddy <no-reply@beebuddy.local>",
+    })).toThrow(/EMAIL_FROM/);
+  });
+
   it("rejects mock credentials in production", () => {
     expect(() => parseEnvironment({
       ...validEnvironment,

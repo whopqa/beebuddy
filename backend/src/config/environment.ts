@@ -17,8 +17,9 @@ const environmentSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default("1d"),
   JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET phải có ít nhất 32 ký tự"),
   JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
-  EMAIL_DELIVERY_MODE: z.enum(["console", "smtp"]).default("console"),
+  EMAIL_DELIVERY_MODE: z.enum(["console", "smtp", "resend"]).default("console"),
   EMAIL_FROM: z.string().min(3).default("BeeBuddy <no-reply@beebuddy.local>"),
+  RESEND_API_KEY: z.string().default(""),
   SMTP_HOST: z.string().default(""),
   SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
   SMTP_SECURE: booleanFromEnvironment.default(false),
@@ -62,6 +63,15 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
     errors.push("JWT_SECRET và JWT_REFRESH_SECRET phải khác nhau");
   }
 
+  if (value.EMAIL_DELIVERY_MODE === "resend") {
+    if (!value.RESEND_API_KEY.trim()) {
+      errors.push("RESEND_API_KEY phải được cấu hình khi dùng Resend");
+    }
+    if (value.EMAIL_FROM.includes("@beebuddy.local")) {
+      errors.push("EMAIL_FROM phải dùng địa chỉ gửi được Resend cho phép");
+    }
+  }
+
   if (value.NODE_ENV === "production") {
     const productionSecrets = {
       JWT_SECRET: value.JWT_SECRET,
@@ -85,10 +95,10 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
       errors.push("PAYOS_RETURN_URL và PAYOS_CANCEL_URL production phải sử dụng HTTPS");
     }
 
-    if (value.EMAIL_DELIVERY_MODE !== "smtp") {
-      errors.push("EMAIL_DELIVERY_MODE production phải là smtp");
+    if (value.EMAIL_DELIVERY_MODE === "console") {
+      errors.push("EMAIL_DELIVERY_MODE production phải là smtp hoặc resend");
     }
-    if (!value.SMTP_HOST || !value.SMTP_USER || !value.SMTP_PASSWORD) {
+    if (value.EMAIL_DELIVERY_MODE === "smtp" && (!value.SMTP_HOST || !value.SMTP_USER || !value.SMTP_PASSWORD)) {
       errors.push("SMTP_HOST, SMTP_USER và SMTP_PASSWORD phải được cấu hình trong production");
     }
   }
@@ -111,6 +121,7 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
     EMAIL: {
       DELIVERY_MODE: value.EMAIL_DELIVERY_MODE,
       FROM: value.EMAIL_FROM,
+      RESEND_API_KEY: value.RESEND_API_KEY,
       SMTP_HOST: value.SMTP_HOST,
       SMTP_PORT: value.SMTP_PORT,
       SMTP_SECURE: value.SMTP_SECURE,
