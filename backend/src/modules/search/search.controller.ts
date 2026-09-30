@@ -6,7 +6,13 @@ export class SearchController {
   public static async searchInterestsPreview(req: Request, res: Response) {
     try {
       const q = (req.query.q as string) || "";
-      const result = await SearchService.searchInterestsPreview(q);
+      const parseFilter = (name: string) => String(req.query[name] || "")
+        .split(",").map((value) => value.trim().slice(0, 80)).filter(Boolean).slice(0, 10);
+      const result = await SearchService.searchInterestsPreview(q, {
+        interests: parseFilter("interests"),
+        skills: parseFilter("skills"),
+        availability: parseFilter("availability"),
+      });
       return sendSuccess(res, result);
     } catch (err: any) {
       return sendError(res, err.message, 400);

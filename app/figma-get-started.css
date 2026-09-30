@@ -1,0 +1,437 @@
+/* Figma 227:40 — the public Get Started / onboarding walkthrough. */
+.bb-get-started-canvas {
+  position: relative;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.bb-get-started-canvas .bb-gs-welcome-section {
+  position: relative;
+  display: flex;
+  min-height: 642px;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  margin: 0;
+  padding: 100px 24px 80px;
+  background: linear-gradient(#f6f6f6, #fff);
+  text-align: center;
+}
+
+.bb-get-started-canvas .bb-gs-welcome-section::before {
+  position: absolute;
+  inset: -100px auto auto -100px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 183, 0, .12), transparent 70%);
+  content: "";
+  pointer-events: none;
+}
+
+.bb-get-started-canvas .bb-gs-welcome-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+.bb-get-started-canvas .bb-gs-kicker-pill {
+  display: inline-flex;
+  min-height: 33px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px 16px;
+  border: 1px solid #ffb700;
+  border-radius: 100px;
+  background: #fff;
+  color: #ff7300;
+  font: 700 13px/1 "Afacad Flux", sans-serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.bb-get-started-canvas .bb-gs-main-title {
+  max-width: 1050px;
+  margin: 0;
+  background: linear-gradient(0deg, #fecc07, #ff7300);
+  background-clip: text;
+  color: transparent;
+  font: 700 clamp(66px, 7.7vw, 110px)/.77 "Dongle", sans-serif;
+  letter-spacing: 0;
+}
+
+.bb-get-started-canvas .bb-gs-subtitle {
+  max-width: 800px;
+  margin: -16px auto 0;
+  color: #444;
+  font: 300 22px/30px "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-passport-card {
+  width: min(880px, 100%);
+  min-height: 174px;
+  gap: 40px;
+  margin: 0;
+  padding: 32px;
+  border: 1.5px solid #ffb700;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, .04);
+  box-shadow: 0 12px 24px rgba(255, 115, 0, .2);
+  color: #111;
+  text-align: left;
+}
+
+.bb-get-started-canvas .bb-gs-passport-avatar {
+  display: block;
+  width: 110px;
+  height: 110px;
+  flex: 0 0 110px;
+  border: 3px solid #ffb700;
+  border-radius: 50%;
+  padding: 5px;
+  background: #fff;
+  object-fit: cover;
+}
+
+.bb-get-started-canvas .bb-gs-passport-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bb-get-started-canvas .bb-gs-passport-info h3 {
+  margin: 0 0 8px;
+  color: #111;
+  font: 700 24px/1.15 "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-passport-info p {
+  margin: 0;
+  color: #555;
+  font: 400 16px/1.35 "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-launch-passport-btn {
+  flex: 0 0 auto;
+  gap: 12px;
+  border: 0;
+  padding: 14px 0;
+  background: transparent;
+  background-image: none;
+  color: #ff7300;
+  cursor: pointer;
+  font: 700 28px/1 "Dongle", sans-serif;
+  white-space: nowrap;
+  filter: drop-shadow(0 4px 4px rgba(255, 115, 0, .25));
+  transition: transform .2s ease, filter .2s ease;
+}
+
+.bb-get-started-canvas .bb-gs-launch-passport-btn:hover {
+  transform: translateY(-3px);
+  filter: drop-shadow(0 6px 6px rgba(255, 115, 0, .32));
+}
+
+.bb-get-started-canvas .bb-gs-launch-passport-btn:focus-visible,
+.bb-get-started-canvas .bb-gs-style-chip:focus-visible,
+.bb-get-started-canvas .bb-gs-play-badge:focus-visible {
+  outline: 3px solid #ff7300;
+  outline-offset: 4px;
+}
+
+.bb-get-started-canvas .bb-gs-walkthrough-section {
+  position: relative;
+  margin: 0;
+  padding: 50px max(24px, calc((100vw - 1200px) / 2)) 100px;
+  background: linear-gradient(rgba(255, 255, 255, .8), rgba(255, 255, 255, .8)),
+    url("/assets/buzzy/mountain_landscape_bg.png") center 55% / cover no-repeat;
+}
+
+.bb-get-started-canvas .bb-gs-walkthrough-section > .bb-gs-kicker-pill {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bb-get-started-canvas .bb-gs-walkthrough-title {
+  margin: 12px 0 50px;
+  color: #111;
+  font: 700 64px/.85 "Dongle", sans-serif;
+  text-align: center;
+}
+
+.bb-get-started-canvas .bb-gs-steps-list {
+  max-width: 1200px;
+  gap: 96px;
+  margin: 0 auto;
+}
+
+.bb-get-started-canvas .bb-gs-step-row,
+.bb-get-started-canvas .bb-gs-step-row:nth-child(even) {
+  display: grid;
+  min-height: 307px;
+  grid-template-columns: minmax(0, 500px) minmax(0, 557px);
+  justify-content: space-between;
+  gap: 24px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  direction: ltr;
+}
+
+.bb-get-started-canvas .bb-gs-step-row.is-reverse {
+  grid-template-columns: minmax(0, 557px) minmax(0, 500px);
+}
+
+.bb-get-started-canvas .bb-gs-step-row.is-reverse .bb-gs-step-img-wrap {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bb-get-started-canvas .bb-gs-step-row.is-reverse .bb-gs-step-text {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bb-get-started-canvas .bb-gs-step-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  justify-content: center;
+}
+
+.bb-get-started-canvas .bb-gs-step-num {
+  margin: 0;
+  background: linear-gradient(#111, #7c7c7c);
+  background-clip: text;
+  color: transparent;
+  font: 500 65px/.65 "Afacad Flux", sans-serif;
+  letter-spacing: 0;
+}
+
+.bb-get-started-canvas .bb-gs-step-text h3 {
+  margin: 0;
+  background: linear-gradient(#111, #7c7c7c);
+  background-clip: text;
+  color: transparent;
+  font: 500 32px/1 "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-step-text > p {
+  margin: 0;
+  color: #444;
+  font: 400 18px/26px "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-step-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #111;
+  font: 600 16px/1.2 "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-step-bullets li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bb-get-started-canvas .bb-bullet-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #ff7300;
+}
+
+.bb-get-started-canvas .bb-gs-step-img-wrap {
+  width: 100%;
+  height: 307px;
+  border: 1px solid #ffb700;
+  border-radius: 24px;
+  background: #faf7f2;
+}
+
+.bb-get-started-canvas .bb-gs-step-img {
+  object-fit: cover;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-banner {
+  display: block;
+  min-height: 344px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 60px max(24px, calc((100vw - 1200px) / 2));
+  background: linear-gradient(63deg, #000 47%, #984f00);
+  color: #fff;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-inner {
+  display: flex;
+  max-width: 1200px;
+  align-items: center;
+  gap: 40px;
+  margin: 0 auto;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-mascot-wrap {
+  position: relative;
+  width: 260px;
+  height: 224px;
+  flex: 0 0 260px;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-buzzy-img {
+  max-width: none;
+  width: 360px;
+  height: 300px;
+  object-fit: contain;
+}
+
+.bb-get-started-canvas .bb-gs-buzzy-speech {
+  display: none;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-copy h2 {
+  margin: 12px 0;
+  background: linear-gradient(#ff7300, #fecc07);
+  background-clip: text;
+  color: transparent;
+  font: 700 56px/.9 "Dongle", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-milestone-copy p {
+  max-width: 850px;
+  margin: 0;
+  color: #fff;
+  font: 500 16px/26px "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-questionnaire-section {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 80px 24px 100px;
+  background: linear-gradient(rgba(255, 255, 255, .82), rgba(255, 255, 255, .82)),
+    url("/assets/buzzy/mountain_landscape_bg.png") center / cover no-repeat;
+}
+
+.bb-get-started-canvas .bb-gs-styles-title,
+.bb-get-started-canvas .bb-gs-unlock-world-block h3 {
+  margin: 12px 0;
+  color: #111;
+  font: 700 56px/.9 "Dongle", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-styles-sub {
+  max-width: 750px;
+  margin: 0 auto 30px;
+  color: #444;
+  font: 400 18px/26px "Afacad Flux", sans-serif;
+}
+
+.bb-get-started-canvas .bb-gs-styles-chips-row {
+  max-width: 800px;
+  gap: 12px;
+  margin: 0 auto;
+}
+
+.bb-get-started-canvas .bb-gs-style-chip {
+  min-height: 42px;
+  border: 1px solid #ffb700;
+  border-radius: 30px;
+  padding: 8px 24px;
+  background: #fff;
+  color: #ff7300;
+  cursor: pointer;
+  font: 700 16px/1.2 "Afacad Flux", sans-serif;
+  transition: background .2s ease, color .2s ease, transform .2s ease;
+}
+
+.bb-get-started-canvas .bb-gs-style-chip:hover {
+  transform: translateY(-2px);
+  background: #fff4df;
+}
+
+.bb-get-started-canvas .bb-gs-style-chip.is-selected {
+  border-color: #ff7300;
+  background: #ff7300;
+  color: #fff;
+}
+
+.bb-get-started-canvas .bb-gs-unlock-world-block {
+  margin-top: 80px;
+}
+
+.bb-get-started-canvas .bb-gs-play-badge {
+  display: inline-flex;
+  width: 185px;
+  height: 50px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  padding: 3px 8px;
+  background: linear-gradient(90deg, #000, #343434);
+  color: #fff;
+  text-align: left;
+  text-decoration: none;
+}
+
+.bb-get-started-canvas .bb-gs-play-badge img {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  object-fit: contain;
+}
+
+.bb-get-started-canvas .bb-gs-play-badge span {
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font: 500 24px/.8 "Afacad Flux", sans-serif;
+  white-space: nowrap;
+}
+
+.bb-get-started-canvas .bb-gs-play-badge small {
+  margin-bottom: 5px;
+  font: 400 10px/1 "Afacad Flux", sans-serif;
+  letter-spacing: .5px;
+}
+
+@media (max-width: 900px) {
+  .bb-get-started-canvas .bb-gs-welcome-section { min-height: 0; padding: 72px 24px; }
+  .bb-get-started-canvas .bb-gs-passport-card { flex-wrap: wrap; justify-content: center; gap: 20px; text-align: center; }
+  .bb-get-started-canvas .bb-gs-passport-info { flex-basis: calc(100% - 140px); }
+  .bb-get-started-canvas .bb-gs-step-row,
+  .bb-get-started-canvas .bb-gs-step-row.is-reverse { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+
+@media (max-width: 640px) {
+  .bb-get-started-canvas .bb-gs-main-title { font-size: 64px; }
+  .bb-get-started-canvas .bb-gs-subtitle { font-size: 18px; line-height: 25px; }
+  .bb-get-started-canvas .bb-gs-passport-info { flex-basis: 100%; }
+  .bb-get-started-canvas .bb-gs-walkthrough-section { padding: 50px 24px 70px; }
+  .bb-get-started-canvas .bb-gs-walkthrough-title { font-size: 52px; }
+  .bb-get-started-canvas .bb-gs-steps-list { gap: 64px; }
+  .bb-get-started-canvas .bb-gs-step-row,
+  .bb-get-started-canvas .bb-gs-step-row.is-reverse { display: flex; flex-direction: column; }
+  .bb-get-started-canvas .bb-gs-step-img-wrap { height: 240px; }
+  .bb-get-started-canvas .bb-gs-milestone-inner { flex-direction: column; gap: 12px; text-align: center; }
+  .bb-get-started-canvas .bb-gs-milestone-mascot-wrap { height: 200px; flex-basis: auto; }
+  .bb-get-started-canvas .bb-gs-milestone-copy h2 { font-size: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-get-started-canvas .bb-gs-launch-passport-btn,
+  .bb-get-started-canvas .bb-gs-style-chip { transition: none; }
+}

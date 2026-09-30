@@ -164,7 +164,7 @@ Kỳ vọng: backend compile; 50/50 test pass; web TypeScript pass; Next.js buil
 
 ## 8. Upload ảnh (avatar, bảng tin, community, tin nhắn)
 
-1. Mở `/account/edit`, chọn ảnh JPEG/PNG/WebP/GIF dưới 5 MB, lưu và reload `/account`; avatar mới phải còn hiển thị.
+1. Mở `/account/edit`, chọn ảnh JPEG/PNG/WebP/GIF dưới 4 MB, lưu và reload `/account`; avatar mới phải còn hiển thị.
 2. Đổi tên file văn bản hoặc SVG thành `.png` rồi thử upload; API phải từ chối do chữ ký file không hợp lệ.
 3. Vào `/feed`, chọn tối đa 4 ảnh, đăng bài và reload; ảnh phải hiển thị theo đúng thứ tự, đồng thời vẫn sửa/xóa được bài.
 4. Vào một community đã tham gia, chọn tối đa 4 ảnh, đăng bài và reload; ảnh phải hiển thị theo đúng thứ tự.

@@ -7,8 +7,20 @@ import { ProfileAudience, ProfileSection } from "@prisma/client";
 const updateProfileSchema = z.object({
   fullName: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
+  aboutMe: z.string().max(500).optional(),
+  personalityType: z.string().max(80).optional(),
+  lifestyle: z.string().max(160).optional(),
+  hobbies: z.array(z.string().min(1).max(50)).max(20).optional(),
+  skills: z.array(z.string().min(1).max(50)).max(20).optional(),
+  favoriteColors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(5).optional(),
+  socialLinks: z.array(z.string().url().max(300).refine((link) => {
+    const protocol = new URL(link).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "Liên kết phải dùng http hoặc https")).max(5).optional(),
+  galleryMediaIds: z.array(z.string().uuid()).max(3).refine((ids) => new Set(ids).size === ids.length, "Ảnh trong bộ sưu tập không được trùng nhau").optional(),
+  avatarMediaAssetId: z.string().uuid().nullable().optional(),
   gender: z.string().max(50).optional(),
-  dateOfBirth: z.string().date().optional(),
+  dateOfBirth: z.string().date().nullable().optional(),
   location: z.string().max(120).optional(),
   interests: z.array(z.string().min(1).max(50)).max(20).optional(),
   habits: z.array(z.string().min(1).max(50)).max(20).optional(),
@@ -23,6 +35,10 @@ const updateSettingsSchema = z.object({
   emailNotification: z.boolean().optional(),
   language: z.enum(["vi", "en"]).optional(),
   theme: z.enum(["system", "light", "dark"]).optional(),
+  travelStyles: z.array(z.enum([
+    "Backpack & Trek", "Foodie & Cafes", "Slow Explorer", "Night owl",
+    "Beach Hobo", "History buff", "Local Gatherings",
+  ])).max(7).refine((styles) => new Set(styles).size === styles.length, "Travel styles must be unique").optional(),
 }).strict();
 
 const updateProfilePrivacySchema = z.object({

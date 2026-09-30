@@ -117,7 +117,13 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
     if (!user) return;
     setRealtimeStatus("CONNECTING");
     const source = new EventSource("/api/conversations/events");
-    source.onopen = () => setRealtimeStatus("CONNECTED");
+    source.onopen = () => {
+      setRealtimeStatus("CONNECTED");
+      // A Vercel stream can be closed after its maximum function duration.
+      // Catch up on events missed while EventSource reconnects.
+      void loadList().catch(() => undefined);
+      if (selectedIdRef.current) void loadMessages(selectedIdRef.current, true);
+    };
     source.onerror = () => setRealtimeStatus("RECONNECTING");
     source.onmessage = (event) => {
       let payload: ConversationRealtimeEvent;
@@ -146,7 +152,7 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
       }
     };
     return () => source.close();
-  }, [loadList, user]);
+  }, [loadList, loadMessages, user]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
@@ -161,8 +167,8 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
 
   const chooseImages = (files: File[]) => {
     const next = files.slice(0, 4);
-    if (next.some((file) => !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024)) {
-      setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 5 MB.");
+    if (next.some((file) => !file.type.startsWith("image/") || file.size > 4 * 1024 * 1024)) {
+      setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 4 MB.");
       return;
     }
     setError("");

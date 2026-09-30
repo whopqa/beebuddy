@@ -29,7 +29,7 @@ const environmentSchema = z.object({
   AUTH_TOKEN_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(15).max(3600).default(60),
   GOOGLE_CLIENT_ID: z.string().default(""),
   MEDIA_UPLOAD_DIR: z.string().min(1).default("uploads"),
-  MEDIA_IMAGE_MAX_BYTES: z.coerce.number().int().min(1024).max(20 * 1024 * 1024).default(5 * 1024 * 1024),
+  MEDIA_IMAGE_MAX_BYTES: z.coerce.number().int().min(1024).max(20 * 1024 * 1024).default(4 * 1024 * 1024),
   PUSH_TOKEN_ENCRYPTION_KEY: z.string().min(32).default("beebuddy_local_push_token_key_change_me"),
   PAYOS_CLIENT_ID: z.string().default(""),
   PAYOS_API_KEY: z.string().default(""),

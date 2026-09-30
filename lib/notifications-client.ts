@@ -2,6 +2,12 @@ import type { ApiEnvelope } from "./auth-types";
 
 export type NotificationType = "CONNECTION_REQUEST" | "CONNECTION_ACCEPTED" | "COMMUNITY_INVITE" | "COMMUNITY_JOIN_APPROVED" | "MESSAGE" | "SYSTEM";
 
+export type NotificationPreference = {
+  type: NotificationType;
+  channel: "IN_APP" | "PUSH" | "EMAIL";
+  enabled: boolean;
+};
+
 export type AppNotification = {
   id: string;
   type: NotificationType;
@@ -46,6 +52,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const notificationsApi = {
+  preferences: () => request<NotificationPreference[]>("/preferences"),
+  setPreference: (type: NotificationType, enabled: boolean) =>
+    request<NotificationPreference>("/preferences", { method: "PUT", body: JSON.stringify({ type, channel: "IN_APP", enabled }) }),
   list: (cursor?: string, limit = 30, unreadOnly = false) => {
     const query = new URLSearchParams({ limit: String(limit), unreadOnly: String(unreadOnly) });
     if (cursor) query.set("cursor", cursor);

@@ -329,9 +329,9 @@ export default function CommunityHub({
           onComposer={setComposer}
           onPostImages={(files) => {
             const next = files.slice(0, 4);
-            const invalid = next.find((file) => !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024);
+            const invalid = next.find((file) => !file.type.startsWith("image/") || file.size > 4 * 1024 * 1024);
             if (invalid) {
-              setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 5 MB.");
+              setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 4 MB.");
               return;
             }
             setError("");

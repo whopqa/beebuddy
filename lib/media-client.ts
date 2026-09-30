@@ -6,12 +6,12 @@ export type UploadedImage = {
   mimeType: string;
   byteSize: number;
   processingStatus: "READY";
-  purpose: "avatar" | "post" | "message";
+  purpose: "avatar" | "profile" | "post" | "message";
 };
 
 export async function uploadImage(file: File, purpose: UploadedImage["purpose"]): Promise<UploadedImage> {
   if (!file.type.startsWith("image/")) throw new Error("Vui lòng chọn một file ảnh");
-  if (file.size > 5 * 1024 * 1024) throw new Error("Ảnh không được vượt quá 5 MB");
+  if (file.size > 4 * 1024 * 1024) throw new Error("Ảnh không được vượt quá 4 MB");
 
   const response = await fetch(`/api/media/images?purpose=${encodeURIComponent(purpose)}`, {
     method: "POST",

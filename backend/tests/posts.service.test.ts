@@ -71,6 +71,30 @@ describe("PostsService", () => {
     }));
   });
 
+  it("filters shared post links through the same visibility policy as the feed", async () => {
+    prismaMock.post.count.mockResolvedValue(0);
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    await PostsService.getFeed({ postId: "post-1", page: 1, limit: 1 });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        AND: [
+          {
+            status: PostStatus.PUBLISHED,
+            deletedAt: null,
+            audience: PostVisibility.PUBLIC,
+            OR: [
+              { communityId: null },
+              { community: { is: { visibility: CommunityVisibility.PUBLIC } } },
+            ],
+          },
+          { id: "post-1" },
+        ],
+      },
+    }));
+  });
+
   it("includes CONNECTIONS posts for accepted connections in either direction", async () => {
     prismaMock.connection.findMany.mockResolvedValue([
       { requesterId: "friend-1", addresseeId: "current-user" },

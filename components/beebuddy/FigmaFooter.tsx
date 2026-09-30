@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { useState, FormEvent } from "react";
+import { submitNewsletter } from "@/lib/lead-client";
 
 export default function FigmaFooter() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubscribe = (e: FormEvent) => {
+  const handleSubscribe = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    setSubscribed(true);
+    if (!email.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitNewsletter(email);
+      setSubscribed(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to subscribe right now.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -122,7 +132,7 @@ export default function FigmaFooter() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bb-glass-email-input"
                 />
-                <button type="submit" className="bb-glass-submit-btn">
+                <button type="submit" className="bb-glass-submit-btn" disabled={submitting}>
                   <span>START YOUR JOURNEY</span>
                   <span className="bb-submit-arrow">&gt;</span>
                 </button>

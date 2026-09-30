@@ -48,7 +48,7 @@ export class MediaService {
     ownerId: string;
     bytes: Buffer;
     declaredMimeType: string;
-    purpose: "avatar" | "post" | "message";
+    purpose: "avatar" | "profile" | "post" | "message";
   }) {
     if (!input.bytes.length) throw new AppError("File ảnh không được rỗng", 400);
     if (input.bytes.length > ENV.MEDIA.IMAGE_MAX_BYTES) {

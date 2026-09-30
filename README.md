@@ -1,5 +1,7 @@
 # BeeBuddy
 
+Hướng dẫn deploy web lên Vercel và backend/PostgreSQL lên Railway: [docs/DEPLOY_VERCEL_RAILWAY.md](docs/DEPLOY_VERCEL_RAILWAY.md).
+
 BeeBuddy gồm ba phần:
 
 - **Web**: Next.js, chạy mặc định tại `http://localhost:3000`.

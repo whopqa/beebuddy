@@ -7,6 +7,15 @@ export type AccountProfile = {
   username?: string | null;
   avatarUrl?: string | null;
   bio?: string | null;
+  aboutMe?: string | null;
+  personalityType?: string | null;
+  lifestyle?: string | null;
+  hobbies: string[];
+  skills: string[];
+  favoriteColors: string[];
+  socialLinks: string[];
+  galleryMediaIds: string[];
+  gallery: { id: string; url: string }[];
   gender?: string | null;
   dateOfBirth?: string | null;
   location?: string | null;
@@ -29,6 +38,12 @@ export type AccountSettings = {
   emailNotification: boolean;
   language: string;
   theme: string;
+  travelStyles: string[];
+};
+
+export type ProfileVisibilityRule = {
+  section: "BASIC" | "BIO" | "AGE" | "OCCUPATION" | "INTERESTS" | "HABITS" | "PLACES" | "GOALS" | "INTRO_MEDIA";
+  audience: "PUBLIC" | "CONNECTIONS" | "ONLY_ME";
 };
 
 export type AccountSession = {
@@ -60,13 +75,16 @@ async function request<T>(path: string, init?: RequestInit) {
 
 export const accountApi = {
   profile: () => request<AccountProfile>("profile"),
-  updateProfile: (data: Partial<Omit<AccountProfile, "id" | "userId" | "user">>) =>
+  updateProfile: (data: Partial<Omit<AccountProfile, "id" | "userId" | "user" | "gallery">> & { avatarMediaAssetId?: string | null }) =>
     request<AccountProfile>("profile", { method: "PUT", body: JSON.stringify(data) }),
   setAvatar: (mediaAssetId: string | null) =>
     request<AccountProfile>("avatar", { method: "PUT", body: JSON.stringify({ mediaAssetId }) }),
   settings: () => request<AccountSettings>("settings"),
   updateSettings: (data: Partial<AccountSettings>) =>
     request<AccountSettings>("settings", { method: "PUT", body: JSON.stringify(data) }),
+  profilePrivacy: () => request<ProfileVisibilityRule[]>("privacy"),
+  updateProfilePrivacy: (rules: ProfileVisibilityRule[]) =>
+    request<ProfileVisibilityRule[]>("privacy", { method: "PUT", body: JSON.stringify({ rules }) }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<null>("password", { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) }),
   sessions: () => request<AccountSession[]>("sessions"),

@@ -2,17 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Bell, Search, Menu, X } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { webAuth } from "@/lib/auth-client";
 import type { WebUser } from "@/lib/auth-types";
 import { notificationsApi } from "@/lib/notifications-client";
 
-export default function FigmaHeader({ authenticated = false }: { authenticated?: boolean }) {
+export default function FigmaHeader({ authenticated = false, designHome = false }: { authenticated?: boolean; designHome?: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [isAuth, setIsAuth] = useState(authenticated);
   const [user, setUser] = useState<WebUser | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [drawerOpen]);
 
   useEffect(() => {
     let active = true;
@@ -52,15 +61,13 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
               aria-expanded={drawerOpen}
               aria-label="Toggle site navigation drawer"
             >
-              <span className="bb-hamburger-bar" />
-              <span className="bb-hamburger-bar" />
-              <span className="bb-hamburger-bar" />
+              {designHome ? <img src="/assets/home/intro-menu.svg" alt="" /> : <><span className="bb-hamburger-bar" /><span className="bb-hamburger-bar" /><span className="bb-hamburger-bar" /></>}
             </button>
 
             {/* Brand Logo */}
             <Link href={homePath} className="bb-topbar-logo" aria-label="BeeBuddy home">
-              <img src="/assets/ui/logo-mark.svg" alt="" className="bb-topbar-logo-mark" />
-              <img src="/assets/ui/logo-word.svg" alt="BeeBuddy" className="bb-topbar-logo-word" />
+              <img src={designHome ? "/assets/home/intro-logo-mark.svg" : "/assets/ui/logo-mark.svg"} alt="" className="bb-topbar-logo-mark" />
+              <img src={designHome ? "/assets/home/intro-logo-word.svg" : "/assets/ui/logo-word.svg"} alt="BeeBuddy" className="bb-topbar-logo-word" />
             </Link>
 
             {/* Circular Search Button with magenta/purple outline */}
@@ -69,7 +76,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
               aria-label="Search"
               href="/community"
             >
-              <Search size={16} className="text-[#a855f7]" />
+              {designHome ? <img src="/assets/home/intro-search.svg" alt="" /> : <Search size={16} className="text-[#a855f7]" />}
             </Link>
           </div>
 
@@ -81,7 +88,7 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
             <Link href={`${homePath}#services`} className="bb-topbar-nav-link">
               Services
             </Link>
-            <Link href="/community" className="bb-topbar-nav-link">
+            <Link href={`${homePath}#community`} className="bb-topbar-nav-link">
               Community
             </Link>
           </nav>
@@ -157,68 +164,21 @@ export default function FigmaHeader({ authenticated = false }: { authenticated?:
         </div>
       </header>
 
-      {/* Slide-over Side Navigation Drawer (Toggled by hamburger button) */}
+      {/* Figma's compact left Settings panel; existing destination pages stay available. */}
       {drawerOpen && (
-        <div className="bb-drawer-backdrop" onClick={() => setDrawerOpen(false)}>
-          <div className="bb-drawer-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="bb-drawer-header">
-              <Link href={homePath} className="bb-topbar-logo" onClick={() => setDrawerOpen(false)}>
-                <img src="/assets/ui/logo-mark.svg" alt="" className="bb-topbar-logo-mark" />
-                <span className="bb-topbar-logo-text">eebuddy</span>
-              </Link>
-              <button
-                type="button"
-                className="bb-drawer-close"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close navigation"
-              >
-                <X size={22} />
-              </button>
-            </div>
-
-            <div className="bb-drawer-body">
-              <div className="bb-drawer-section">
-                <span className="bb-drawer-label">MAIN</span>
-                <Link href={homePath} onClick={() => setDrawerOpen(false)}>Home</Link>
-                <Link href={`${homePath}#about`} onClick={() => setDrawerOpen(false)}>About Us</Link>
-                <Link href={`${homePath}#services`} onClick={() => setDrawerOpen(false)}>Services</Link>
-                <Link href="/community" onClick={() => setDrawerOpen(false)}>Community Members</Link>
-                <Link href="/meet-buzzy" onClick={() => setDrawerOpen(false)}>Meet Buzzy</Link>
-              </div>
-
-              <div className="bb-drawer-section">
-                <span className="bb-drawer-label">ONBOARDING & ACCOUNT</span>
-                <Link href="/get-started" onClick={() => setDrawerOpen(false)}>Get Started Walkthrough</Link>
-                <Link href="/start-your-journey" onClick={() => setDrawerOpen(false)}>Start Your Journey</Link>
-                <Link href="/notifications" onClick={() => setDrawerOpen(false)}>Notifications</Link>
-                <Link href="/account" onClick={() => setDrawerOpen(false)}>Account Profile</Link>
-                <Link href="/settings" onClick={() => setDrawerOpen(false)}>Settings & Preferences</Link>
-                <Link href="/billing" onClick={() => setDrawerOpen(false)}>Billing & Plans</Link>
-                <Link href="/security" onClick={() => setDrawerOpen(false)}>Security & Sessions</Link>
-                <Link href="/help" onClick={() => setDrawerOpen(false)}>Help & Support</Link>
-              </div>
-
-              <div className="bb-drawer-section">
-                <span className="bb-drawer-label">LEGAL & POLICIES</span>
-                <Link href="/privacy" onClick={() => setDrawerOpen(false)}>Privacy Policy</Link>
-                <Link href="/terms" onClick={() => setDrawerOpen(false)}>Terms of Use</Link>
-                <Link href="/cookies" onClick={() => setDrawerOpen(false)}>Cookie Preferences</Link>
-              </div>
-            </div>
-
-            <div className="bb-drawer-footer">
-              {!isAuth ? (
-                <div className="bb-drawer-auth-btns">
-                  <Link href="/login" className="bb-drawer-signin" onClick={() => setDrawerOpen(false)}>Sign In</Link>
-                  <Link href="/signup" className="bb-drawer-signup" onClick={() => setDrawerOpen(false)}>Create Account</Link>
-                </div>
-              ) : (
-                <div className="bb-drawer-user-info">
-                  <img src="/assets/home/figma-buzzy.png" alt="" className="w-8 h-8 rounded-full" />
-                  <span>{user?.profile?.fullName || "BeeBuddy Member"}</span>
-                </div>
-              )}
-            </div>
+        <div className="bb-settings-backdrop" onClick={() => setDrawerOpen(false)}>
+          <div className="bb-settings-panel" role="dialog" aria-modal="true" aria-label="Settings navigation" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="bb-settings-panel-heading" onClick={() => setDrawerOpen(false)} aria-label="Close settings navigation">
+              <img src="/assets/home/settings-menu.svg" alt="" />
+              <span>Settings</span>
+            </button>
+            <nav className="bb-settings-panel-links" aria-label="Settings">
+              <Link href="/settings" onClick={() => setDrawerOpen(false)}><img src="/assets/home/settings-gear.svg" alt="" /><span>Settings</span></Link>
+              <Link href="/account" onClick={() => setDrawerOpen(false)}><img src="/assets/home/settings-user.svg" alt="" /><span>Account Info</span></Link>
+              <Link href="/billing" onClick={() => setDrawerOpen(false)}><img src="/assets/home/settings-billing.svg" alt="" /><span>Billing</span></Link>
+              <Link href="/security" onClick={() => setDrawerOpen(false)}><img src="/assets/home/settings-shield.svg" alt="" /><span>Security</span></Link>
+              <Link href="/help" onClick={() => setDrawerOpen(false)}><img src="/assets/home/settings-help.svg" alt="" /><span>Help &amp; Support</span></Link>
+            </nav>
           </div>
         </div>
       )}

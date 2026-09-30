@@ -50,7 +50,7 @@ describe("AccountService.updateProfile", () => {
   it("keeps legacy profile fields and normalized taxonomy in one transaction", async () => {
     const tx = {
       profile: {
-        update: vi.fn().mockResolvedValue({ userId: "user-1" }),
+        update: vi.fn().mockResolvedValue({ userId: "user-1", galleryMediaIds: [] }),
       },
       interest: {
         upsert: vi.fn()
@@ -111,6 +111,46 @@ describe("AccountService.updateProfile", () => {
     expect(tx.userConnectionGoal.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ userId: "user-1", priority: 0 }),
     }));
+  });
+
+  it("clears the birth date and keeps avatar and gallery changes in the same transaction", async () => {
+    const tx = {
+      mediaAsset: { findMany: vi.fn().mockResolvedValue([
+        { id: "avatar-id", sourceUrl: "/api/media/avatar-id/content" },
+        { id: "gallery-id", sourceUrl: "/api/media/gallery-id/content" },
+      ]) },
+      profile: { update: vi.fn().mockResolvedValue({ userId: "user-1", galleryMediaIds: ["gallery-id"] }) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    const updated = await AccountService.updateProfile("user-1", {
+      dateOfBirth: null,
+      avatarMediaAssetId: "avatar-id",
+      galleryMediaIds: ["gallery-id"],
+      aboutMe: "About me",
+    });
+
+    expect(tx.profile.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        dateOfBirth: null,
+        avatarUrl: "/api/media/avatar-id/content",
+        galleryMediaIds: ["gallery-id"],
+        aboutMe: "About me",
+      }),
+    }));
+    expect(updated.gallery).toEqual([{ id: "gallery-id", url: "/api/media/gallery-id/content" }]);
+  });
+
+  it("rejects an unowned gallery image before updating the profile", async () => {
+    const tx = {
+      mediaAsset: { findMany: vi.fn().mockResolvedValue([]) },
+      profile: { update: vi.fn() },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => callback(tx));
+
+    await expect(AccountService.updateProfile("user-1", { galleryMediaIds: ["other-user-image"] }))
+      .rejects.toThrow("Ảnh không tồn tại");
+    expect(tx.profile.update).not.toHaveBeenCalled();
   });
 });
 

@@ -4,7 +4,7 @@ import { getErrorStatus } from "../../common/errors/app-error";
 import { sendError, sendSuccess } from "../../common/utils/response";
 import { MediaService } from "./media.service";
 
-const purposeSchema = z.enum(["avatar", "post", "message"]);
+const purposeSchema = z.enum(["avatar", "profile", "post", "message"]);
 const assetIdSchema = z.string().uuid();
 
 export class MediaController {

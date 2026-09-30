@@ -1,0 +1,74 @@
+/* Figma VeeHYy9MyfRTlSYTHPQTov, Login 87:151. Login only;
+   signup/reset/verification and functional auth handlers are untouched. */
+.bb-auth-login .auth-divider .auth-divider-text {
+  flex: 0 0 auto;
+  height: auto;
+  background: transparent;
+  padding: 0;
+  font-size: 14px;
+}
+@media (min-width: 1100px) {
+  .bb-auth-login .bb-figma-topbar { height: 73px; }
+  .bb-auth-login .bb-topbar-nav { position: absolute; left: calc(50% + 10px); gap: 4px; }
+  .bb-auth-login .bb-topbar-nav-link { width: 102px; font-size: 18px; font-weight: 500; }
+  .bb-auth-login .auth-layout { min-height: 846px; height: auto; }
+  .bb-auth-login .auth-form-side { height: auto; min-height: 846px; padding: 53.5px 40px 80px; }
+  .bb-auth-login .auth-form-container { flex-shrink: 0; width: 480px; }
+  .bb-auth-login .auth-heading h1 { height: 75px; margin: 0 0 12px; font-size: 64px; line-height: normal; letter-spacing: 0; background: linear-gradient(-.4152deg,#fecc07 9.1746%,#ff7300 98.596%); background-clip: text; }
+  .bb-auth-login .auth-heading p { height: 24px; font-size: 18px; line-height: normal; margin: 0 0 20px; }
+  .bb-auth-login .auth-figma-form { gap: 24px; }
+  .bb-auth-login .auth-field { margin: 0; }
+  .bb-auth-login .auth-field-label { height: 19px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: 0; }
+  .bb-auth-login .auth-field-input { font-size: 16px; border-radius: 12px; background: #f9f9f9; border-color: #e5e5e5; }
+  .bb-auth-login .form-options { height: 20px; margin: 0; }
+  .bb-auth-login .bb-remember-me-label, .bb-auth-login .bb-forgot-link { font-size: 14px; }
+  .bb-auth-login .bb-figma-checkbox { width: 20px; height: 20px; }
+  .bb-auth-login .auth-submit { margin-top: -5px; height: 52px; flex-shrink: 0; font-size: 24px; }
+  .bb-auth-login .auth-divider { height: 19px; margin: 20px 0; }
+  .bb-auth-login .bb-social-stack { gap: 12px; }
+  .bb-auth-login .social-login { margin: 0; }
+  .bb-auth-login .auth-switch { margin-top: 20px; font-size: 14px; }
+  .bb-auth-login .auth-hero-copy { top: 513px; bottom: auto; left: 66px; max-width: none; }
+  .bb-auth-login .auth-hero-copy h2 { font-size: 64px; line-height: normal; letter-spacing: 0; margin: 0 0 16px; white-space: nowrap; text-shadow: 0 4px 15.6px rgba(0,0,0,.25); }
+  .bb-auth-login .auth-hero-copy p { width: 400px; font-size: 20px; line-height: 30px; }
+  .bb-auth-login .bb-simple-black-footer { margin-top: -60px; position: relative; z-index: 1; height: 60px; min-height: 60px; }
+}
+.bb-login-provider-icon { display: none; }
+.bb-auth-login .social-login > svg { display: none; }
+.bb-auth-login .bb-login-provider-icon { display: block; }
+.bb-auth-login .social-login img { width: auto; height: auto; }
+.bb-auth-login .social-login.apple img { filter: none; }
+.bb-auth-login .social-login.apple { opacity: 1; }
+.bb-auth-login .bb-eye-btn img { max-width: none; object-fit: contain; }
+.bb-auth-login .bb-eye-btn img { display: block; margin: auto; }
+.bb-login-hero-layers { position: absolute; inset: 0; overflow: hidden; }
+.bb-login-hero-base { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bb-login-hero-crop { position: absolute; left: 0; top: -46px; width: 100%; height: 846px; overflow: hidden; }
+.bb-login-hero-crop img { position: absolute; left: -111.52%; top: 0; width: 211.5%; max-width: none; height: 100%; }
+.bb-login-footer-logo { position: relative; display: block; width: 91px; height: 33px; }
+.bb-login-footer-logo img { position: absolute; top: 0; left: 0; width: auto; height: auto; }
+.bb-login-footer-logo img + img { top: 14.59px; left: 19.16px; }
+.bb-auth-login .bb-figma-checkbox { appearance: none; margin: 0; border: 1px solid #fecc07; border-radius: 6px; background: linear-gradient(#f6f6f6,#fff); flex-shrink: 0; }
+.bb-auth-login .bb-figma-checkbox:checked { background: url('/assets/home/login-check.svg') center no-repeat,linear-gradient(#ff7300,#fecc07); }
+.bb-auth-login .bb-figma-checkbox:focus-visible { outline: 2px solid #ff7300; outline-offset: 3px; }
+@media (min-width: 1100px) {
+  .bb-auth-login .bb-topbar-inner { position: relative; width: 100%; height: 58px; max-width: none; padding: 0; }
+  .bb-auth-login .bb-topbar-brand-wrap { position: static; }
+  .bb-auth-login .bb-topbar-menu-toggle { position: absolute; left: 24px; top: 19.5px; width: 26.111px; height: 16.44px; padding: 0; }
+  .bb-auth-login .bb-figma-topbar .bb-topbar-logo { position: absolute; left: 60px; top: 9px; width: 103px; height: 38px; display: block; }
+  .bb-auth-login .bb-figma-topbar .bb-topbar-logo-mark { position: absolute; top: 0; left: 0; width: auto; height: auto; }
+  .bb-auth-login .bb-figma-topbar .bb-topbar-logo-word { position: absolute; top: 16.8px; left: 21.69px; width: auto; height: auto; }
+  .bb-auth-login .bb-topbar-search-btn { position: absolute; left: 178px; top: 9px; width: 37px; height: 37px; padding: 0; }
+  .bb-auth-login .bb-topbar-search-btn img { transform: scale(1.3224); }
+  .bb-auth-login .bb-topbar-nav { top: 19px; display: grid; grid-template-columns: 102px 117px 102px; }
+  .bb-auth-login .bb-topbar-actions { position: absolute; top: 9px; right: 24px; gap: 20px; }
+  .bb-auth-login .bb-topbar-signin, .bb-auth-login .bb-topbar-signup { display: grid; place-items: center; height: 32px; padding: 0; border-radius: 5px; font: 700 15px/normal "Afacad Flux",sans-serif; }
+  .bb-auth-login .bb-topbar-signin { width: 61px; }
+  .bb-auth-login .bb-topbar-signup { width: 120px; }
+  .bb-auth-login .bb-simple-black-footer { padding: 10px 25px 0 28px; }
+  .bb-auth-login .bb-simple-footer-inner { max-width: none; height: 40px; gap: 0; font-size: 12px; font-weight: 300; }
+  .bb-auth-login .bb-simple-footer-copy, .bb-auth-login .bb-simple-footer-link { color: #fff; letter-spacing: 0; }
+  .bb-auth-login .bb-simple-footer-links { gap: 0; }
+  .bb-auth-login .bb-simple-footer-link { width: 84.117px; }
+  .bb-auth-login .bb-simple-footer-pipe { margin: 0 64px 0 10.65px; height: 19px; color: #fff; }
+}

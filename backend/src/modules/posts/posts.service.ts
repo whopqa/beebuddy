@@ -188,6 +188,7 @@ export class PostsService {
     page?: number;
     limit?: number;
     communityId?: string;
+    postId?: string;
   }) {
     const page = Math.max(1, params.page || 1);
     const limit = Math.min(50, params.limit || 10);
@@ -201,8 +202,8 @@ export class PostsService {
       socialAccess.connectedUserIds,
       socialAccess.blockedUserIds
     );
-    const whereClause = params.communityId
-      ? { AND: [visibilityWhere, { communityId: params.communityId }] }
+    const whereClause: Prisma.PostWhereInput = params.communityId || params.postId
+      ? { AND: [visibilityWhere, ...(params.communityId ? [{ communityId: params.communityId }] : []), ...(params.postId ? [{ id: params.postId }] : [])] }
       : visibilityWhere;
 
     const [total, posts] = await Promise.all([

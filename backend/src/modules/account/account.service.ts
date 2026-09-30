@@ -155,7 +155,16 @@ export class AccountService {
     });
 
     if (!profile) throw new Error("Không tìm thấy hồ sơ người dùng");
-    return profile;
+    const galleryAssets = profile.galleryMediaIds.length
+      ? await prisma.mediaAsset.findMany({
+          where: { id: { in: profile.galleryMediaIds }, ownerId: userId, processingStatus: "READY", deletedAt: null },
+          select: { id: true, sourceUrl: true },
+        })
+      : [];
+    return { ...profile, gallery: profile.galleryMediaIds.flatMap((id) => {
+      const asset = galleryAssets.find((item) => item.id === id);
+      return asset?.sourceUrl ? [{ id, url: asset.sourceUrl }] : [];
+    }) };
   }
 
   public static async updateProfile(
@@ -163,8 +172,17 @@ export class AccountService {
     data: {
       fullName?: string;
       bio?: string;
+      aboutMe?: string;
+      personalityType?: string;
+      lifestyle?: string;
+      hobbies?: string[];
+      skills?: string[];
+      favoriteColors?: string[];
+      socialLinks?: string[];
+      galleryMediaIds?: string[];
+      avatarMediaAssetId?: string | null;
       gender?: string;
-      dateOfBirth?: string;
+      dateOfBirth?: string | null;
       location?: string;
       interests?: string[];
       habits?: string[];
@@ -173,13 +191,38 @@ export class AccountService {
     }
   ) {
     return prisma.$transaction(async (tx) => {
+      const requestedIds = [
+        ...(data.galleryMediaIds || []),
+        ...(data.avatarMediaAssetId ? [data.avatarMediaAssetId] : []),
+      ];
+      const mediaAssets = requestedIds.length ? await tx.mediaAsset.findMany({
+        where: { id: { in: requestedIds }, ownerId: userId, processingStatus: "READY", deletedAt: null, mimeType: { startsWith: "image/" } },
+        select: { id: true, sourceUrl: true },
+      }) : [];
+      if (requestedIds.some((id) => !mediaAssets.some((asset) => asset.id === id && asset.sourceUrl))) {
+        throw new Error("Ảnh không tồn tại, chưa sẵn sàng hoặc không thuộc tài khoản");
+      }
+      const avatarUrl = data.avatarMediaAssetId === undefined
+        ? undefined
+        : data.avatarMediaAssetId === null
+          ? null
+          : mediaAssets.find((asset) => asset.id === data.avatarMediaAssetId)!.sourceUrl;
       const updated = await tx.profile.update({
         where: { userId },
         data: {
           fullName: data.fullName,
           bio: data.bio,
+          aboutMe: data.aboutMe,
+          personalityType: data.personalityType,
+          lifestyle: data.lifestyle,
+          hobbies: data.hobbies,
+          skills: data.skills,
+          favoriteColors: data.favoriteColors,
+          socialLinks: data.socialLinks,
+          galleryMediaIds: data.galleryMediaIds,
+          avatarUrl,
           gender: data.gender,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+          dateOfBirth: data.dateOfBirth === null ? null : data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
           location: data.location,
           interests: data.interests,
           habits: data.habits,
@@ -196,7 +239,16 @@ export class AccountService {
         await syncConnectionGoal(tx, userId, data.connectionGoal);
       }
 
-      return updated;
+      const galleryAssets = updated.galleryMediaIds.length
+        ? await tx.mediaAsset.findMany({
+            where: { id: { in: updated.galleryMediaIds }, ownerId: userId, processingStatus: "READY", deletedAt: null },
+            select: { id: true, sourceUrl: true },
+          })
+        : [];
+      return { ...updated, gallery: updated.galleryMediaIds.flatMap((id) => {
+        const asset = galleryAssets.find((item) => item.id === id);
+        return asset?.sourceUrl ? [{ id, url: asset.sourceUrl }] : [];
+      }) };
     });
   }
 
@@ -355,6 +407,7 @@ export class AccountService {
       emailNotification?: boolean;
       language?: string;
       theme?: string;
+      travelStyles?: string[];
     }
   ) {
     return prisma.userSetting.upsert({

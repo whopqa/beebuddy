@@ -1,0 +1,51 @@
+/* Figma VeeHYy9MyfRTlSYTHPQTov 219:5062, Settings Panel variant. */
+.bb-settings-backdrop {
+  position: fixed;
+  inset: 73px 0 0;
+  z-index: 200;
+  background: rgba(0,0,0,.32);
+}
+.bb-settings-panel {
+  position: fixed;
+  top: 42px;
+  left: 30px;
+  width: 314px;
+  height: 286px;
+  max-width: calc(100vw - 60px);
+  box-sizing: border-box;
+  border: 1px solid #ffb200;
+  border-radius: 16px;
+  background: linear-gradient(to bottom,rgba(255,255,255,.9),#fff);
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  font-family: "Afacad Flux",sans-serif;
+}
+.bb-settings-panel-heading {
+  position: absolute;
+  top: 23px;
+  left: 19px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 0;
+  padding: 0;
+  background: none;
+  background-image: url('/assets/home/settings-title.png');
+  background-position: center;
+  background-size: cover;
+  background-clip: text;
+  color: transparent;
+  cursor: pointer;
+  font: 700 17px/21px Inter,Arial,sans-serif;
+}
+.bb-settings-panel-heading img { display: block; flex: none; }
+.bb-settings-panel-links { position: absolute; top: 59px; left: 32px; right: 20px; display: flex; flex-direction: column; gap: 0; }
+.bb-settings-panel-links a { display: flex; align-items: center; gap: 12px; height: 40px; color: #2d2d2d; font: 500 14px/normal "Afacad Flux",sans-serif; text-decoration: none; border-radius: 8px; }
+.bb-settings-panel-links a:first-child { color: #000; }
+.bb-settings-panel-links a img { display: block; flex: none; width: auto; height: auto; max-width: none; }
+.bb-settings-panel-links a:first-child img { margin-right: 3px; }
+.bb-settings-panel-links a:focus-visible { outline: 2px solid #ffb200; outline-offset: 2px; }
+.bb-settings-panel-heading:focus-visible { outline: 2px solid #ff8400; outline-offset: 4px; }
+@media (max-width: 760px) {
+  .bb-settings-backdrop { inset: 60px 0 0; }
+  .bb-settings-panel { top: 30px; left: 15px; width: min(314px,calc(100vw - 30px)); max-width: calc(100vw - 30px); height: 286px; }
+}

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion, type Transition } from "motion/react";
 import FigmaHeader from "./FigmaHeader";
 import { webAuth } from "@/lib/auth-client";
+import { submitNewsletter } from "@/lib/lead-client";
 
 const homeAsset = (name: string) => `/assets/home/${name}`;
 const FIGMA_HOME_DURATION = 42.5;
@@ -37,7 +38,7 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
   }, []);
 
   const reducedMotion = useReducedMotion() === true;
-  const heroImages = ["hero-01.png", "hero-02.png", "hero-03.png", "hero-04.png", "hero-05.png"];
+  const heroImages = ["intro-hero-01.png", "intro-hero-02.png", "intro-hero-03.png", "intro-hero-04.png", "intro-hero-05.png"];
   const heroOpacity = [
     [1, 1, 0, 0, 1],
     [0, 0, 1, 1, 0, 0],
@@ -63,19 +64,19 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
 
   return (
     <div className="bb-site bb-design-site">
-      <FigmaHeader authenticated={isAuth} />
+      <FigmaHeader authenticated={isAuth} designHome />
 
       <main className="bb-canvas" id="top">
         {/* Floating Social Media Rail on Left */}
         <aside className="bb-social-rail" aria-label="Social media">
           <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
-            <img src="/assets/ui/facebook.svg" alt="" />
+            <img src={homeAsset("intro-facebook.svg")} alt="" />
           </a>
           <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
-            <img src="/assets/ui/instagram.png" alt="" />
+            <img src={homeAsset("intro-instagram.png")} alt="" />
           </a>
           <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
-            <img src="/assets/ui/tiktok.svg" alt="" />
+            <img src={homeAsset("intro-tiktok.svg")} alt="" />
           </a>
         </aside>
 
@@ -104,19 +105,22 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
             </p>
             <div className="bb-hero-design-actions">
               <a className="bb-play-badge" href="/signup" aria-label="Get started on Google Play">
-                <img src={homeAsset("home-18.png")} alt="" />
+                <img src={homeAsset("intro-play.png")} alt="" />
                 <span>
                   <small>GET IT ON</small>Google Play
                 </span>
               </a>
-              <Link className="bb-start-button" href={isAuth ? "/get-started" : "/signup"}>
-                GET STARTED <span>↗</span>
+              <Link className="bb-start-button" href="/get-started">
+                <span className="bb-start-plane" aria-hidden="true"><img src={homeAsset("intro-send.png")} alt="" /><img className="bb-start-plane-trail" src={homeAsset("intro-send-trail.svg")} alt="" /></span>
+                <span className="bb-start-label">GET STARTED</span>
               </Link>
             </div>
           </div>
 
-          <a href="#features" className="bb-scroll-cue" aria-label="Scroll down">
-            <img src={homeAsset("scroll_cue_hero.png")} alt="Scroll" className="bb-scroll-cue-img" />
+          <a href="#join" className="bb-scroll-cue" aria-label="Scroll to footer">
+            <span className="bb-scroll-label">SCROLL</span>
+            <img src={homeAsset("intro-scroll-curve.svg")} alt="" className="bb-scroll-curve" />
+            <img src={homeAsset("intro-scroll-dot.svg")} alt="" className="bb-scroll-dot" />
           </a>
         </section>
 
@@ -126,20 +130,20 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
           <div className="bb-scenic-gradient-overlay" />
           <div className="bb-feature-action-container">
             <InteractiveFeatureCard
-              icon="figma-people.png"
+              icon="intro-people.png"
               title="Find Like-Minded Friends"
               subtitle="Connect with people who share your vibe and your values"
               href="/community"
             />
             <InteractiveFeatureCard
-              icon="figma-globe.png"
+              icon="intro-globe.png"
               title="Shared Interests"
               subtitle="Discover groups and activities that spark real connections"
               defaultActive
               href="#services"
             />
             <InteractiveFeatureCard
-              icon="figma-chat.png"
+              icon="intro-chat.png"
               title="Real Experiences"
               subtitle="Turn conversations into moments you’ll always remember"
               href="/community"
@@ -204,10 +208,10 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
 
             {/* Interactive Trait Pills in single unified capsule container */}
             <div className="bb-buzzy-traits-container" aria-label="Buzzy personality traits">
-              <InteractiveTraitPill icon="♥" label="Friendly" defaultColor="#ff8500" />
-              <InteractiveTraitPill icon="☺" label="Helpful" defaultColor="#ff9900" />
-              <InteractiveTraitPill icon="★" label="Curious" defaultColor="#eab308" />
-              <InteractiveTraitPill icon="🔍" label="Fun" defaultColor="#f97316" />
+              <InteractiveTraitPill icon="♥" label="Friendly" />
+              <InteractiveTraitPill icon="☺" label="Helpful" />
+              <InteractiveTraitPill icon="★" label="Curious" />
+              <InteractiveTraitPill icon="🔍" label="Fun" />
             </div>
           </div>
 
@@ -349,24 +353,30 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
             {/* Card 1: Top Left (x: 90, y: 4231) */}
             <InteractiveCommunityCard
               className="card-top-left"
-              image="figma-community-mountain.png"
+              image="community-reference-mountain.png"
+              icon="community-story-icon.svg"
               tag="Story Exchange"
+              hoverText="Every journey leaves something behind. Share the moments, little discoveries, and stories that might inspire someone else’s next adventure."
               text="Share travel stories, tips, and snapshots that inspire the next journey"
             />
 
             {/* Card 2: Middle Right (x: 793, y: 4526) */}
             <InteractiveCommunityCard
               className="card-mid-right"
-              image="figma-community-dinner.png"
+              image="community-reference-dinner.png"
+              icon="community-food-icon.svg"
               tag="Foodies Abroad"
+              hoverText="Every journey leaves something behind. Share the moments, little discoveries, and stories that might inspire someone else’s next adventure."
               text="For food lovers exploring local flavors and shared meals"
             />
 
             {/* Card 3: Bottom Left (x: 90, y: 4755) */}
             <InteractiveCommunityCard
               className="card-bottom-left"
-              image="figma-community-campfire.png"
+              image="community-reference-campfire.png"
+              icon="community-event-icon.svg"
               tag="Buddy Events"
+              hoverText="Some plans start with strangers and end with stories worth remembering. Find your people, share the moment, and see where it takes you."
               text="Curated gatherings, weekend plans, friendly activities"
             />
 
@@ -469,9 +479,22 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
 
                 <form
                   className="bb-glass-form"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
-                    alert("Thank you! You have been added to the BeeBuddy newsletter.");
+                    const form = e.currentTarget;
+                    const input = form.querySelector<HTMLInputElement>('input[type="email"]');
+                    if (!input) return;
+                    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+                    if (button) button.disabled = true;
+                    try {
+                      await submitNewsletter(input.value);
+                      input.value = "";
+                      alert("Thank you! You have been added to the BeeBuddy newsletter.");
+                    } catch (error) {
+                      alert(error instanceof Error ? error.message : "Unable to subscribe right now.");
+                    } finally {
+                      if (button) button.disabled = false;
+                    }
                   }}
                 >
                   <input
@@ -526,19 +549,20 @@ function InteractiveFeatureCard({
   href: string;
 }) {
   const [hovered, setHovered] = useState(false);
+  const reducedMotion = useReducedMotion() === true;
   const isActive = hovered || defaultActive;
 
   return (
     <Link
       href={href}
-      className={`bb-feature-action-card ${isActive ? "is-active" : ""}`}
+      className={`bb-feature-action-card ${isActive ? "is-active" : ""} ${hovered ? "is-revealed" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
     >
-      <div className="bb-feat-top-row">
-        <img src={homeAsset(icon)} alt="" className="bb-feat-icon" />
-        <span className="bb-feat-title">{title}</span>
-      </div>
+      <img src={homeAsset(icon)} alt="" className="bb-feat-icon" />
+      <span className="bb-feat-title">{title}</span>
       <motion.p
         initial={false}
         animate={{
@@ -546,7 +570,7 @@ function InteractiveFeatureCard({
           opacity: hovered ? 1 : 0,
           marginTop: hovered ? 8 : 0,
         }}
-        transition={{ duration: 0.35, ease: "easeInOut" }}
+        transition={{ duration: reducedMotion ? 0 : 0.5, ease: hovered ? "easeIn" : "easeOut" }}
         className="bb-feat-hover-subtitle"
       >
         {subtitle}
@@ -556,24 +580,15 @@ function InteractiveFeatureCard({
 }
 
 /** Trait Pill with Mouse-in Scale and Glow */
-function InteractiveTraitPill({ icon, label, defaultColor }: { icon: string; label: string; defaultColor: string }) {
-  const [hovered, setHovered] = useState(false);
-
+function InteractiveTraitPill({ icon, label }: { icon: string; label: string }) {
   return (
-    <motion.button
+    <button
       type="button"
-      className="bb-trait-pill"
-      style={{
-        background: hovered ? "linear-gradient(90deg, #ff8500, #ffb020)" : "linear-gradient(90deg, #ff9900, #ffc040)",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      whileHover={{ scale: 1.08, y: -2 }}
-      transition={{ duration: 0.2 }}
+      className={`bb-trait-pill bb-trait-${label.toLowerCase()}`}
     >
       <span className="bb-trait-icon">{icon}</span>
       <span className="bb-trait-label">{label}</span>
-    </motion.button>
+    </button>
   );
 }
 
@@ -594,53 +609,58 @@ function InteractiveServiceRow({ number, title, side }: { number: string; title:
       </div>
       <motion.div
         className="bb-service-accent-bar"
-        initial={{ scaleX: 0.85 }}
-        animate={{ scaleX: hovered ? 1 : 0.85 }}
+        initial={{ scaleX: 1 }}
+        animate={{ scaleX: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
     </div>
   );
 }
 
-/** Community Story Card with Mouse-in Image Zoom and Caption Lift */
+/** Community card with the Figma variant's 300ms dissolve on hover. */
 function InteractiveCommunityCard({
   image,
+  icon,
   tag,
   text,
   className,
+  hoverText,
 }: {
   image: string;
+  icon: string;
   tag: string;
   text: string;
   className: string;
+  hoverText?: string;
 }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
-    <article
-      className={`bb-community-card-unit ${className} ${hovered ? "is-hovered" : ""}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <article className={`bb-community-card-unit ${className}`}>
       <div className="bb-community-card-frame">
-        <motion.img
-          src={homeAsset(image)}
-          alt={tag}
-          className="bb-community-card-img"
-          animate={{ scale: hovered ? 1.05 : 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        />
-        <motion.div
+        <div className="bb-community-card-img">
+          <img className="bb-community-source-photo" src={homeAsset(image)} alt={tag} />
+        </div>
+        <div
           className="bb-community-caption-pill"
-          animate={{ y: hovered ? -3 : 0 }}
-          transition={{ duration: 0.25 }}
         >
-          <span className="bb-caption-bubble-icon" aria-hidden="true">💬</span>
+          <span className="bb-caption-bubble-icon" aria-hidden="true"><img src={homeAsset(icon)} alt="" /></span>
           <div className="bb-caption-text-wrap">
             <strong>{tag}</strong>
             <p>{text}</p>
           </div>
-        </motion.div>
+        </div>
+        {hoverText && (
+          <div className="bb-community-hover-layer">
+            <div className="bb-community-hover-photo">
+              <img className="bb-community-source-photo" src={homeAsset(image)} alt="" />
+            </div>
+            <div className="bb-community-hover-overlay">
+              <img src={homeAsset(className === "card-mid-right" ? "community-hover-overlay-food.svg" : "community-hover-overlay.svg")} alt="" />
+            </div>
+            <p>{hoverText}</p>
+            <Link className="bb-community-members" href="/community">Members</Link>
+          </div>
+        )}
+        <Link className="bb-community-touch-link" href="/community" aria-label={`Xem cộng đồng ${tag}`} />
       </div>
     </article>
   );
@@ -674,11 +694,14 @@ function MarqueeStrip() {
             : { x: { duration: FIGMA_HOME_DURATION, times: [0, 1], ease: "linear", repeat: Infinity } }
         }
       >
-        {[...words, ...words, ...words].map((word, index) => (
-          <span key={`${word}-${index}`} className="bb-marquee-item">
-            {word}
-            <b className="bb-marquee-dot">·</b>
-          </span>
+        {[0, 1].map((copy) => (
+          <div key={copy} className="bb-marquee-cycle" aria-hidden={copy === 1}>
+            {[...words, ...words, ...words].map((word, index) => (
+              <span key={`${word}-${index}`} className="bb-marquee-item">
+                {word}<b className="bb-marquee-dot">·</b>
+              </span>
+            ))}
+          </div>
         ))}
       </motion.div>
     </div>

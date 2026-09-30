@@ -77,7 +77,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const postsApi = {
-  feed: (page = 1, limit = 10) => request<FeedPage>(`?page=${page}&limit=${limit}`),
+  feed: (page = 1, limit = 10, postId?: string) => request<FeedPage>(`?page=${page}&limit=${limit}${postId ? `&postId=${encodeURIComponent(postId)}` : ""}`),
   create: (input: PostMutationInput) => request<{ postId: string; warning?: string | null }>("", {
     method: "POST",
     body: JSON.stringify(input),

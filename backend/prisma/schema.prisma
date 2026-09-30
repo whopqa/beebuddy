@@ -614,6 +614,14 @@ model Profile {
   username              String?          @unique
   avatarUrl             String?
   bio                   String?
+  aboutMe               String?
+  personalityType       String?
+  lifestyle             String?
+  hobbies               String[]         @default([])
+  skills                String[]         @default([])
+  favoriteColors        String[]         @default([])
+  socialLinks           String[]         @default([])
+  galleryMediaIds       String[]         @default([])
   gender                String?
   dateOfBirth           DateTime?
   location              String?
@@ -772,7 +780,22 @@ model UserSetting {
   emailNotification Boolean  @default(true)
   language          String   @default("vi")
   theme             String   @default("light")
+  travelStyles      String[] @default(["Backpack & Trek", "Foodie & Cafes"])
   updatedAt         DateTime @updatedAt
+}
+
+model LeadSubmission {
+  id        String   @id @default(uuid())
+  kind      String
+  email     String
+  name      String?
+  phone     String?
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, email])
+  @@index([createdAt])
 }
 
 model Payment {

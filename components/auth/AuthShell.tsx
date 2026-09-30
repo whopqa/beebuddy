@@ -188,15 +188,18 @@ export default function AuthShell({
   return (
     <div className={`auth-page bb-figma-auth-screen bb-auth-${mode}`}>
       {/* change-password in Figma uses authenticated header */}
-      <FigmaHeader authenticated={mode === "change"} />
+      <FigmaHeader authenticated={mode === "change"} designHome={mode === "login"} />
 
       <main className="auth-layout">
         {/* Left Side: Mountain sunset puzzle hero photo matching Figma */}
         <section className="auth-hero">
-          <div
+          {mode === "login" ? <div className="bb-login-hero-layers" aria-hidden="true">
+            <img className="bb-login-hero-base" src="/assets/home/login-hero-base.png" alt="" />
+            <div className="bb-login-hero-crop"><img src="/assets/home/intro-hero-05.png" alt="" /></div>
+          </div> : <div
             className="auth-hero-image"
             style={{ backgroundImage: "url(/assets/home/figma-puzzle.png)" }}
-          />
+          />}
           <div className="auth-hero-copy">
             <h2>Explore the world with friends</h2>
             <p>
@@ -247,6 +250,7 @@ export default function AuthShell({
               {mode === "login" && (
                 <PasswordField
                   label="Password"
+                  autoComplete="current-password"
                   value={form.password}
                   show={showPassword}
                   onChange={(v) => update("password", v)}
@@ -428,7 +432,7 @@ export default function AuthShell({
       </main>
 
       {/* Clean black bottom footer bar matching Figma Group 36 */}
-      <SimpleFooter />
+      <SimpleFooter designLogin={mode === "login"} />
     </div>
   );
 }
@@ -448,7 +452,7 @@ export function Field({ label, placeholder, value, onChange, type = "text" }: { 
   );
 }
 
-export function PasswordField({ label, value, show, onChange, toggle, placeholder = "••••••••" }: { label: string; value: string; show: boolean; onChange: (value: string) => void; toggle: () => void; placeholder?: string }) {
+export function PasswordField({ label, value, show, onChange, toggle, placeholder = "••••••••", autoComplete }: { label: string; value: string; show: boolean; onChange: (value: string) => void; toggle: () => void; placeholder?: string; autoComplete?: "current-password" | "new-password" }) {
   return (
     <label className="auth-field">
       <span className="auth-field-label">{label}</span>
@@ -458,11 +462,11 @@ export function PasswordField({ label, value, show, onChange, toggle, placeholde
           placeholder={placeholder}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          autoComplete={label === "Old Password" ? "current-password" : "new-password"}
+          autoComplete={autoComplete ?? (label === "Old Password" ? "current-password" : "new-password")}
           className="auth-field-input"
         />
         <button type="button" onClick={toggle} aria-label={show ? "Hide password" : "Show password"} className="bb-eye-btn">
-          {show ? <EyeOff size={18} /> : <Eye size={18} />}
+          {show ? <EyeOff size={18} /> : autoComplete === "current-password" && label === "Password" ? <img src="/assets/home/login-eye.svg" alt="" /> : <Eye size={18} />}
         </button>
       </div>
     </label>
@@ -526,6 +530,7 @@ export function SocialLoginButton({ provider, disabled = false }: { provider: "G
       title={provider === "Apple" ? "Apple login is not available yet" : "Google login is not configured"}
       aria-label={`Continue with ${provider}`}
     >
+      <img className="bb-login-provider-icon" src={provider === "Google" ? "/assets/home/login-google.svg" : "/assets/home/login-apple.svg"} alt="" />
       {provider === "Google" ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

@@ -133,8 +133,12 @@ export class PostsController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const userId = req.user?.id;
+      const postId = req.query.postId;
+      if (postId !== undefined && (typeof postId !== "string" || !z.string().uuid().safeParse(postId).success)) {
+        return sendError(res, "Post ID không hợp lệ", 400);
+      }
 
-      const feed = await PostsService.getFeed({ userId, page, limit });
+      const feed = await PostsService.getFeed({ userId, page, limit, postId: postId as string | undefined });
       return sendSuccess(res, feed);
     } catch (err: any) {
       return sendError(res, err.message, getErrorStatus(err));

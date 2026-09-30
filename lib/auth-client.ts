@@ -65,6 +65,7 @@ export const webAuth = {
     }),
   me: () => request<WebUser>("/api/auth/me"),
   logout: async () => {
-    await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
+    const response = await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
+    if (!response.ok) throw new Error("Không thể đăng xuất. Vui lòng thử lại.");
   },
 };

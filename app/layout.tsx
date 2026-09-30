@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./figma-components.css";
 import "./feature-support.css";
+import "./figma-home.css";
+import "./figma-home-intro.css";
+import "./figma-login.css";
+import "./figma-settings-panel.css";
+import "./figma-get-started.css";
+import "./figma-community-members.css";
 import CookieConsentBanner from "@/components/beebuddy/CookieConsentBanner";
 
 export const metadata: Metadata = {

@@ -16,6 +16,7 @@ import { wellbeingRoutes } from "./modules/wellbeing/wellbeing.routes";
 import { insightsRoutes } from "./modules/insights/insights.routes";
 import { connectionsRoutes } from "./modules/connections/connections.routes";
 import { mediaRoutes } from "./modules/media/media.routes";
+import { leadsRoutes } from "./modules/leads/leads.routes";
 
 export const createApp = () => {
   const app = express();
@@ -55,6 +56,7 @@ export const createApp = () => {
   app.use("/api/v1/insights", insightsRoutes);
   app.use("/api/v1/connections", connectionsRoutes);
   app.use("/api/v1/media", mediaRoutes);
+  app.use("/api/v1/leads", leadsRoutes);
 
   // 404 handler
   app.use((req: Request, res: Response) => {
