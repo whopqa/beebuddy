@@ -28,6 +28,7 @@ const environmentSchema = z.object({
   EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),
   AUTH_TOKEN_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(15).max(3600).default(60),
+  DEMO_SKIP_EMAIL_VERIFICATION_UNTIL: z.string().default(""),
   GOOGLE_CLIENT_ID: z.string().default(""),
   MEDIA_UPLOAD_DIR: z.string().min(1).default("uploads"),
   MEDIA_IMAGE_MAX_BYTES: z.coerce.number().int().min(1024).max(20 * 1024 * 1024).default(4 * 1024 * 1024),
@@ -58,6 +59,15 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
 
   const value = parsed.data;
   const errors: string[] = [];
+
+  if (value.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL) {
+    const until = Date.parse(value.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL);
+    if (!Number.isFinite(until) || !/^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/.test(value.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL)) {
+      errors.push("DEMO_SKIP_EMAIL_VERIFICATION_UNTIL phải là thời gian ISO 8601 có múi giờ");
+    } else if (until - Date.now() > 7 * 24 * 60 * 60 * 1000) {
+      errors.push("DEMO_SKIP_EMAIL_VERIFICATION_UNTIL không được quá 7 ngày trong tương lai");
+    }
+  }
 
   if (value.JWT_SECRET === value.JWT_REFRESH_SECRET) {
     errors.push("JWT_SECRET và JWT_REFRESH_SECRET phải khác nhau");
@@ -110,6 +120,9 @@ export function parseEnvironment(source: NodeJS.ProcessEnv | Record<string, stri
   return {
     PORT: value.PORT,
     NODE_ENV: value.NODE_ENV,
+    DEMO_SKIP_EMAIL_VERIFICATION_UNTIL: value.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL
+      ? new Date(value.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL)
+      : null,
     CLIENT_URL: value.CLIENT_URL,
     DATABASE_URL: value.DATABASE_URL,
     JWT: {

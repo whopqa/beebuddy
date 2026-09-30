@@ -20,7 +20,7 @@ export type AuthPayload = {
 
 export type RegisterPayload = {
   user: WebUser;
-  verificationRequired: true;
+  verificationRequired: boolean;
   verificationSent: boolean;
   developmentCode?: string;
 };

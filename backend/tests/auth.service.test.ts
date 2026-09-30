@@ -11,11 +11,15 @@ import {
 } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma";
+import { ENV } from "../src/config/environment";
 import { AuthService } from "../src/modules/auth/auth.service";
 import { AuthEmailService } from "../src/modules/auth/auth-email.service";
 import { GoogleIdentityService } from "../src/modules/auth/google-identity.service";
 
+const originalDemoUntil = ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL;
+
 afterEach(() => {
+  ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = originalDemoUntil;
   vi.restoreAllMocks();
 });
 
@@ -51,6 +55,32 @@ describe("AuthService.login", () => {
       email: "member@beebuddy.vn",
       password: "correct-password",
     })).rejects.toThrow(/đã bị khóa/);
+  });
+
+  it("allows an unverified account only during the temporary demo window", async () => {
+    await mockUser({ isVerified: false });
+    await expect(AuthService.login({
+      email: "member@beebuddy.vn",
+      password: "correct-password",
+    })).rejects.toThrow(/chưa được xác minh/);
+
+    ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = new Date(Date.now() + 60_000);
+    vi.spyOn(prisma.authIdentity, "update").mockResolvedValue({} as never);
+    vi.spyOn(prisma.userSession, "create").mockResolvedValue({} as never);
+    await expect(AuthService.login({
+      email: "member@beebuddy.vn",
+      password: "correct-password",
+    })).resolves.toHaveProperty("accessToken");
+    await expect(AuthService.login({
+      email: "member@beebuddy.vn",
+      password: "wrong-password",
+    })).rejects.toThrow(/không chính xác/);
+
+    ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = new Date(Date.now() - 60_000);
+    await expect(AuthService.login({
+      email: "member@beebuddy.vn",
+      password: "correct-password",
+    })).rejects.toThrow(/chưa được xác minh/);
   });
 
   it("creates a revocable session and stores only the refresh token hash", async () => {
@@ -146,6 +176,19 @@ describe("AuthService.register", () => {
     expect(result.verificationRequired).toBe(true);
     expect(result.verificationSent).toBe(true);
     expect(createSession).not.toHaveBeenCalled();
+
+    ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = new Date(Date.now() + 60_000);
+    vi.mocked(AuthEmailService.sendVerificationCode).mockClear();
+    const demoResult = await AuthService.register({
+      email: "demo@beebuddy.vn",
+      password: "password123",
+      fullName: "Demo User",
+      acceptTerms: true,
+      acceptPrivacy: true,
+    });
+    expect(demoResult.verificationRequired).toBe(false);
+    expect(demoResult.verificationSent).toBe(false);
+    expect(AuthEmailService.sendVerificationCode).not.toHaveBeenCalled();
   });
 
   it("rejects registration when legal consent is missing", async () => {
@@ -279,6 +322,7 @@ describe("AuthService refresh sessions", () => {
         role: Role.USER,
         tier: SubscriptionTier.FREE,
         isBanned: false,
+        isVerified: true,
       },
     } as never);
 

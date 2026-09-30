@@ -49,6 +49,11 @@ const DEFAULT_PROFILE_VISIBILITY = [
 ];
 
 export class AuthService {
+  private static isDemoEmailVerificationBypassActive() {
+    return ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL !== null
+      && Date.now() < ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL.getTime();
+  }
+
   private static hashToken(token: string) {
     return createHash("sha256").update(token).digest("hex");
   }
@@ -305,18 +310,21 @@ export class AuthService {
       return createdUser;
     });
 
+    const verificationRequired = !this.isDemoEmailVerificationBypassActive();
     let verificationSent = false;
     let developmentCode: string | undefined;
-    try {
-      const delivery = await this.issueEmailVerification({
-        userId: user.id,
-        email: user.email,
-        fullName: user.profile?.fullName || data.fullName,
-      });
-      verificationSent = true;
-      developmentCode = delivery.developmentCode;
-    } catch (error) {
-      console.error("Không thể gửi email xác minh sau khi đăng ký:", error);
+    if (verificationRequired) {
+      try {
+        const delivery = await this.issueEmailVerification({
+          userId: user.id,
+          email: user.email,
+          fullName: user.profile?.fullName || data.fullName,
+        });
+        verificationSent = true;
+        developmentCode = delivery.developmentCode;
+      } catch (error) {
+        console.error("Không thể gửi email xác minh sau khi đăng ký:", error);
+      }
     }
 
     return {
@@ -328,7 +336,7 @@ export class AuthService {
         isVerified: user.isVerified,
         profile: user.profile,
       },
-      verificationRequired: true,
+      verificationRequired,
       verificationSent,
       ...(developmentCode ? { developmentCode } : {}),
     };
@@ -361,7 +369,7 @@ export class AuthService {
     if (!passwordHash || !(await bcrypt.compare(data.password, passwordHash))) {
       throw new Error("Tài khoản hoặc mật khẩu không chính xác");
     }
-    if (!user.isVerified) {
+    if (!user.isVerified && !this.isDemoEmailVerificationBypassActive()) {
       throw new Error("Email chưa được xác minh. Vui lòng xác minh email trước khi đăng nhập");
     }
 
@@ -888,7 +896,8 @@ export class AuthService {
         session.refreshTokenHash !== tokenHash ||
         session.revokedAt ||
         session.expiresAt <= now ||
-        session.user.isBanned
+        session.user.isBanned ||
+        (!session.user.isVerified && !this.isDemoEmailVerificationBypassActive())
       ) {
         throw new Error("Refresh session không còn hiệu lực");
       }

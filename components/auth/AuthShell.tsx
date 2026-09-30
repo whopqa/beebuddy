@@ -114,10 +114,16 @@ export default function AuthShell({
           acceptPrivacy,
           consentSessionId: getConsentSessionId(),
         });
-        const params = new URLSearchParams({ email: result.user.email });
-        if (result.developmentCode) params.set("devCode", result.developmentCode);
-        if (!result.verificationSent) params.set("deliveryFailed", "1");
-        router.replace(`/verify-code?${params.toString()}`);
+        if (!result.verificationRequired) {
+          const session = await webAuth.login(form.email.trim(), form.password);
+          router.replace(session.user.role === "ADMIN" ? "/admin" : "/home");
+          router.refresh();
+        } else {
+          const params = new URLSearchParams({ email: result.user.email });
+          if (result.developmentCode) params.set("devCode", result.developmentCode);
+          if (!result.verificationSent) params.set("deliveryFailed", "1");
+          router.replace(`/verify-code?${params.toString()}`);
+        }
       } else if (mode === "verify") {
         await webAuth.confirmEmailVerification(form.email.trim(), code.join(""));
         router.replace("/get-started");

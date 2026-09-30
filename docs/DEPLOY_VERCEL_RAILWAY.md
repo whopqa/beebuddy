@@ -80,6 +80,12 @@ Không cần tự đặt `PORT` nếu Railway đã cấp biến này. Nếu dị
 
 Railway Trial/Free/Hobby **chặn SMTP**, nên `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` không giúp gửi email trên các gói này. Tạo tài khoản Resend và API key, nhập key **chỉ vào Railway Variables**, không gửi qua chat hoặc commit vào Git. Sender thử nghiệm `onboarding@resend.dev` chỉ phù hợp để gửi thử đến email của chính tài khoản Resend; trước khi cho người dùng khác đăng ký, cần [xác minh domain bạn sở hữu trên Resend](https://resend.com/docs/dashboard/domains/introduction) rồi đổi `EMAIL_FROM` thành địa chỉ ở domain đó (ví dụ `BeeBuddy <no-reply@your-domain.example>`). Domain `*.vercel.app` không phải domain bạn sở hữu để cấu hình DNS. Nếu dùng Railway Pro và muốn giữ SMTP, đặt `EMAIL_DELIVERY_MODE=smtp` cùng `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` hợp lệ.
 
+### Chế độ demo tạm thời khi chưa gửi được email
+
+Chỉ dùng cho buổi demo và chỉ sau khi đã deploy mã nguồn có hỗ trợ chế độ này. Trong **Railway → backend service → Variables**, thêm `DEMO_SKIP_EMAIL_VERIFICATION_UNTIL=2026-10-03T00:00:00+07:00` (thay bằng thời điểm kết thúc demo của bạn; tối đa 7 ngày từ lúc deploy). Redeploy backend. Đăng ký trên web sẽ không gửi email xác minh và tự đăng nhập bằng mật khẩu; tài khoản đã tạo nhưng chưa xác minh cũng đăng nhập được. Điều khoản sử dụng, chính sách quyền riêng tư, mật khẩu và kiểm tra tài khoản bị khóa vẫn giữ nguyên. Biến này không cần đặt trên Vercel.
+
+**Rủi ro:** mọi người có thể đăng ký bằng email họ không sở hữu trong thời gian demo. Tài khoản vẫn được lưu là *chưa xác minh*, không bị tự đánh dấu đã xác minh. Sau demo, **xóa biến trên Railway rồi redeploy**; đăng nhập mới và làm mới phiên của các tài khoản này sẽ yêu cầu xác minh email trở lại. Access token đã cấp có thể còn hiệu lực đến khi hết hạn; nếu cần chặn ngay, phải thu hồi phiên. Chức năng quên mật khẩu vẫn cần dịch vụ email hoạt động.
+
 Sau khi Railway deploy thành công, mở `https://<backend-domain>/health`; phải thấy JSON có `status: "ok"`. Healthcheck chỉ xác nhận server đã mở, không thay cho kiểm tra database hoặc email.
 
 ## 3. Nối web với backend và các dịch vụ ngoài

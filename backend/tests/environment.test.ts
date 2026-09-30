@@ -76,4 +76,20 @@ describe("parseEnvironment", () => {
       JWT_REFRESH_SECRET: validEnvironment.JWT_SECRET,
     })).toThrow(/phải khác nhau/);
   });
+
+  it("accepts a short demo expiry and rejects an indefinite bypass", () => {
+    const until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    expect(parseEnvironment({
+      ...validEnvironment,
+      DEMO_SKIP_EMAIL_VERIFICATION_UNTIL: until,
+    }).DEMO_SKIP_EMAIL_VERIFICATION_UNTIL?.toISOString()).toBe(until);
+    expect(() => parseEnvironment({
+      ...validEnvironment,
+      DEMO_SKIP_EMAIL_VERIFICATION_UNTIL: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
+    })).toThrow(/7 ngày/);
+    expect(() => parseEnvironment({
+      ...validEnvironment,
+      DEMO_SKIP_EMAIL_VERIFICATION_UNTIL: "2026-10-03T00:00:00",
+    })).toThrow(/múi giờ/);
+  });
 });
