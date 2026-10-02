@@ -104,7 +104,9 @@ Sau khi Railway deploy thành công, mở `https://<backend-domain>/health`; ph�
 node scripts/grant-admin.mjs email-da-xac-minh-cua-ban@example.com
 ```
 
-Có thể dùng `railway ssh --service <ten-backend-service> -- node scripts/grant-admin.mjs email@example.com` sau khi liên kết project CLI. Script chỉ nâng quyền tài khoản đã tồn tại, đã xác minh, không bị khóa; đồng thời ghi audit log. Đăng xuất và đăng nhập lại để nhận JWT có role mới. Không chạy seed demo để lấy admin.
+Có thể dùng `railway ssh --service <ten-backend-service> -- node scripts/grant-admin.mjs email@example.com` sau khi liên kết project CLI. Mặc định, script chỉ nâng quyền tài khoản đã tồn tại, đã xác minh, không bị khóa; đồng thời ghi audit log. Đăng xuất và đăng nhập lại để nhận JWT có role mới. Không chạy seed demo để lấy admin.
+
+Nếu Google và email verification chưa dùng được trong buổi demo: đăng ký tài khoản của **chính bạn** trước, rồi khi `DEMO_SKIP_EMAIL_VERIFICATION_UNTIL` vẫn còn hiệu lực, mở shell trong backend service Railway và chạy `node scripts/grant-admin.mjs email-cua-ban@example.com --demo-unverified`. Chỉ email được nêu trong lệnh được nâng quyền; script không tự xác minh email, không cấp quyền qua web và ghi ngoại lệ demo vào audit log. Kiểm tra email thật kỹ trước khi chạy; sau demo nên xác minh email của admin hoặc thu hồi quyền admin này. Không nhập email/mật khẩu của người khác và không chạy seed demo.
 
 ## 5. Kiểm thử sau deploy
 

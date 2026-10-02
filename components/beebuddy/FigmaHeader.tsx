@@ -9,7 +9,6 @@ import { notificationsApi } from "@/lib/notifications-client";
 
 export default function FigmaHeader({ authenticated = false, designHome = false }: { authenticated?: boolean; designHome?: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const [isAuth, setIsAuth] = useState(authenticated);
   const [user, setUser] = useState<WebUser | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -41,6 +40,7 @@ export default function FigmaHeader({ authenticated = false, designHome = false 
   }, []);
 
   const homePath = isAuth ? "/home" : "/";
+  const hasCustomAvatar = Boolean(user?.profile?.avatarUrl && !user.profile.avatarUrl.includes("/assets/"));
 
   return (
     <>
@@ -115,49 +115,17 @@ export default function FigmaHeader({ authenticated = false, designHome = false 
               </Link>
 
               <div className="bb-topbar-avatar-wrap">
-                <button
-                  className="bb-topbar-avatar-btn"
-                  type="button"
-                  onClick={() => setAccountOpen(!accountOpen)}
-                  aria-expanded={accountOpen}
-                  aria-haspopup="menu"
-                  aria-label="Account menu"
+                <Link
+                  className={`bb-topbar-avatar-btn ${hasCustomAvatar ? "" : "is-default-avatar"}`}
+                  href="/account"
+                  aria-label="Account Info"
                 >
                   <img
-                    src={user?.profile?.avatarUrl || "/assets/home/figma-buzzy.png"}
+                    src={hasCustomAvatar ? user?.profile?.avatarUrl || "" : "/assets/home/OngChuaGanAvatar.png"}
                     alt="User Avatar"
                     className="bb-topbar-avatar-img"
                   />
-                </button>
-
-                {accountOpen && (
-                  <div className="bb-topbar-dropdown-menu" role="menu">
-                    <div className="bb-dropdown-user-header">
-                      <strong>{user?.profile?.fullName || "BeeBuddy Member"}</strong>
-                      <span>{user?.email || ""}</span>
-                    </div>
-                    <div className="bb-dropdown-divider" />
-                    <AccountMenuItem href="/account" icon="account-user.svg" label="Account Info" close={() => setAccountOpen(false)} />
-                    <AccountMenuItem href="/billing" icon="account-billing.svg" label="Billing" close={() => setAccountOpen(false)} />
-                    <AccountMenuItem href="/security" icon="account-security.svg" label="Security" close={() => setAccountOpen(false)} />
-                    <AccountMenuItem href="/help" icon="account-help.svg" label="Help & Support" close={() => setAccountOpen(false)} />
-                    <AccountMenuItem href="/settings" icon="account-settings.svg" label="Settings" close={() => setAccountOpen(false)} />
-                    <div className="bb-dropdown-divider" />
-                    <AccountMenuItem
-                      href="/"
-                      icon="account-logout.svg"
-                      label="Log out"
-                      close={() => {
-                        setAccountOpen(false);
-                        void webAuth.logout().finally(() => {
-                          setUser(null);
-                          setIsAuth(false);
-                          window.location.href = "/";
-                        });
-                      }}
-                    />
-                  </div>
-                )}
+                </Link>
               </div>
             </div>
           )}
@@ -183,24 +151,5 @@ export default function FigmaHeader({ authenticated = false, designHome = false 
         </div>
       )}
     </>
-  );
-}
-
-function AccountMenuItem({
-  href,
-  icon,
-  label,
-  close,
-}: {
-  href: string;
-  icon: string;
-  label: string;
-  close: () => void;
-}) {
-  return (
-    <Link href={href} role="menuitem" onClick={close} className="bb-dropdown-item">
-      <img src={`/assets/ui/${icon}`} alt="" className="bb-dropdown-icon" />
-      <span>{label}</span>
-    </Link>
   );
 }

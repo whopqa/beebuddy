@@ -1750,8 +1750,11 @@
   font-family: "Dongle", sans-serif;
   font-size: clamp(140px, 15vw, 208px);
   font-weight: 700;
-  color: #fbbf24;
-  opacity: 0.18;
+  color: transparent;
+  background: linear-gradient(90deg, #ffe4a3 0%, #ffd1b9 28%, #f3b9d8 56%, #c6a6ff 79%, #9edff1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  opacity: 0.6;
   user-select: none;
   pointer-events: none;
   letter-spacing: -2px;
@@ -1761,27 +1764,54 @@
 
 .bb-settings-brand-title-row {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 5px;
   position: relative;
   z-index: 2;
-  margin-bottom: 20px;
+  min-height: 104px;
+  margin-bottom: 8px;
 }
 
+.bb-settings-mascot-lockup {
+  position: relative;
+  width: 140px;
+  height: 104px;
+  flex: none;
+}
+.bb-settings-mascot-trail {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 36px;
+  width: 104px;
+  height: 100px;
+  background: url('/assets/buzzy/settings_mascot_brush.png') center / contain no-repeat;
+  pointer-events: none;
+}
 .bb-settings-mascot-head {
-  width: 68px;
-  height: 68px;
+  position: absolute;
+  z-index: 1;
+  left: -10px;
+  bottom: -12px;
+  width: 150px;
+  height: 135px;
   object-fit: contain;
   filter: drop-shadow(0 6px 14px rgba(251, 146, 60, 0.25));
 }
 
 .bb-settings-page-title {
   font-family: "Dongle", sans-serif;
-  font-size: clamp(64px, 6vw, 84px);
+  font-size: clamp(76px, 6vw, 88px);
   font-weight: 700;
-  color: #ff7300;
+  color: transparent;
+  background: linear-gradient(180deg, #ffbe00 0%, #ff8a00 58%, #e96800 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 1px rgba(177, 78, 0, .28));
   margin: 0;
-  line-height: 0.85;
+  line-height: 0.82;
+  letter-spacing: .4px;
+  transform: translateY(-7px);
 }
 
 .bb-settings-pill-nav {
@@ -1792,22 +1822,24 @@
   max-width: 1300px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 6px 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  border-radius: 12px 12px 0 0;
+  padding: 8px 12px;
+  box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.17), 0 2px 5px rgba(0, 0, 0, 0.03);
   position: relative;
   z-index: 2;
   margin-bottom: 28px;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .bb-settings-tab-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 24px;
-  border-radius: 8px;
+  min-height: 34px;
+  padding: 7px 24px;
+  border-radius: 999px;
   border: none;
   background: transparent;
   color: #4b5563;
@@ -1821,20 +1853,41 @@
 }
 
 .bb-settings-tab-btn:hover {
-  background: #f9fafb;
-  color: #111827;
+  background: #fff7ec;
+  color: #d76a00;
 }
 
 .bb-settings-tab-btn.is-active {
-  background: linear-gradient(135deg, #ff7300, #ffb700);
+  background: linear-gradient(90deg, #ff7300, #ff9b00 54%, #ffc400);
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(255, 115, 0, 0.35);
+  box-shadow: 0 0 0 7px rgba(238, 220, 205, .78), 0 4px 12px rgba(255, 115, 0, 0.28);
+}
+.bb-settings-tab-btn.is-active::after {
+  content: "";
+  position: absolute;
+  right: -24px;
+  bottom: -9px;
+  left: -24px;
+  height: 2px;
+  background: linear-gradient(90deg, #ff7300, #ff9900);
 }
 
 .bb-tab-icon {
   display: flex;
   align-items: center;
+}
+
+@media (max-width: 760px) {
+  .bb-settings-giant-watermark { top: -8px; right: 0; font-size: 110px; }
+  .bb-settings-brand-title-row { min-height: 78px; gap: 3px; }
+  .bb-settings-mascot-lockup { width: 104px; height: 78px; }
+  .bb-settings-mascot-head { left: -7px; bottom: -9px; width: 112px; height: 100px; }
+  .bb-settings-mascot-trail { top: 0; left: 27px; width: 77px; height: 75px; }
+  .bb-settings-page-title { font-size: 62px; }
+  .bb-settings-pill-nav { justify-content: flex-start; overflow-x: auto; overflow-y: hidden; }
+  .bb-settings-tab-btn { flex: 0 0 auto; min-width: 150px; }
+  .bb-settings-tab-btn.is-active::after { display: none; }
 }
 
 /* Guest Banner Row matching Figma 347:1286 / 381:289 / 436:537 */
@@ -2103,6 +2156,11 @@
   object-fit: cover;
   flex: none;
 }
+.bb-settings-account-details > img.is-default-avatar {
+  padding: 3px;
+  background: linear-gradient(135deg, #ff7300 0%, #fecc07 100%);
+  object-fit: contain;
+}
 .bb-settings-account-details dl { margin: 0; display: grid; gap: 10px; }
 .bb-settings-account-details dl > div { display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 15px; }
 .bb-settings-account-details dt { color: #929292; font-size: 13px; }
@@ -2344,6 +2402,8 @@
 .bb-color-dot {
   width: 16px;
   height: 16px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.16);
   border-radius: 50%;
   display: inline-block;
 }
@@ -2661,7 +2721,7 @@
 .bb-account-edit-stage .bb-detail-item-val { width: 100%; min-width: 0; max-width: none; border: 0; border-bottom: 1px solid #b9b9b9; border-radius: 0; background: transparent; color: #444; font: inherit; font-size: 12px; text-align: right; padding: 4px 0; outline-color: #ff9000; }
 .bb-account-edit-stage textarea.bb-detail-item-val { resize: vertical; min-height: 38px; }
 .bb-account-edit-stage .bb-edit-row .bb-color-dots-row { justify-self: end; }
-.bb-account-edit-stage .bb-edit-row:has(.bb-color-dots-row) { grid-template-columns: minmax(240px, 1fr) auto minmax(180px, .6fr); }
+.bb-account-edit-stage .bb-favorite-colors-control { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; }
 .bb-account-edit-stage .bb-edit-detail-list { display: flex; flex-direction: column; }
 .bb-account-edit-stage .bb-edit-gallery-section { padding-top: 18px; }
 .bb-account-edit-stage .bb-edit-gallery-section .label { display: block; font-size: 12px; color: #888; margin-bottom: 12px; }
@@ -2677,8 +2737,8 @@
   .bb-account-canvas .bb-profile-tags-grid { grid-template-columns: 1fr; }
   .bb-account-canvas .bb-profile-tags-grid > * { grid-column: auto !important; grid-row: auto !important; }
   .bb-account-edit-stage .bb-edit-row,
-  .bb-account-edit-stage .bb-detail-item,
-  .bb-account-edit-stage .bb-edit-row:has(.bb-color-dots-row) { grid-template-columns: 1fr; gap: 8px; padding: 12px 0; }
+  .bb-account-edit-stage .bb-detail-item { grid-template-columns: 1fr; gap: 8px; padding: 12px 0; }
+  .bb-account-edit-stage .bb-favorite-colors-control { grid-template-columns: auto minmax(0, 1fr); }
   .bb-account-edit-stage .bb-edit-val-underlined,
   .bb-account-edit-stage .bb-detail-item-val { text-align: left; }
 }

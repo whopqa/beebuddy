@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, type Transition } from "motion/react";
 import FigmaHeader from "./FigmaHeader";
 import { webAuth } from "@/lib/auth-client";
@@ -151,16 +151,38 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
           </div>
         </section>
 
-        {/* 3. ABOUT US SECTION (Figma frames 61:123, 61:76, 80:266) */}
-        <section className="bb-intro-design" id="about" aria-labelledby="about-title">
-          <div className="bb-intro-snow-backdrop" style={{ backgroundImage: `url(${homeAsset("about_snowy_mountains_bg.png")})` }} />
+        <div className="bb-about-buzzy-sequence">
+          <div
+            className="bb-about-buzzy-snow-backdrop"
+            style={{ backgroundImage: `url(${homeAsset("about_snowy_mountains_bg.png")})` }}
+            aria-hidden="true"
+          />
+
+          {/* 3. ABOUT US SECTION (Figma frames 61:123, 61:76, 80:266) */}
+          <section className="bb-intro-design" id="about" aria-labelledby="about-title">
 
           {/* Giant Faint Background Wordmark */}
           <div className="bb-giant-watermark" aria-hidden="true">Beebuddy</div>
 
           {/* Floating Bee Mascot on the right */}
           <div className="bb-flying-bee-wrap" aria-hidden="true">
-            <img src={homeAsset("bee_about_flying_transparent.png")} alt="" className="bb-flying-bee" />
+            {reducedMotion ? (
+              <img src={homeAsset("bee_about_flying_transparent.png")} alt="" className="bb-flying-bee" />
+            ) : (
+              <video
+                className="bb-flying-bee bb-flying-bee-video"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                poster={homeAsset("bee_about_flying_transparent.png")}
+                disablePictureInPicture
+              >
+                <source src={homeAsset("OngBay.webm")} type="video/webm" />
+                <source src={homeAsset("OngBay.mp4")} type="video/mp4" />
+              </video>
+            )}
           </div>
 
           <div className="bb-intro-copy-card">
@@ -192,10 +214,10 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
           <div className="bb-kite-trail-wrap" aria-hidden="true">
             <img src={homeAsset("kite_trail_about.svg")} alt="" className="bb-kite-trail-img" />
           </div>
-        </section>
+          </section>
 
-        {/* 4. MEET BUZZY SECTION (Figma frame 110:74, 270:1426-1429) */}
-        <section className="bb-buzzy-showcase" id="meet-buzzy" aria-labelledby="buzzy-showcase-title">
+          {/* 4. MEET BUZZY SECTION (Figma frame 110:74, 270:1426-1429) */}
+          <section className="bb-buzzy-showcase" id="meet-buzzy" aria-labelledby="buzzy-showcase-title">
           <div className="bb-buzzy-left-column">
             <div className="bb-buzzy-character-stage">
               <img
@@ -236,7 +258,21 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
               Say Hi to Buzzy <span>→</span>
             </Link>
           </div>
-        </section>
+          </section>
+
+          <div className="bb-about-services-wave" aria-hidden="true">
+            <svg viewBox="0 0 1440 190" preserveAspectRatio="none">
+              <path
+                className="bb-about-services-wave-back"
+                d="M0 55C132 23 255 96 395 78C544 58 598 18 735 38C894 62 988 117 1133 84C1249 58 1338 40 1440 66V190H0Z"
+              />
+              <path
+                className="bb-about-services-wave-front"
+                d="M0 104C145 74 273 134 420 119C574 103 634 72 778 89C924 106 1038 146 1178 117C1279 96 1366 89 1440 108V190H0Z"
+              />
+            </svg>
+          </div>
+        </div>
 
         {/* 5. SERVICES SECTION (Figma frames 119:286, 181:1165, 186:1179-1199 with staggered rows and vertical typography) */}
         <section className="bb-services-showcase" id="services" aria-labelledby="services-showcase-title">
@@ -255,10 +291,34 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
             <h2 id="services-showcase-title" className="sr-only">Services</h2>
 
             <div className="bb-services-staggered-list">
-              <InteractiveServiceRow number="01" title="Find Your People" side="left" />
-              <InteractiveServiceRow number="02" title="Shared Adventures" side="right" />
-              <InteractiveServiceRow number="03" title="Stories That Stay" side="left" />
-              <InteractiveServiceRow number="04" title="Build Your Circle" side="right" />
+              <InteractiveServiceRow
+                number="01"
+                title="Find Your People"
+                side="left"
+                image="home-02.png"
+                description="Connect with people who share your passions, energy, and way of exploring."
+              />
+              <InteractiveServiceRow
+                number="02"
+                title="Shared Adventures"
+                side="right"
+                image="home-04.png"
+                description="Turn shared interests into meaningful adventures and experiences together."
+              />
+              <InteractiveServiceRow
+                number="03"
+                title="Stories That Stay"
+                side="left"
+                image="home-08.png"
+                description="Create memorable moments and stories that stay with you beyond the journey."
+              />
+              <InteractiveServiceRow
+                number="04"
+                title="Build Your Circle"
+                side="right"
+                image="home-20.png"
+                description="Grow a welcoming circle built around trust, connection, and belonging."
+              />
             </div>
 
             {/* Giant Vertical Artwork from Figma on Far Right */}
@@ -592,17 +652,47 @@ function InteractiveTraitPill({ icon, label }: { icon: string; label: string }) 
   );
 }
 
-/** Staggered Service Row with Mouse-in Line Expansion */
-function InteractiveServiceRow({ number, title, side }: { number: string; title: string; side: "left" | "right" }) {
+/** Staggered service row that reveals a photographic detail card on hover. */
+function InteractiveServiceRow({
+  number,
+  title,
+  side,
+  image,
+  description,
+}: {
+  number: string;
+  title: string;
+  side: "left" | "right";
+  image: string;
+  description: string;
+}) {
   const [hovered, setHovered] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showCard = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setHovered(true);
+  };
+
+  const hideCard = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setHovered(false), 90);
+  };
+
+  useEffect(() => () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+  }, []);
 
   return (
-    <div
-      className={`bb-service-stagger-item ${side} ${hovered ? "is-hovered" : ""}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="bb-service-item-head">
+    <div className={`bb-service-stagger-item ${side} ${hovered ? "is-hovered" : ""}`}>
+      <div
+        className="bb-service-item-head"
+        onMouseEnter={showCard}
+        onMouseLeave={hideCard}
+        onFocus={showCard}
+        onBlur={hideCard}
+        tabIndex={0}
+      >
         <span className="bb-service-num">{number}</span>
         <div className="bb-service-dotted-line" />
         <span className="bb-service-title">{title}</span>
@@ -613,6 +703,22 @@ function InteractiveServiceRow({ number, title, side }: { number: string; title:
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
+
+      <div
+        className="bb-service-hover-card"
+        aria-hidden={!hovered}
+        onMouseEnter={showCard}
+        onMouseLeave={hideCard}
+      >
+        <img className="bb-service-hover-image" src={homeAsset(image)} alt="" />
+        <div className="bb-service-hover-overlay" />
+        <div className="bb-service-hover-content">
+          <span className="bb-service-hover-number">{number}</span>
+          <span className="bb-service-hover-title">{title}</span>
+          <p>{description}</p>
+        </div>
+        <div className="bb-service-hover-accent" />
+      </div>
     </div>
   );
 }

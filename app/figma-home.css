@@ -34,10 +34,10 @@
   .bb-design-site { position: relative; }
   /* Header/Hero/feature cards are maintained in figma-home-intro.css. */
   .bb-design-site .bb-intro-design { height: 1060px; padding: 0; overflow: visible; }
-  .bb-design-site .bb-intro-snow-backdrop { top: 514px; opacity: .2; }
-  .bb-design-site .bb-giant-watermark { left: -8px; top: -15px; transform: none; font-size: 546.659px; line-height: normal; letter-spacing: normal; }
-  .bb-design-site .bb-flying-bee-wrap { left: calc(75% + 15px); right: auto; top: 282px; }
-  .bb-design-site .bb-intro-copy-card { position: absolute; top: 361px; left: calc(16.6667% + 104px); width: 705px; margin: 0; }
+  .bb-design-site .bb-about-buzzy-snow-backdrop { opacity: .18; }
+  .bb-design-site .bb-giant-watermark { left: 0; top: -145px; width: 100%; transform: none; font-size: min(480px,31.25vw); line-height: normal; letter-spacing: normal; text-align: center; }
+  .bb-design-site .bb-flying-bee-wrap { left: calc(50% + 415px); right: auto; top: 282px; }
+  .bb-design-site .bb-intro-copy-card { position: absolute; top: 361px; left: calc(50% - 376px); width: 705px; margin: 0; }
   .bb-design-site .bb-intro-title-wrap { display: flex; margin: 0 0 0 26px; }
   .bb-design-site .bb-intro-title-bar { display: none; }
   .bb-design-site .bb-brand-year { margin: 0 0 18px 26px; color: #000; }
@@ -47,7 +47,7 @@
   .bb-design-site .bb-kite-trail-wrap { top: 592px; bottom: auto; left: -8px; width: calc(100% + 19px); height: 351.853px; }
   .bb-design-site .bb-kite-trail-img { height: 100%; }
   .bb-design-site .bb-buzzy-showcase { width: 100%; max-width: none; height: 790px; margin: 0; padding: 0; display: block; }
-  .bb-design-site .bb-buzzy-left-column { position: absolute; left: 70px; top: 16px; }
+  .bb-design-site .bb-buzzy-left-column { position: absolute; left: calc(var(--bb-desktop-frame-offset) + 70px); top: 16px; }
   .bb-design-site .bb-buzzy-mascot-img { filter: none; }
   .bb-design-site .bb-buzzy-aura-glow { display: none; }
   .bb-design-site .bb-buzzy-traits-container { position: absolute; left: 98px; top: 603px; margin: 0; }
@@ -56,6 +56,7 @@
   .bb-design-site .bb-buzzy-title-sunburst { position: absolute; left: 0; top: 60px; margin: 0; }
   .bb-design-site .bb-buzzy-right-column p { position: absolute; left: 8px; top: 147px; width: 480px; line-height: normal; text-align: justify; margin: 0; }
   .bb-design-site .bb-buzzy-cta-pill { position: absolute; left: 8px; top: 283px; }
+  .bb-design-site .bb-about-services-wave { bottom: -92px; height: 190px; }
   .bb-design-site .bb-services-showcase { height: 925px; min-height: 0; margin: 0; padding: 0; overflow: visible; }
   .bb-design-site .bb-services-inner { height: 100%; min-height: 0; max-width: none; }
   .bb-design-site .bb-services-staggered-list { position: absolute; inset: 0; max-width: none; display: block; }
@@ -64,22 +65,26 @@
   .bb-design-site .bb-service-stagger-item:nth-child(2) { top: 260px; }
   .bb-design-site .bb-service-stagger-item:nth-child(3) { top: 425px; }
   .bb-design-site .bb-service-stagger-item:nth-child(4) { top: 585px; }
-  .bb-design-site .bb-service-item-head { position: absolute; left: calc(8.3333% + 29px); width: max-content; }
-  .bb-design-site .bb-service-stagger-item:nth-child(2) .bb-service-item-head { left: calc(58.3333% + 55px); }
-  .bb-design-site .bb-service-stagger-item:nth-child(3) .bb-service-item-head { left: calc(8.3333% + 44px); }
-  .bb-design-site .bb-service-stagger-item:nth-child(4) .bb-service-item-head { left: calc(58.3333% + 68px); }
+  .bb-design-site .bb-service-item-head { position: absolute; left: calc(50% - 571px); width: max-content; }
+  .bb-design-site .bb-service-stagger-item:nth-child(2) .bb-service-item-head { left: calc(50% + 175px); }
+  .bb-design-site .bb-service-stagger-item:nth-child(3) .bb-service-item-head { left: calc(50% - 556px); }
+  .bb-design-site .bb-service-stagger-item:nth-child(4) .bb-service-item-head { left: calc(50% + 188px); }
+  .bb-design-site .bb-service-hover-card { left: calc(50% - 571px); }
+  .bb-design-site .bb-service-stagger-item:nth-child(2) .bb-service-hover-card { left: calc(50% + 175px); }
+  .bb-design-site .bb-service-stagger-item:nth-child(3) .bb-service-hover-card { left: calc(50% - 556px); }
+  .bb-design-site .bb-service-stagger-item:nth-child(4) .bb-service-hover-card { left: calc(50% + 188px); }
   .bb-design-site .bb-service-num { line-height: normal; }
   .bb-design-site .bb-service-dotted-line { position: absolute; top: 77px; width: 100%; margin: 0; border-bottom-width: 1px; }
   .bb-design-site .bb-service-title { line-height: normal; }
-  .bb-design-site .bb-service-accent-bar { position: absolute; left: -7px; top: 138px; margin: 0; border-radius: 5px; box-shadow: inset 0 4px 4px rgba(0,0,0,.25); }
-  .bb-design-site .bb-service-stagger-item:nth-child(2) .bb-service-accent-bar { top: 145px; left: calc(33.3333% + 41px); }
+  .bb-design-site .bb-service-accent-bar { position: absolute; left: calc(var(--bb-desktop-frame-offset) - 7px); top: 138px; margin: 0; border-radius: 5px; box-shadow: inset 0 4px 4px rgba(0,0,0,.25); }
+  .bb-design-site .bb-service-stagger-item:nth-child(2) .bb-service-accent-bar { top: 145px; left: calc(50% - 199px); }
   .bb-design-site .bb-service-stagger-item:nth-child(3) .bb-service-accent-bar { top: 140px; }
-  .bb-design-site .bb-service-stagger-item:nth-child(4) .bb-service-accent-bar { top: 148px; left: calc(33.3333% + 41px); width: 422px; }
-  .bb-design-site .bb-services-vertical-art-wrap { top: -57px; right: -44px; width: 346px; }
+  .bb-design-site .bb-service-stagger-item:nth-child(4) .bb-service-accent-bar { top: 148px; left: calc(50% - 199px); width: 422px; }
+  .bb-design-site .bb-services-vertical-art-wrap { top: -57px; right: calc(var(--bb-desktop-frame-offset) - 44px); width: 346px; }
   .bb-design-site .bb-ticker-strip-wrap { margin-bottom: 1px; border: 0; background: linear-gradient(#f5f5f5,#f3f3f2); }
   .bb-design-site .bb-solid-orange-accent-band { font-family: "Dongle",sans-serif; font-size: 22px; }
   .bb-design-site .bb-community-showcase { margin: 21px 0 0; padding: 0; height: 1306px; max-width: none; }
-  .bb-design-site .bb-community-header-block { position: absolute; left: 90px; top: 0; margin: 0; }
+  .bb-design-site .bb-community-header-block { position: absolute; left: calc(var(--bb-desktop-frame-offset) + 90px); top: 0; margin: 0; }
   .bb-design-site .bb-community-header-block h2 { line-height: normal; margin: 0; background-image: linear-gradient(#fecc07,#ff7300); }
   .bb-design-site .bb-member-proof-row { position: absolute; top: 132px; margin: 0; width: 360px; }
   .bb-design-site .bb-member-label { position: absolute; left: 209px; top: 5px; width: 128px; font-family: "Dongle",sans-serif; font-size: 20px; font-weight: 400; color: #9ca3af; }
@@ -88,7 +93,7 @@
   .bb-design-site .bb-community-subhead-row strong { font-size: 14px; width: 270px; }
   .bb-design-site .bb-community-subhead-row p { font-size: 12px; white-space: nowrap; }
   .bb-design-site .bb-community-cards-stage { position: absolute; top: 286px; width: 100%; height: 1020px; max-width: none; margin: 0; }
-  .bb-design-site .card-top-left, .bb-design-site .card-bottom-left { left: 90px; }
+  .bb-design-site .card-top-left, .bb-design-site .card-bottom-left { left: calc(var(--bb-desktop-frame-offset) + 90px); }
   .bb-design-site .card-mid-right { left: calc(50% + 73px); right: auto; }
   .bb-design-site .bb-community-card-frame { border-color: #686868; border-radius: 0 50px 0 50px; background: linear-gradient(#ffa100,#e0e0e0); box-shadow: none; }
   .bb-design-site .bb-community-card-unit:hover .bb-community-card-frame { transform: none; box-shadow: none; }
@@ -143,14 +148,14 @@
   .bb-design-site .card-bottom-left .bb-community-hover-overlay { top: 12.05%; }
   .bb-design-site .card-bottom-left .bb-community-hover-layer > p { top: 66.45%; }
   .bb-design-site .card-bottom-left .bb-community-members { left: 69.48%; top: 77.2%; }
-  .bb-design-site .bb-concentric-rings { top: -286px; left: calc(83.3333% + 5px); right: auto; }
+  .bb-design-site .bb-concentric-rings { top: -286px; left: calc(50% + 485px); right: auto; }
   .bb-design-site .bb-footer-showcase { height: 1000px; min-height: 0; padding: 0; display: block; }
   .bb-design-site .bb-footer-mountains-backdrop { top: 300px; bottom: auto; height: 811px; }
   .bb-design-site .bb-footer-top-grid { position: absolute; inset: 0; max-width: none; display: block; }
-  .bb-design-site .bb-footer-nav-columns { position: absolute; top: 306px; left: 103px; width: 710px; grid-template-columns: 156px 187px 180px 1fr; gap: 40px; }
+  .bb-design-site .bb-footer-nav-columns { position: absolute; top: 306px; left: calc(var(--bb-desktop-frame-offset) + 103px); width: 710px; grid-template-columns: 156px 187px 180px 1fr; gap: 40px; }
   .bb-design-site .bb-footer-col h4 { font-size: 20px; margin-bottom: 30px; }
   .bb-design-site .bb-footer-col a { font-size: 12px; line-height: 1.4; letter-spacing: -.6px; }
-  .bb-design-site .bb-footer-tagline-block { position: absolute; left: calc(66.6667% - 25px); top: 265px; width: 498px; }
+  .bb-design-site .bb-footer-tagline-block { position: absolute; left: calc(50% + 215px); top: 265px; width: 498px; }
   .bb-design-site .bb-tagline-meet, .bb-design-site .bb-tagline-connect, .bb-design-site .bb-tagline-grow { line-height: 1.2; font-weight: 300; margin: 0; }
   .bb-design-site .bb-tagline-grow { font-weight: 500; }
   .bb-design-site .bb-tagline-sub { margin-top: 26px; font-size: 15px; }

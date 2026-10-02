@@ -229,8 +229,14 @@
 
 /* Landing page translation from Figma frame 1:2 & prototype.
    1440px desktop baseline with fluid responsiveness and micro-interactions. */
-.bb-design-site { background: #fff; color: #131313; font-family: "Afacad Flux", "Trebuchet MS", Arial, sans-serif; overflow-x: hidden; }
-.bb-canvas { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; background: #fff; }
+.bb-design-site {
+  --bb-desktop-frame-offset: max(0px, calc((100vw - 1440px) / 2));
+  background: #fff;
+  color: #131313;
+  font-family: "Afacad Flux", "Trebuchet MS", Arial, sans-serif;
+  overflow-x: hidden;
+}
+.bb-canvas { position: relative; width: 100%; margin: 0; background: #fff; }
 
 /* Floating Social Media Rail on Left */
 .bb-social-rail {
@@ -408,21 +414,50 @@
 }
 
 /* 3. About Us Section (Figma 61:123, 61:76, 80:266) */
-.bb-intro-design {
+.bb-about-buzzy-sequence {
   position: relative;
-  padding: 120px 24px 140px;
-  overflow: hidden;
   background: #ffffff;
+  isolation: isolate;
 }
-.bb-intro-snow-backdrop {
+.bb-about-services-wave {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: -62px;
+  left: 0;
+  height: 138px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bb-about-services-wave svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bb-about-services-wave-back {
+  fill: rgba(232, 238, 242, 0.72);
+}
+.bb-about-services-wave-front {
+  fill: rgba(255, 255, 255, 0.88);
+}
+.bb-about-buzzy-snow-backdrop {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background-size: cover;
   background-position: center top;
-  opacity: 0.25;
+  background-repeat: no-repeat;
+  opacity: 0.18;
   pointer-events: none;
-  mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.8) 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.8) 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, transparent 18%, rgba(0, 0, 0, 0.72) 34%, #000 48%, #000 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 18%, rgba(0, 0, 0, 0.72) 34%, #000 48%, #000 100%);
+}
+.bb-intro-design {
+  position: relative;
+  z-index: 1;
+  padding: 120px 24px 140px;
+  overflow: hidden;
+  background: transparent;
 }
 .bb-giant-watermark {
   position: absolute;
@@ -448,10 +483,50 @@
   position: absolute;
   right: 12%;
   top: 120px;
-  width: 261px;
+  width: 170px;
+  height: 108px;
   z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: darken;
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at center, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at center, #000 58%, transparent 100%);
+  animation: bb-flying-bee-patrol 5.5s ease-in-out infinite;
+  will-change: transform;
 }
-.bb-flying-bee { width: 100%; height: auto; filter: drop-shadow(0 12px 28px rgba(255, 140, 0, 0.25)); }
+.bb-flying-bee {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 12px 28px rgba(255, 140, 0, 0.25));
+}
+.bb-flying-bee-video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 270px;
+  max-width: none;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+}
+@keyframes bb-flying-bee-patrol {
+  0%, 100% { transform: translate3d(-18px, 3px, 0) rotate(-1.5deg); }
+  50% { transform: translate3d(18px, -8px, 0) rotate(1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-flying-bee-wrap { animation: none; }
+}
+@media (max-width: 760px) {
+  .bb-flying-bee-wrap {
+    top: 65px;
+    right: 4px;
+    width: 130px;
+    height: 84px;
+  }
+  .bb-flying-bee-video { width: 210px; }
+}
 .bb-intro-copy-card {
   position: relative;
   z-index: 3;
@@ -529,6 +604,7 @@
   padding: 0 24px;
   position: relative;
   z-index: 3;
+  background: transparent;
 }
 .bb-buzzy-left-column { display: flex; flex-direction: column; align-items: center; width: 623px; flex-shrink: 0; }
 .bb-buzzy-character-stage { position: relative; width: 623px; height: 610px; display: grid; place-items: center; }
@@ -656,10 +732,21 @@
 }
 .bb-services-inner { position: relative; min-height: 964px; max-width: 1400px; margin: 0 auto; }
 .bb-services-staggered-list { display: flex; flex-direction: column; gap: 48px; max-width: 1100px; }
-.bb-service-stagger-item { width: 410px; cursor: pointer; transition: transform 0.2s ease; }
+.bb-service-stagger-item {
+  position: relative;
+  width: 410px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.2s ease;
+}
 .bb-service-stagger-item.left { align-self: flex-start; margin-left: 100px; }
 .bb-service-stagger-item.right { align-self: flex-end; margin-right: 180px; }
-.bb-service-item-head { display: flex; flex-direction: column; gap: 0; }
+.bb-service-item-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
 .bb-service-num {
   font-family: "Afacad Flux", sans-serif;
   font-size: 65px;
@@ -690,6 +777,7 @@
   margin-top: 14px;
   transform-origin: left center;
   box-shadow: 0 4px 12px rgba(255, 115, 0, 0.25);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 .bb-service-stagger-item.right .bb-service-accent-bar {
   background: linear-gradient(90deg, #ff7300, #fecc07);
@@ -697,6 +785,140 @@
 .bb-service-stagger-item:hover .bb-service-num,
 .bb-service-stagger-item:hover .bb-service-title {
   color: #ff8500;
+}
+.bb-service-hover-card {
+  position: absolute;
+  z-index: 8;
+  top: -24px;
+  left: 0;
+  width: 360px;
+  height: 300px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  background: #1d2526;
+  box-shadow: 0 16px 36px rgba(17, 24, 39, 0.24);
+  opacity: 0;
+  visibility: hidden;
+  clip-path: inset(8% 6% 8% 6% round 24px);
+  filter: saturate(0.82) blur(2px);
+  transform: translateY(18px) scale(0.94) rotate(-0.6deg);
+  transform-origin: center;
+  transition:
+    opacity 0.24s ease,
+    transform 0.42s cubic-bezier(0.2, 0.82, 0.2, 1),
+    clip-path 0.42s cubic-bezier(0.2, 0.82, 0.2, 1),
+    filter 0.32s ease,
+    visibility 0.24s ease;
+}
+.bb-service-hover-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.13) translateY(7px);
+  transition: transform 0.8s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+.bb-service-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 13, 15, 0.48) 0%, rgba(9, 13, 15, 0.12) 42%, rgba(9, 13, 15, 0.82) 100%),
+    linear-gradient(90deg, rgba(9, 13, 15, 0.3), transparent 70%);
+}
+.bb-service-hover-content {
+  position: absolute;
+  inset: 24px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.38);
+}
+.bb-service-hover-number {
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 54px;
+  font-weight: 500;
+  line-height: 0.9;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease 0.08s, transform 0.35s ease 0.08s;
+}
+.bb-service-hover-title {
+  margin-top: 8px;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.1;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease 0.12s, transform 0.35s ease 0.12s;
+}
+.bb-service-hover-content p {
+  max-width: 295px;
+  margin: auto 0 0;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.35;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.28s ease 0.16s, transform 0.38s ease 0.16s;
+}
+.bb-service-hover-accent {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 54%;
+  height: 13px;
+  border-radius: 7px 0 0;
+  background: linear-gradient(90deg, #ff8500, #fecc07);
+  box-shadow: inset 0 3px 3px rgba(0, 0, 0, 0.16);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.45s cubic-bezier(0.2, 0.82, 0.2, 1) 0.1s;
+}
+.bb-service-stagger-item.is-hovered {
+  z-index: 9;
+}
+.bb-service-stagger-item.is-hovered .bb-service-item-head {
+  opacity: 0;
+  visibility: hidden;
+}
+.bb-service-stagger-item.is-hovered .bb-service-hover-card {
+  opacity: 1;
+  visibility: visible;
+  clip-path: inset(0 round 20px);
+  filter: saturate(1) blur(0);
+  transform: translateY(0) scale(1) rotate(0);
+}
+.bb-service-stagger-item.is-hovered .bb-service-hover-image {
+  transform: scale(1.03) translateY(0);
+}
+.bb-service-stagger-item.is-hovered .bb-service-hover-number,
+.bb-service-stagger-item.is-hovered .bb-service-hover-title,
+.bb-service-stagger-item.is-hovered .bb-service-hover-content p {
+  opacity: 1;
+  transform: translateY(0);
+}
+.bb-service-stagger-item.is-hovered .bb-service-hover-accent {
+  transform: scaleX(1);
+}
+.bb-service-item-head:focus-visible {
+  border-radius: 8px;
+  outline: 3px solid rgba(255, 133, 0, 0.55);
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-service-hover-card,
+  .bb-service-hover-image,
+  .bb-service-hover-number,
+  .bb-service-hover-title,
+  .bb-service-hover-content p,
+  .bb-service-hover-accent {
+    transition-duration: 0.01ms;
+    transition-delay: 0ms;
+  }
 }
 .bb-services-vertical-art-wrap {
   position: absolute;
@@ -1853,6 +2075,9 @@
   justify-content: center;
   transition: all 0.2s ease;
 }
+.bb-topbar-avatar-btn.is-default-avatar {
+  background: linear-gradient(135deg, #ff7300 0%, #fecc07 100%);
+}
 .bb-topbar-avatar-btn:hover {
   border-color: #ff7300;
   transform: scale(1.05);
@@ -1861,6 +2086,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.bb-topbar-avatar-btn.is-default-avatar .bb-topbar-avatar-img {
+  width: 126%;
+  height: 126%;
+  object-fit: contain;
 }
 .bb-topbar-dropdown-menu {
   position: absolute;
@@ -2330,6 +2560,166 @@
 .bb-growth-invite-btn:hover {
   background: #e66700;
   transform: translateY(-1px);
+}
+
+/* Invite friends dialog */
+.bb-invite-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.25);
+  backdrop-filter: blur(1.5px);
+}
+.bb-invite-modal {
+  position: relative;
+  width: min(504px, calc(100vw - 32px));
+  padding: 28px 28px 30px;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.24);
+  color: #111827;
+}
+.bb-invite-modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-bottom: 20px;
+}
+.bb-invite-modal-header h2 {
+  margin: 0;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.bb-invite-close {
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.bb-invite-close:hover { background: #f3f4f6; color: #111827; }
+.bb-invite-share-list { display: grid; gap: 11px; }
+.bb-invite-share-option {
+  display: grid;
+  grid-template-columns: 42px 1fr 22px;
+  align-items: center;
+  min-height: 62px;
+  padding: 9px 17px;
+  border: 1px solid #dfe3e8;
+  border-radius: 999px;
+  color: #111827;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.bb-invite-share-option:hover {
+  border-color: #ff9a31;
+  box-shadow: 0 8px 20px rgba(255, 115, 0, 0.1);
+  transform: translateY(-1px);
+}
+.bb-invite-share-option > svg { justify-self: end; color: #dfe3e8; }
+.bb-invite-option-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ff7300, #ffb800);
+  color: #fff;
+}
+.bb-invite-social-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 80px;
+}
+.bb-invite-social-row a {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  transition: transform 0.2s ease;
+}
+.bb-invite-social-row a:hover { transform: translateY(-2px) scale(1.05); }
+.bb-invite-social-row img { display: block; width: 31px; height: 31px; object-fit: contain; }
+.bb-invite-social-row > svg { margin-left: 2px; color: #dfe3e8; }
+.bb-invite-divider { height: 1px; margin: 0 0 26px; background: #e5e7eb; }
+.bb-invite-link-label {
+  display: block;
+  margin-bottom: 9px;
+  color: #6b7280;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.bb-invite-link-row { display: flex; gap: 10px; }
+.bb-invite-link-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 54px;
+  padding: 0 14px;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #77808d;
+}
+.bb-invite-link-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #374151;
+  font: 400 15px "Afacad Flux", sans-serif;
+}
+.bb-invite-link-row > button {
+  min-width: 83px;
+  height: 50px;
+  align-self: center;
+  border: 0;
+  border-radius: 10px;
+  background: #ff7300;
+  color: #fff;
+  font: 600 15px "Afacad Flux", sans-serif;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.bb-invite-link-row > button:hover { background: #e66700; transform: translateY(-1px); }
+.bb-invite-link-row > button.is-copied { background: #16a34a; }
+
+@media (max-width: 560px) {
+  .bb-invite-modal-backdrop { padding: 16px; }
+  .bb-invite-modal { padding: 22px 18px 24px; }
+  .bb-invite-modal-header h2 { font-size: 20px; }
+  .bb-invite-share-option { min-height: 56px; padding: 7px 13px; font-size: 15px; }
+  .bb-invite-link-row { align-items: stretch; }
+  .bb-invite-link-field { height: 50px; }
+  .bb-invite-link-row > button { min-width: 76px; height: 50px; }
 }
 
 /* 3. EXPLORE SCREEN (Node 502:2348) */

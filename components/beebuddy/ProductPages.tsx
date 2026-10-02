@@ -31,6 +31,10 @@ import {
   BarChart3,
   Tag,
   CalendarDays,
+  Mail,
+  Link2,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import FigmaHeader from "./FigmaHeader";
 import FigmaFooter from "./FigmaFooter";
@@ -127,11 +131,11 @@ function ProductContent({ view, isLoggedIn, currentUser, onAuthenticated }: { vi
    ========================================================================== */
 function SettingsNavTabs({ active }: { active: "settings" | "account" | "billing" | "security" | "help" }) {
   const tabs = [
-    { key: "settings", label: "Settings", href: "/settings", icon: <SettingsIcon size={16} /> },
-    { key: "account", label: "Account Info", href: "/account", icon: <UserIcon size={16} /> },
-    { key: "billing", label: "Billing", href: "/billing", icon: <CreditCard size={16} /> },
-    { key: "security", label: "Security", href: "/security", icon: <Shield size={16} /> },
-    { key: "help", label: "Help & Support", href: "/help", icon: <HelpCircle size={16} /> },
+    { key: "settings", label: "Settings", href: "/settings", icon: <SettingsIcon size={20} /> },
+    { key: "account", label: "Account Info", href: "/account", icon: <UserIcon size={20} /> },
+    { key: "billing", label: "Billing", href: "/billing", icon: <CreditCard size={20} /> },
+    { key: "security", label: "Security", href: "/security", icon: <Shield size={20} /> },
+    { key: "help", label: "Help & Support", href: "/help", icon: <HelpCircle size={20} /> },
   ];
 
   return (
@@ -142,15 +146,18 @@ function SettingsNavTabs({ active }: { active: "settings" | "account" | "billing
       </div>
 
       <div className="bb-settings-brand-title-row">
-        <img
-          src="/assets/buzzy/buzzy_laptop_setting.png"
-          alt="Buzzy mascot"
-          className="bb-settings-mascot-head"
-        />
+        <div className="bb-settings-mascot-lockup">
+          <span className="bb-settings-mascot-trail" aria-hidden="true" />
+          <img
+            src="/assets/buzzy/buzzy_laptop_setting.png"
+            alt="Buzzy mascot"
+            className="bb-settings-mascot-head"
+          />
+        </div>
         <h1 className="bb-settings-page-title">Setting</h1>
       </div>
 
-      <nav className="bb-settings-pill-nav" aria-label="Settings Navigation">
+      <nav className={`bb-settings-pill-nav is-${active}`} aria-label="Settings Navigation">
         {tabs.map((tab) => {
           const isActive = active === tab.key;
           return (
@@ -158,6 +165,7 @@ function SettingsNavTabs({ active }: { active: "settings" | "account" | "billing
               key={tab.key}
               href={tab.href}
               className={`bb-settings-tab-btn ${isActive ? "is-active" : ""}`}
+              aria-current={isActive ? "page" : undefined}
             >
               <span className="bb-tab-icon">{tab.icon}</span>
               <span className="bb-tab-text">{tab.label}</span>
@@ -756,6 +764,8 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     }
   };
 
+  const hasCustomProfileAvatar = Boolean(profile?.avatarUrl && !profile.avatarUrl.includes("/assets/"));
+
   return (
     <main className="bb-canvas bb-settings-canvas">
       {/* Floating social rail on left */}
@@ -822,7 +832,11 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <Link href="/account/edit" className="bb-settings-small-action">Edit</Link>
               </div>
               <div className="bb-settings-account-details">
-                <img src={profile?.avatarUrl || "/assets/home/figma-buzzy.png"} alt="Avatar" />
+                <img
+                  src={hasCustomProfileAvatar ? profile?.avatarUrl || "" : "/assets/home/OngChuaGanAvatar.png"}
+                  alt="Avatar"
+                  className={hasCustomProfileAvatar ? "" : "is-default-avatar"}
+                />
                 <dl>
                   <div><dt>Full Name</dt><dd>{profile?.fullName || "Not set"}</dd></div>
                   <div><dt>Email</dt><dd className="bb-settings-email">{profile?.user.email || "Not set"}</dd></div>
@@ -1281,10 +1295,12 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Favorite Colors</strong><p>Colors that match your vibe</p></div>
-                  <div className="bb-color-dots-row">
-                    {draft.favoriteColors.split(",").map((color) => color.trim()).filter((color) => /^#[0-9a-fA-F]{6}$/.test(color)).map((color) => <span key={color} className="bb-color-dot" style={{ background: color }} title={color} />)}
+                  <div className="bb-favorite-colors-control">
+                    <div className="bb-color-dots-row">
+                      {draft.favoriteColors.split(",").map((color) => color.trim()).filter((color) => /^#[0-9a-fA-F]{6}$/.test(color)).map((color) => <span key={color} className="bb-color-dot" style={{ background: color }} title={color} />)}
+                    </div>
+                    <input className="bb-edit-val-underlined" aria-label="Favorite Colors" placeholder="#ff7300, #ffc800" value={draft.favoriteColors} onChange={(event) => updateDraft("favoriteColors", event.target.value)} />
                   </div>
-                  <input className="bb-edit-val-underlined" aria-label="Favorite Colors" placeholder="#ff7300, #ffc800" value={draft.favoriteColors} onChange={(event) => updateDraft("favoriteColors", event.target.value)} />
                 </div>
                 <div className="bb-edit-row">
                   <div><strong>Habits</strong><p>Daily routines and rituals</p></div>
@@ -1390,6 +1406,20 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
 /* ==========================================================================
    6. BILLING & PLANS (Figma Frames 381:289, 407:9189, 407:8501, 566:7784)
    ========================================================================== */
+const BILLING_FEATURE_LABELS: Record<string, string> = {
+  "community.create": "Create communities",
+  "community.max_owned": "Maximum communities you can own",
+  "community.max_joined": "Maximum communities you can join",
+  "group_chat.create": "Create group chats",
+  "group_chat.max_members": "Maximum group chat members",
+  "profile.extended_visibility": "Advanced privacy controls",
+  "voice_message.send": "Send voice messages",
+  "video_call.hd": "HD video calls",
+};
+
+const billingFeatureName = (feature: { code: string; name: string }) =>
+  BILLING_FEATURE_LABELS[feature.code] || feature.name;
+
 function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [subView, setSubView] = useState<"overview" | "compare" | "manage" | "checkout">("overview");
   const [selectedPlan, setSelectedPlan] = useState("Explorer");
@@ -1606,7 +1636,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <p className="bb-plan-short-desc">
                     Perfect for new users who want to explore the BeeBuddy community and start connecting.
                   </p>
-                  <ul className="bb-plan-checklist">{findPlan("Free")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}{feature.limitValue != null ? `: ${feature.limitValue}` : ""}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
+                  <ul className="bb-plan-checklist">{findPlan("Free")?.features.map(feature => <li key={feature.code}><span className="dot" />{billingFeatureName(feature)}{feature.limitValue != null ? `: ${feature.limitValue}` : ""}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-outline"
@@ -1633,7 +1663,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <p className="bb-plan-short-desc">
                     Best for active users who want better discovery tools and more ways to connect.
                   </p>
-                  <ul className="bb-plan-checklist">{findPlan("Explorer")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
+                  <ul className="bb-plan-checklist">{findPlan("Explorer")?.features.map(feature => <li key={feature.code}><span className="dot" />{billingFeatureName(feature)}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled orange"
@@ -1659,7 +1689,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <p className="bb-plan-short-desc">
                     Designed for highly engaged users who want richer social experiences and stronger community tools.
                   </p>
-                  <ul className="bb-plan-checklist">{findPlan("Buddy+")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
+                  <ul className="bb-plan-checklist">{findPlan("Buddy+")?.features.map(feature => <li key={feature.code}><span className="dot" />{billingFeatureName(feature)}</li>) || <li><span className="dot" />Loading plan benefits...</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled purple"
@@ -1685,7 +1715,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <p className="bb-plan-short-desc">
                     Made for community leaders, organizers, and super users who want the full BeeBuddy experience.
                   </p>
-                  <ul className="bb-plan-checklist">{findPlan("Hive Pro")?.features.map(feature => <li key={feature.code}><span className="dot" />{feature.name}</li>) || <li><span className="dot" />Coming soon</li>}</ul>
+                  <ul className="bb-plan-checklist">{findPlan("Hive Pro")?.features.map(feature => <li key={feature.code}><span className="dot" />{billingFeatureName(feature)}</li>) || <li><span className="dot" />Coming soon</li>}</ul>
                   <button
                     type="button"
                     className="bb-plan-action-filled amber"
@@ -1746,7 +1776,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <tr className="category-header"><td colSpan={5}>PLAN BENEFITS</td></tr>
                   {Array.from(new Map(plans.flatMap(plan => plan.features.map(feature => [feature.code, feature] as const))).values()).map(feature => (
                     <tr key={feature.code}>
-                      <td>{feature.name}</td>
+                      <td>{billingFeatureName(feature)}</td>
                       {["Free", "Explorer", "Buddy+", "Hive Pro"].map(name => (
                         <td key={name} className={name === "Explorer" ? "highlight-col" : undefined}>
                           {name === "Hive Pro" ? "Coming soon" : findPlan(name)?.features.find(item => item.code === feature.code)?.limitValue ?? (findPlan(name)?.features.some(item => item.code === feature.code) ? "✓" : "—")}
@@ -1838,7 +1868,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     <small className="ml-auto">Valid Until: <strong>{renewal}</strong></small>
                   </div>
                   <p className="bb-sub-info">
-                    You&apos;re currently on the {currentName} plan. {findPlan(currentName)?.features.map(feature => feature.name).join(", ")}.
+                    You&apos;re currently on the {currentName} plan. {findPlan(currentName)?.features.map(billingFeatureName).join(", ")}.
                   </p>
                   <div className="bb-sub-actions-row">
                     <button type="button" className="bb-btn-change-plan" onClick={() => setSubView("overview")}>
@@ -2775,6 +2805,9 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeCommentsTitle, setActiveCommentsTitle] = useState("Comments");
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState("/community");
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   useEffect(() => {
     const postId = new URLSearchParams(window.location.search).get("post");
@@ -2796,6 +2829,20 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
       document.removeEventListener("keydown", onEscape);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isInviteOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsInviteOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [isInviteOpen]);
 
   const toggleFilterValue = (key: DirectoryFilterKey, value: string) => {
     setSelectedFilters((current) => ({
@@ -2910,12 +2957,19 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
     };
   }, [searchQuery, selectedFilters]);
 
+  const openInviteModal = () => {
+    setInviteLink(`${window.location.origin}/community`);
+    setInviteCopied(false);
+    setIsInviteOpen(true);
+  };
+
   const copyInviteLink = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/community`);
-      alert("Link copied! Share BeeBuddy with your friends.");
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 1800);
     } catch {
-      alert("Unable to copy automatically. Share the address in your browser.");
+      setInviteCopied(false);
     }
   };
 
@@ -2939,6 +2993,14 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
   return (
     <div className="bb-figma-community-page">
       {loginTargetId && <ConnectLoginModal onClose={() => setLoginTargetId(null)} onAuthenticated={completeModalLogin} />}
+      {isInviteOpen && (
+        <InviteFriendsModal
+          inviteLink={inviteLink}
+          copied={inviteCopied}
+          onCopy={() => void copyInviteLink()}
+          onClose={() => setIsInviteOpen(false)}
+        />
+      )}
       <div className="bb-figma-bg-decor" aria-hidden="true">
         <div className="bb-bg-circle circle-bottom-left" />
         <div className="bb-bg-circle circle-mid-bottom" />
@@ -3042,7 +3104,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
               <button
                 type="button"
                 className="bb-growth-invite-btn"
-                onClick={() => void copyInviteLink()}
+                onClick={openInviteModal}
               >
                 Invite Friends
               </button>
@@ -3246,7 +3308,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
               <img src="/assets/home/figma-buzzy.png" alt="Buzzy" className="bb-explore-growth-buzzy" />
               <h3 className="bb-growth-title">The hive is buzzing!</h3>
               <p className="bb-growth-sub">Great things are built together. Invite friends to join our cozy community space and explore adventures side-by-side.</p>
-              <button type="button" className="bb-growth-invite-btn" onClick={() => void copyInviteLink()}>Invite Friends</button>
+              <button type="button" className="bb-growth-invite-btn" onClick={openInviteModal}>Invite Friends</button>
             </div>
           </div>
         )}
@@ -3261,6 +3323,87 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
         onApprovedComment={onApprovedComment}
         showReportAction={false}
       />
+    </div>
+  );
+}
+
+function InviteFriendsModal({
+  inviteLink,
+  copied,
+  onCopy,
+  onClose,
+}: {
+  inviteLink: string;
+  copied: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+}) {
+  const shareMessage = `Join me on BeeBuddy and discover new people and adventures: ${inviteLink}`;
+  const encodedMessage = encodeURIComponent(shareMessage);
+  const encodedLink = encodeURIComponent(inviteLink);
+
+  return (
+    <div className="bb-invite-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <motion.section
+        className="bb-invite-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bb-invite-modal-title"
+        initial={{ opacity: 0, y: 18, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="bb-invite-modal-header">
+          <h2 id="bb-invite-modal-title">Invite Friends</h2>
+          <button type="button" className="bb-invite-close" onClick={onClose} aria-label="Close invite dialog">
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="bb-invite-share-list">
+          <a href={`https://wa.me/?text=${encodedMessage}`} target="_blank" rel="noreferrer" className="bb-invite-share-option">
+            <span className="bb-invite-option-icon"><MessageSquare size={21} /></span>
+            <span>Share via WhatsApp</span>
+            <ChevronRight size={20} aria-hidden="true" />
+          </a>
+          <a href={`mailto:?subject=${encodeURIComponent("Join me on BeeBuddy")}&body=${encodedMessage}`} className="bb-invite-share-option">
+            <span className="bb-invite-option-icon"><Mail size={21} /></span>
+            <span>Share via Email</span>
+            <ChevronRight size={20} aria-hidden="true" />
+          </a>
+          <a href={`https://twitter.com/intent/tweet?text=${encodedMessage}`} target="_blank" rel="noreferrer" className="bb-invite-share-option">
+            <span className="bb-invite-option-icon"><Share2 size={20} /></span>
+            <span>Share via Twitter</span>
+            <ChevronRight size={20} aria-hidden="true" />
+          </a>
+        </div>
+
+        <div className="bb-invite-social-row" aria-label="Share on social media">
+          <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodedLink}`} target="_blank" rel="noreferrer" aria-label="Share on Facebook">
+            <img src="/assets/ui/facebook.svg" alt="" />
+          </a>
+          <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Open Instagram">
+            <img src="/assets/ui/instagram.png" alt="" />
+          </a>
+          <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="Open TikTok">
+            <img src="/assets/ui/tiktok.svg" alt="" />
+          </a>
+          <ChevronRight size={20} aria-hidden="true" />
+        </div>
+
+        <div className="bb-invite-divider" />
+        <label className="bb-invite-link-label" htmlFor="bb-invite-link">Or share via link</label>
+        <div className="bb-invite-link-row">
+          <div className="bb-invite-link-field">
+            <Link2 size={19} aria-hidden="true" />
+            <input id="bb-invite-link" value={inviteLink} readOnly onFocus={(event) => event.currentTarget.select()} />
+          </div>
+          <button type="button" className={copied ? "is-copied" : ""} onClick={onCopy} aria-live="polite">
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </motion.section>
     </div>
   );
 }
