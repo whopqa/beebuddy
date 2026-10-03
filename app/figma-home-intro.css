@@ -18,7 +18,7 @@
 .bb-design-site .bb-topbar-menu-toggle > img { display: block; }
 .bb-design-site .bb-topbar-search-btn > img { display: block; }
 @media (min-width: 1100px) {
-  .bb-design-site .bb-figma-topbar { position: fixed; inset: 0 0 auto; height: 73px; z-index: 1000; background: rgba(255,255,255,.8); backdrop-filter: none; box-shadow: none; }
+  .bb-design-site .bb-figma-topbar { position: fixed; inset: 0 0 auto; height: 73px; z-index: 1000; background: #fff; backdrop-filter: none; box-shadow: none; }
   .bb-design-site .bb-topbar-strip-orange { background: linear-gradient(90deg,#ff8400,#ff9900); }
   .bb-design-site .bb-topbar-inner { position: relative; width: 100%; height: 58px; max-width: none; padding: 0; }
   .bb-design-site .bb-topbar-brand-wrap { position: static; }
@@ -50,7 +50,7 @@
   .bb-design-site .bb-start-plane { position: absolute; left: 19px; top: 6px; }
   .bb-design-site .bb-start-label { position: absolute; left: 51px; top: 4px; font: 700 32px/normal "Dongle",sans-serif; letter-spacing: 0; }
   .bb-design-site .bb-scroll-cue { left: calc(var(--bb-desktop-frame-offset) + 149px); top: 730px; bottom: auto; }
-  .bb-design-site .bb-social-rail { top: 342px; left: calc(var(--bb-desktop-frame-offset) - 8px); width: 60px; height: 150px; padding: 0; background: rgba(255,255,255,.5); border: 1px solid #fff; border-radius: 14px; box-shadow: none; backdrop-filter: none; }
+  .bb-design-site .bb-social-rail { top: 342px; left: -8px; width: 60px; height: 150px; padding: 0; background: rgba(225,225,225,.88); border: 1px solid #fff; border-radius: 14px; box-shadow: 0 3px 12px rgba(0,0,0,.12); backdrop-filter: none; }
   .bb-design-site .bb-social-rail a { position: absolute; width: auto; height: auto; left: 21px; }
   .bb-design-site .bb-social-rail a:nth-child(1) { top: 21px; }
   .bb-design-site .bb-social-rail a:nth-child(2) { left: 18px; top: 58px; }

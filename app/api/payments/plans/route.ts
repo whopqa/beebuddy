@@ -7,9 +7,9 @@ export async function GET() {
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
-    const payload = await upstream.json().catch(() => ({ success: false, error: "Backend trả về dữ liệu không hợp lệ" }));
+    const payload = await upstream.json().catch(() => ({ success: false, error: "The backend returned invalid data" }));
     return NextResponse.json(payload, { status: upstream.status });
   } catch {
-    return NextResponse.json({ success: false, error: "Không thể kết nối BeeBuddy API" }, { status: 503 });
+    return NextResponse.json({ success: false, error: "Unable to connect to the BeeBuddy API" }, { status: 503 });
   }
 }

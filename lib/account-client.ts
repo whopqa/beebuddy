@@ -68,7 +68,7 @@ async function request<T>(path: string, init?: RequestInit) {
   });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Yêu cầu không thành công");
+    throw new Error(body.error || body.message || "Request failed");
   }
   return body.data;
 }

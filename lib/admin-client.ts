@@ -107,7 +107,7 @@ async function request<T>(path: string, init?: RequestInit) {
   });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Không thể tải dữ liệu quản trị");
+    throw new Error(body.error || body.message || "Unable to load admin data");
   }
   return body.data;
 }

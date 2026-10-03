@@ -16,7 +16,7 @@ export class GoogleIdentityService {
 
   public static async verifyCredential(credential: string): Promise<VerifiedGoogleIdentity> {
     if (!ENV.GOOGLE.CLIENT_ID) {
-      throw new Error("Google Sign-In chưa được cấu hình trên máy chủ");
+      throw new Error("Google Sign-In is not configured on the server");
     }
 
     let ticket;
@@ -26,12 +26,12 @@ export class GoogleIdentityService {
         audience: ENV.GOOGLE.CLIENT_ID,
       });
     } catch {
-      throw new Error("Google credential không hợp lệ hoặc đã hết hạn");
+      throw new Error("Google credential is invalid or expired");
     }
 
     const payload = ticket.getPayload();
     if (!payload?.sub || !payload.email || payload.email_verified !== true) {
-      throw new Error("Tài khoản Google chưa cung cấp email đã xác minh");
+      throw new Error("Google account did not provide a verified email address");
     }
 
     const email = payload.email.toLowerCase().trim();

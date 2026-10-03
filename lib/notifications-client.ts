@@ -2,6 +2,8 @@ import type { ApiEnvelope } from "./auth-types";
 
 export type NotificationType = "CONNECTION_REQUEST" | "CONNECTION_ACCEPTED" | "COMMUNITY_INVITE" | "COMMUNITY_JOIN_APPROVED" | "MESSAGE" | "SYSTEM";
 
+export const NOTIFICATION_PREFERENCES_CHANGED_EVENT = "beebuddy:notification-preferences-changed";
+
 export type NotificationPreference = {
   type: NotificationType;
   channel: "IN_APP" | "PUSH" | "EMAIL";
@@ -42,11 +44,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       cache: "no-store",
     });
   } catch {
-    throw new Error("Không kết nối được máy chủ. Hãy kiểm tra backend đang chạy.");
+    throw new Error("Unable to connect to the server. Check that the backend is running.");
   }
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Yêu cầu không thành công");
+    throw new Error(body.error || body.message || "Request failed");
   }
   return body.data;
 }

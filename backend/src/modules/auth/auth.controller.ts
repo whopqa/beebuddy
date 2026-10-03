@@ -4,47 +4,47 @@ import { sendError, sendSuccess } from "../../common/utils/response";
 import { z } from "zod";
 
 const strongPasswordSchema = z.string()
-  .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
-  .max(72, "Mật khẩu không được vượt quá 72 ký tự")
-  .regex(/[A-Za-zÀ-ỹ]/, "Mật khẩu phải có ít nhất một chữ cái")
-  .regex(/\d/, "Mật khẩu phải có ít nhất một chữ số");
+  .min(8, "Password must have at least 8 characters")
+  .max(72, "Password must not exceed 72 characters")
+  .regex(/[A-Za-zÀ-ỹ]/, "Password must include at least one letter")
+  .regex(/\d/, "Password must include at least one digit");
 
 const registerSchema = z.object({
-  email: z.string().email("Email không đúng định dạng"),
+  email: z.string().email("Invalid email address"),
   password: strongPasswordSchema,
-  fullName: z.string().min(2, "Họ tên tối thiểu 2 ký tự"),
-  acceptTerms: z.boolean().refine(Boolean, "Bạn phải đồng ý Điều khoản sử dụng"),
-  acceptPrivacy: z.boolean().refine(Boolean, "Bạn phải đồng ý Chính sách quyền riêng tư"),
+  fullName: z.string().min(2, "Full name must have at least 2 characters"),
+  acceptTerms: z.boolean().refine(Boolean, "You must agree to the Terms of Use"),
+  acceptPrivacy: z.boolean().refine(Boolean, "You must agree to the Privacy Policy"),
   consentSessionId: z.string().min(8).max(100).optional(),
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Email không đúng định dạng"),
-  password: z.string().min(1, "Vui lòng nhập mật khẩu"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Please enter your password"),
 });
 
 const googleLoginSchema = z.object({
-  credential: z.string().min(100, "Google credential không hợp lệ").max(10_000),
+  credential: z.string().min(100, "Invalid Google credential").max(10_000),
   acceptTerms: z.boolean().default(false),
   acceptPrivacy: z.boolean().default(false),
   consentSessionId: z.string().min(8).max(100).optional(),
 });
 
 const tokenSchema = z.object({
-  refreshToken: z.string().min(1, "Thiếu refresh token"),
+  refreshToken: z.string().min(1, "Refresh token is required"),
 });
 
 const emailSchema = z.object({
-  email: z.string().email("Email không đúng định dạng"),
+  email: z.string().email("Invalid email address"),
 });
 
 const verifyEmailSchema = z.object({
-  email: z.string().email("Email không đúng định dạng"),
-  code: z.string().regex(/^\d{6}$/, "Mã xác minh phải gồm đúng 6 chữ số"),
+  email: z.string().email("Invalid email address"),
+  code: z.string().regex(/^\d{6}$/, "Verification code must contain exactly 6 digits"),
 });
 
 const resetPasswordSchema = z.object({
-  token: z.string().min(32, "Token đặt lại mật khẩu không hợp lệ").max(200),
+  token: z.string().min(32, "Invalid password reset token").max(200),
   newPassword: strongPasswordSchema,
 });
 
@@ -75,7 +75,7 @@ export class AuthController {
         ...parsed.data,
         ...sessionMetadata(req),
       });
-      return sendSuccess(res, result, "Đăng ký tài khoản thành công", 201);
+      return sendSuccess(res, result, "Account created successfully", 201);
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }
@@ -89,7 +89,7 @@ export class AuthController {
       }
 
       const result = await AuthService.login(parsed.data, sessionMetadata(req));
-      return sendSuccess(res, result, "Đăng nhập thành công");
+      return sendSuccess(res, result, "Signed in successfully");
     } catch (err: any) {
       return sendError(res, err.message, 401);
     }
@@ -100,7 +100,7 @@ export class AuthController {
       const parsed = googleLoginSchema.safeParse(req.body);
       if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
       const result = await AuthService.loginWithGoogle(parsed.data, sessionMetadata(req));
-      return sendSuccess(res, result, "Đăng nhập bằng Google thành công");
+      return sendSuccess(res, result, "Signed in with Google successfully");
     } catch (err: any) {
       return sendError(res, err.message, 401);
     }
@@ -113,7 +113,7 @@ export class AuthController {
       const result = await AuthService.requestEmailVerification(parsed.data.email);
       return sendSuccess(res, result, result.message);
     } catch (err: any) {
-      const status = /Vui lòng chờ/.test(err.message) ? 429 : 400;
+      const status = /Please wait/.test(err.message) ? 429 : 400;
       return sendError(res, err.message, status);
     }
   }
@@ -123,7 +123,7 @@ export class AuthController {
       const parsed = verifyEmailSchema.safeParse(req.body);
       if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
       const result = await AuthService.confirmEmailVerification(parsed.data, sessionMetadata(req));
-      return sendSuccess(res, result, "Xác minh email thành công");
+      return sendSuccess(res, result, "Email verified successfully");
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }
@@ -141,7 +141,7 @@ export class AuthController {
       const parsed = resetPasswordSchema.safeParse(req.body);
       if (!parsed.success) return sendError(res, parsed.error.errors[0].message, 400);
       const result = await AuthService.confirmPasswordReset(parsed.data);
-      return sendSuccess(res, result, "Đặt lại mật khẩu thành công");
+      return sendSuccess(res, result, "Password reset successfully");
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }
@@ -155,7 +155,7 @@ export class AuthController {
       }
 
       const result = await AuthService.refreshToken(parsed.data.refreshToken, sessionMetadata(req));
-      return sendSuccess(res, result, "Làm mới phiên thành công");
+      return sendSuccess(res, result, "Session refreshed successfully");
     } catch (err: any) {
       return sendError(res, err.message, 401);
     }
@@ -168,17 +168,17 @@ export class AuthController {
     }
 
     const result = await AuthService.logout(parsed.data.refreshToken);
-    return sendSuccess(res, result, "Đăng xuất thành công");
+    return sendSuccess(res, result, "Signed out successfully");
   }
 
   public static async getMe(req: Request, res: Response) {
     try {
       if (!req.user) {
-        return sendError(res, "Chưa xác thực người dùng", 401);
+        return sendError(res, "User is not authenticated", 401);
       }
 
       const me = await AuthService.getMe(req.user.id);
-      return sendSuccess(res, me, "Lấy thông tin tài khoản thành công");
+      return sendSuccess(res, me, "Account details loaded successfully");
     } catch (err: any) {
       return sendError(res, err.message, 400);
     }

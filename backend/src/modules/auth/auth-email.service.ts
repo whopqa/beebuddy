@@ -65,7 +65,7 @@ export class AuthEmailService {
         const detail = result && typeof result === "object" && "message" in result && typeof result.message === "string"
           ? `: ${result.message}`
           : "";
-        throw new Error(`Resend từ chối gửi email (HTTP ${response.status})${detail}`);
+        throw new Error(`Resend rejected the email (HTTP ${response.status})${detail}`);
       }
       return;
     }
@@ -81,20 +81,20 @@ export class AuthEmailService {
     fullName: string;
     code: string;
   }) {
-    const name = escapeHtml(input.fullName || "bạn");
+    const name = escapeHtml(input.fullName || "friend");
     const ttl = ENV.EMAIL.VERIFICATION_TTL_MINUTES;
     await this.deliver({
       to: input.email,
-      subject: `${input.code} là mã xác minh BeeBuddy của bạn`,
-      text: `Xin chào ${input.fullName || "bạn"},\n\nMã xác minh BeeBuddy của bạn là: ${input.code}\nMã có hiệu lực trong ${ttl} phút và chỉ dùng được một lần.\n\nNếu bạn không tạo tài khoản này, hãy bỏ qua email.`,
+      subject: `${input.code} is your BeeBuddy verification code`,
+      text: `Hello ${input.fullName || "friend"},\n\nYour BeeBuddy verification code is: ${input.code}\nThis code is valid for ${ttl} minutes and can be used only once.\n\nIf you did not create this account, please ignore this email.`,
       html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#202124;max-width:560px;margin:auto">
-          <h1 style="color:#126b3a">Xác minh email BeeBuddy</h1>
-          <p>Xin chào ${name},</p>
-          <p>Nhập mã sau để hoàn tất đăng ký:</p>
+          <h1 style="color:#126b3a">Verify your BeeBuddy email</h1>
+          <p>Hello ${name},</p>
+          <p>Enter this code to complete your sign-up:</p>
           <p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#126b3a">${input.code}</p>
-          <p>Mã có hiệu lực trong <strong>${ttl} phút</strong> và chỉ dùng được một lần.</p>
-          <p style="color:#667085">Nếu bạn không tạo tài khoản này, hãy bỏ qua email.</p>
+          <p>This code is valid for <strong>${ttl} minutes</strong> and can be used only once.</p>
+          <p style="color:#667085">If you did not create this account, please ignore this email.</p>
         </div>`,
     });
   }
@@ -104,21 +104,21 @@ export class AuthEmailService {
     fullName: string;
     resetUrl: string;
   }) {
-    const name = escapeHtml(input.fullName || "bạn");
+    const name = escapeHtml(input.fullName || "friend");
     const safeUrl = escapeHtml(input.resetUrl);
     const ttl = ENV.EMAIL.PASSWORD_RESET_TTL_MINUTES;
     await this.deliver({
       to: input.email,
-      subject: "Đặt lại mật khẩu BeeBuddy",
-      text: `Xin chào ${input.fullName || "bạn"},\n\nMở liên kết sau để đặt lại mật khẩu BeeBuddy:\n${input.resetUrl}\n\nLiên kết có hiệu lực trong ${ttl} phút và chỉ dùng được một lần. Nếu bạn không yêu cầu, hãy bỏ qua email này.`,
+      subject: "Reset your BeeBuddy password",
+      text: `Hello ${input.fullName || "friend"},\n\nOpen this link to reset your BeeBuddy password:\n${input.resetUrl}\n\nThis link is valid for ${ttl} minutes and can be used only once. If you did not request this change, please ignore this email.`,
       html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#202124;max-width:560px;margin:auto">
-          <h1 style="color:#126b3a">Đặt lại mật khẩu</h1>
-          <p>Xin chào ${name},</p>
-          <p>Bạn vừa yêu cầu đặt lại mật khẩu BeeBuddy.</p>
-          <p><a href="${safeUrl}" style="display:inline-block;background:#126b3a;color:white;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Đặt lại mật khẩu</a></p>
-          <p>Liên kết có hiệu lực trong <strong>${ttl} phút</strong> và chỉ dùng được một lần.</p>
-          <p style="color:#667085">Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email. Mật khẩu hiện tại vẫn an toàn.</p>
+          <h1 style="color:#126b3a">Reset your password</h1>
+          <p>Hello ${name},</p>
+          <p>You recently requested a BeeBuddy password reset.</p>
+          <p><a href="${safeUrl}" style="display:inline-block;background:#126b3a;color:white;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Reset password</a></p>
+          <p>This link is valid for <strong>${ttl} minutes</strong> and can be used only once.</p>
+          <p style="color:#667085">If you did not request this change, please ignore this email. Your current password remains secure.</p>
         </div>`,
     });
   }

@@ -64,34 +64,34 @@ export class WellbeingService {
     if (!todayMood) {
       candidates.push({
         type: MascotSuggestionType.CHECK_IN,
-        title: "Bạn đang cảm thấy thế nào?",
-        content: "Dành một phút check-in cảm xúc và năng lượng hôm nay nhé.",
-        reason: "Bạn chưa có mood check-in hôm nay.",
+        title: "How are you feeling today?",
+        content: "Take a minute to check in with your mood and energy today.",
+        reason: "You haven't completed a mood check-in today.",
       });
     } else if (latestMood && (latestMood.mood === MoodValue.VERY_LOW || latestMood.mood === MoodValue.LOW)) {
       candidates.push({
         type: MascotSuggestionType.CHECK_IN,
-        title: "Một nhịp nghỉ nhỏ cũng rất đáng quý",
-        content: "Hãy thử hít thở chậm, uống một cốc nước hoặc nhắn cho người bạn tin tưởng.",
-        reason: "Mood gần nhất của bạn đang ở mức thấp.",
+        title: "A short break matters too",
+        content: "Try breathing slowly, drinking some water, or messaging someone you trust.",
+        reason: "Your most recent mood check-in was low.",
       });
     }
     const pendingRoutine = routines.find((routine) => routine.completions.length === 0);
     if (pendingRoutine) {
       candidates.push({
         type: MascotSuggestionType.HABIT,
-        title: `Một bước nhỏ với “${pendingRoutine.name}”`,
-        content: `Hoàn thành ${pendingRoutine.targetValue} ${pendingRoutine.unit} hôm nay để giữ nhịp thói quen.`,
-        reason: "Routine này chưa được đánh dấu hoàn thành hôm nay.",
+        title: `One small step with “${pendingRoutine.name}”`,
+        content: `Complete ${pendingRoutine.targetValue} ${pendingRoutine.unit} today to stay on track with your routine.`,
+        reason: "This routine hasn't been marked complete today.",
         payload: { routineId: pendingRoutine.id },
       });
     }
     if (connectionCount === 0) {
       candidates.push({
         type: MascotSuggestionType.SOCIAL,
-        title: "Tìm một người đồng điệu",
-        content: "Khám phá gợi ý matching để bắt đầu một kết nối tích cực mới.",
-        reason: "Bạn chưa có kết nối đang hoạt động.",
+        title: "Find someone like-minded",
+        content: "Explore your matches to start a positive new connection.",
+        reason: "You have no active connections yet.",
       });
     }
 

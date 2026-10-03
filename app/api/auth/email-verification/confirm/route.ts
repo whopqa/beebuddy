@@ -4,7 +4,7 @@ import { forwardAuthRequest, setAuthCookies } from "@/lib/server/auth-proxy";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ success: false, error: "Mã xác minh không hợp lệ" }, { status: 400 });
+  if (!body) return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 });
   const { upstream, payload } = await forwardAuthRequest("/auth/email-verification/confirm", body);
   const response = NextResponse.json(payload, { status: upstream?.status ?? 503 });
   if (upstream?.ok && payload?.data) setAuthCookies(response, payload.data as AuthPayload);

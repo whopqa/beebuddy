@@ -38,7 +38,7 @@ describe("AuthEmailService with Resend", () => {
     expect(JSON.parse(options.body as string)).toMatchObject({
       from: "BeeBuddy <onboarding@resend.dev>",
       to: ["member@example.com"],
-      subject: "123456 là mã xác minh BeeBuddy của bạn",
+      subject: "123456 is your BeeBuddy verification code",
     });
   });
 

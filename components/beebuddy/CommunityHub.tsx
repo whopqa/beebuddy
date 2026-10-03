@@ -47,25 +47,25 @@ const fallbackAvatar = "/assets/home/avatar-01.png";
 function relativeTime(value: string) {
   const elapsed = Date.now() - new Date(value).getTime();
   const minutes = Math.max(0, Math.floor(elapsed / 60_000));
-  if (minutes < 1) return "Vừa xong";
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  if (days < 7) return `${days} days ago`;
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 }
 
 function visibilityLabel(value: CommunityVisibility) {
-  if (value === "PUBLIC") return "Công khai";
-  if (value === "PRIVATE") return "Riêng tư";
-  return "Chỉ lời mời";
+  if (value === "PUBLIC") return "Public";
+  if (value === "PRIVATE") return "Private";
+  return "Invite only";
 }
 
 function policyLabel(value: CommunityJoinPolicy) {
-  if (value === "OPEN") return "Tham gia tự do";
-  if (value === "APPROVAL") return "Cần phê duyệt";
-  return "Chỉ qua lời mời";
+  if (value === "OPEN") return "Open to all";
+  if (value === "APPROVAL") return "Approval required";
+  return "By invitation only";
 }
 
 function membershipOf(community: Pick<CommunitySummary, "ownerId"> & Partial<Pick<CommunitySummary, "members">>, userId?: string) {
@@ -112,7 +112,7 @@ export default function CommunityHub({
       setCommunities((current) => cursor ? [...current, ...page.items] : page.items);
       setNextCursor(page.nextCursor);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải danh sách cộng đồng");
+      setError(err instanceof Error ? err.message : "Unable to load communities");
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -150,7 +150,7 @@ export default function CommunityHub({
       const page = await communitiesApi.feed(community.id);
       setFeed(page.posts);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể mở cộng đồng");
+      setError(err instanceof Error ? err.message : "Unable to open the community");
     } finally {
       setFeedLoading(false);
     }
@@ -175,20 +175,20 @@ export default function CommunityHub({
         await communitiesApi.leave(selected.id);
         setSelectedMembership(undefined);
         setSelected((current) => current ? { ...current, membersCount: Math.max(0, current.membersCount - 1) } : current);
-        setNotice("Bạn đã rời cộng đồng.");
+        setNotice("You left the community.");
       } else {
         const result = await communitiesApi.join(selected.id);
         if (result.status === "PENDING") {
-          setNotice("Yêu cầu tham gia đã được gửi tới quản trị viên.");
+          setNotice("Your join request was sent to the community managers.");
         } else {
           setSelectedMembership({ role: result.role ?? "MEMBER", status: "ACTIVE" });
           setSelected((current) => current ? { ...current, membersCount: current.membersCount + 1 } : current);
-          setNotice("Bạn đã tham gia cộng đồng.");
+          setNotice("You joined the community.");
         }
       }
       void loadCommunities();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể cập nhật tư cách thành viên");
+      setError(err instanceof Error ? err.message : "Unable to update your membership");
     } finally {
       setActionPending(false);
     }
@@ -206,9 +206,9 @@ export default function CommunityHub({
       setPostImages([]);
       const page = await communitiesApi.feed(selected.id);
       setFeed(page.posts);
-      setNotice("Bài viết đã được đăng vào cộng đồng.");
+      setNotice("Your post was published in the community.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể đăng bài");
+      setError(err instanceof Error ? err.message : "Unable to publish the post");
     } finally {
       setActionPending(false);
     }
@@ -225,9 +225,9 @@ export default function CommunityHub({
     try {
       await communitiesApi.respondInvite(invite.id, accept);
       setInvitations((rows) => rows.filter((row) => row.id !== invite.id));
-      setNotice(accept ? `Bạn đã tham gia ${invite.community.name}.` : "Đã từ chối lời mời.");
+      setNotice(accept ? `You joined ${invite.community.name}.` : "Invitation declined.");
       await loadCommunities();
-    } catch (err) { setError(err instanceof Error ? err.message : "Không thể phản hồi lời mời"); }
+    } catch (err) { setError(err instanceof Error ? err.message : "Unable to respond to the invitation"); }
     finally { setActionPending(false); }
   };
 
@@ -237,41 +237,41 @@ export default function CommunityHub({
         <>
           <section className="bb-community-hub-hero">
             <div>
-              <span className="bb-community-hub-kicker">Cùng kết nối, cùng trưởng thành</span>
-              <h1>Tìm cộng đồng dành cho bạn</h1>
-              <p>Chia sẻ câu chuyện, thói quen và những điều nhỏ bé tạo nên một cuộc sống ý nghĩa hơn.</p>
+              <span className="bb-community-hub-kicker">Connect and grow together</span>
+              <h1>Find your community</h1>
+              <p>Share stories, routines, and the little things that make life more meaningful.</p>
             </div>
             {isLoggedIn ? (
               <button className="bb-community-primary-btn" type="button" onClick={() => setShowCreate(true)}>
-                <Plus size={18} /> Tạo cộng đồng
+                <Plus size={18} /> Create community
               </button>
             ) : (
-              <Link className="bb-community-primary-btn" href="/login">Đăng nhập để tạo</Link>
+              <Link className="bb-community-primary-btn" href="/login">Sign in to create</Link>
             )}
           </section>
 
           <section className="bb-community-directory" aria-labelledby="community-directory-title">
             <div className="bb-community-directory-head">
               <div>
-                <h2 id="community-directory-title">Khám phá cộng đồng</h2>
-                <p>{communities.length} cộng đồng bạn có thể khám phá</p>
+                <h2 id="community-directory-title">Explore communities</h2>
+                <p>{communities.length} communities to explore</p>
               </div>
               <label className="bb-community-search">
                 <Search size={18} />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo tên hoặc mô tả..." />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or description..." />
               </label>
             </div>
 
-            {invitations.length > 0 && <div className="bb-community-invitations"><h3><UserPlus size={18} /> Lời mời tham gia</h3>{invitations.map((invite) => <article key={invite.id}><img src={invite.community.avatarMedia?.sourceUrl || invite.invitedBy.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{invite.community.name}</strong><span>{invite.invitedBy.profile?.fullName || "Một quản trị viên"} đã mời bạn</span></div><button disabled={actionPending} onClick={() => void respondInvitation(invite, true)}>Tham gia</button><button disabled={actionPending} className="is-muted" onClick={() => void respondInvitation(invite, false)}>Từ chối</button></article>)}</div>}
+            {invitations.length > 0 && <div className="bb-community-invitations"><h3><UserPlus size={18} /> Invitations</h3>{invitations.map((invite) => <article key={invite.id}><img src={invite.community.avatarMedia?.sourceUrl || invite.invitedBy.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{invite.community.name}</strong><span>{invite.invitedBy.profile?.fullName || "A manager"} invited you</span></div><button disabled={actionPending} onClick={() => void respondInvitation(invite, true)}>Join</button><button disabled={actionPending} className="is-muted" onClick={() => void respondInvitation(invite, false)}>Decline</button></article>)}</div>}
 
             {error && <div className="bb-community-alert is-error">{error}</div>}
             {loading ? (
-              <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={28} /> Đang tải cộng đồng...</div>
+              <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={28} /> Loading communities...</div>
             ) : visibleCommunities.length === 0 ? (
               <div className="bb-community-empty">
                 <Users size={34} />
-                <strong>Chưa tìm thấy cộng đồng phù hợp</strong>
-                <span>Thử từ khóa khác hoặc tạo cộng đồng đầu tiên của bạn.</span>
+                <strong>No matching communities found</strong>
+                <span>Try another search or create your first community.</span>
               </div>
             ) : (
               <div className="bb-community-card-grid">
@@ -290,12 +290,12 @@ export default function CommunityHub({
                           <img src={community.avatarMedia?.sourceUrl || community.owner.profile?.avatarUrl || fallbackAvatar} alt="" />
                           <div><h3>{community.name}</h3><span>{policyLabel(community.joinPolicy)}</span></div>
                         </div>
-                        <p>{community.description || "Một không gian mới để gặp gỡ và chia sẻ cùng nhau."}</p>
+                        <p>{community.description || "A new space to meet and share with others."}</p>
                         <div className="bb-community-card-footer">
-                          <span><Users size={15} /> {community.membersCount.toLocaleString("vi-VN")} thành viên</span>
-                          {membership?.status === "ACTIVE" && <span className="bb-community-member-badge">Đã tham gia</span>}
+                          <span><Users size={15} /> {community.membersCount.toLocaleString("en-US")} members</span>
+                          {membership?.status === "ACTIVE" && <span className="bb-community-member-badge">Joined</span>}
                         </div>
-                        <button type="button" onClick={() => void openCommunity(community)}>Xem cộng đồng</button>
+                        <button type="button" onClick={() => void openCommunity(community)}>View community</button>
                       </div>
                     </article>
                   );
@@ -305,7 +305,7 @@ export default function CommunityHub({
 
             {nextCursor && !query && (
               <button className="bb-community-load-more" type="button" disabled={loadingMore} onClick={() => void loadCommunities(nextCursor)}>
-                {loadingMore ? <><LoaderCircle className="bb-spin" size={17} /> Đang tải</> : "Xem thêm cộng đồng"}
+                {loadingMore ? <><LoaderCircle className="bb-spin" size={17} /> Loading</> : "View more communities"}
               </button>
             )}
           </section>
@@ -331,7 +331,7 @@ export default function CommunityHub({
             const next = files.slice(0, 4);
             const invalid = next.find((file) => !file.type.startsWith("image/") || file.size > 4 * 1024 * 1024);
             if (invalid) {
-              setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 4 MB.");
+              setError("Each file must be a JPEG, PNG, WebP, or GIF image smaller than 4 MB.");
               return;
             }
             setError("");
@@ -424,8 +424,8 @@ function CommunityDetailView({
   if (!selected) {
     return (
       <section className="bb-community-detail-shell">
-        <button className="bb-community-back" type="button" onClick={onBack}><ArrowLeft size={18} /> Quay lại</button>
-        {error ? <div className="bb-community-alert is-error">{error}</div> : <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={28} /> Đang mở cộng đồng...</div>}
+        <button className="bb-community-back" type="button" onClick={onBack}><ArrowLeft size={18} /> Back</button>
+        {error ? <div className="bb-community-alert is-error">{error}</div> : <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={28} /> Opening community...</div>}
       </section>
     );
   }
@@ -436,29 +436,29 @@ function CommunityDetailView({
 
   return (
     <section className="bb-community-detail-shell">
-      <button className="bb-community-back" type="button" onClick={onBack}><ArrowLeft size={18} /> Tất cả cộng đồng</button>
+      <button className="bb-community-back" type="button" onClick={onBack}><ArrowLeft size={18} /> All communities</button>
       <div className="bb-community-detail-cover" style={{ backgroundImage: `url(${selected.coverMedia?.sourceUrl || fallbackCover})` }} />
       <div className="bb-community-detail-header">
         <img className="bb-community-detail-avatar" src={selected.avatarMedia?.sourceUrl || selected.owner.profile?.avatarUrl || fallbackAvatar} alt="" />
         <div className="bb-community-detail-copy">
           <div className="bb-community-detail-title"><h1>{selected.name}</h1><span>{visibilityLabel(selected.visibility)}</span></div>
-          <p>{selected.description || "Một không gian để cùng nhau chia sẻ và phát triển."}</p>
+          <p>{selected.description || "A space to share and grow together."}</p>
           <div className="bb-community-detail-meta">
-            <span><Users size={16} /> {selected.membersCount.toLocaleString("vi-VN")} thành viên</span>
+            <span><Users size={16} /> {selected.membersCount.toLocaleString("en-US")} members</span>
             <span><ShieldCheck size={16} /> {policyLabel(selected.joinPolicy)}</span>
-            <span><CalendarDays size={16} /> Tạo {relativeTime(selected.createdAt)}</span>
+            <span><CalendarDays size={16} /> Created {relativeTime(selected.createdAt)}</span>
           </div>
         </div>
         <div className="bb-community-detail-action">
           {!isLoggedIn ? (
-            <Link className="bb-community-primary-btn" href="/login">Đăng nhập để tham gia</Link>
+            <Link className="bb-community-primary-btn" href="/login">Sign in to join</Link>
           ) : isManager ? (
-            <div className="bb-community-manager-actions"><span className="bb-community-owner-chip"><ShieldCheck size={16} /> {isOwner ? "Bạn là chủ cộng đồng" : "Bạn là điều hành viên"}</span><button className="bb-community-secondary-btn" type="button" onClick={onManage}><Settings size={16} /> Quản lý</button></div>
+            <div className="bb-community-manager-actions"><span className="bb-community-owner-chip"><ShieldCheck size={16} /> {isOwner ? "You own this community" : "You are a moderator"}</span><button className="bb-community-secondary-btn" type="button" onClick={onManage}><Settings size={16} /> Manage</button></div>
           ) : selected.joinPolicy === "INVITE_ONLY" && !isMember ? (
-            <span className="bb-community-owner-chip"><LockKeyhole size={16} /> Cần lời mời</span>
+            <span className="bb-community-owner-chip"><LockKeyhole size={16} /> Invitation required</span>
           ) : (
             <button className={isMember ? "bb-community-secondary-btn" : "bb-community-primary-btn"} type="button" disabled={actionPending} onClick={onMembership}>
-              {actionPending ? <LoaderCircle className="bb-spin" size={17} /> : isMember ? "Rời cộng đồng" : selected.joinPolicy === "APPROVAL" ? "Gửi yêu cầu tham gia" : "Tham gia cộng đồng"}
+              {actionPending ? <LoaderCircle className="bb-spin" size={17} /> : isMember ? "Leave community" : selected.joinPolicy === "APPROVAL" ? "Request to join" : "Join community"}
             </button>
           )}
         </div>
@@ -472,15 +472,15 @@ function CommunityDetailView({
             <form className="bb-community-composer" onSubmit={onPost}>
               <img src={currentUser?.profile?.avatarUrl || fallbackAvatar} alt="" />
               <div>
-                <textarea value={composer} onChange={(event) => onComposer(event.target.value)} maxLength={10000} placeholder={`Chia sẻ điều gì đó với ${selected.name}...`} />
+                <textarea value={composer} onChange={(event) => onComposer(event.target.value)} maxLength={10000} placeholder={`Share something with ${selected.name}...`} />
                 {postImagePreviews.length > 0 && (
                   <div className="bb-community-composer-previews">
-                    {postImagePreviews.map((url, index) => <img key={url} src={url} alt={`Ảnh đã chọn ${index + 1}`} />)}
+                    {postImagePreviews.map((url, index) => <img key={url} src={url} alt={`Selected image ${index + 1}`} />)}
                   </div>
                 )}
                 <div className="bb-community-composer-actions">
                   <label className="bb-community-image-picker">
-                    <ImagePlus size={17} /> Chọn ảnh ({postImages.length}/4)
+                    <ImagePlus size={17} /> Choose images ({postImages.length}/4)
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif"
@@ -488,17 +488,17 @@ function CommunityDetailView({
                       onChange={(event) => onPostImages(Array.from(event.target.files || []))}
                     />
                   </label>
-                  {postImages.length > 0 && <button className="is-secondary" type="button" onClick={() => onPostImages([])}>Bỏ ảnh</button>}
-                  <button type="submit" disabled={(!composer.trim() && postImages.length === 0) || actionPending}><Send size={16} /> {actionPending ? "Đang đăng" : "Đăng bài"}</button>
+                  {postImages.length > 0 && <button className="is-secondary" type="button" onClick={() => onPostImages([])}>Remove images</button>}
+                  <button type="submit" disabled={(!composer.trim() && postImages.length === 0) || actionPending}><Send size={16} /> {actionPending ? "Publishing" : "Publish post"}</button>
                 </div>
               </div>
             </form>
           )}
 
           {feedLoading ? (
-            <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={25} /> Đang tải bảng tin...</div>
+            <div className="bb-community-empty"><LoaderCircle className="bb-spin" size={25} /> Loading feed...</div>
           ) : feed.length === 0 ? (
-            <div className="bb-community-empty"><MessageCircle size={32} /><strong>Chưa có bài viết</strong><span>{isMember ? "Hãy bắt đầu câu chuyện đầu tiên." : "Hãy quay lại sau để đọc những chia sẻ mới."}</span></div>
+            <div className="bb-community-empty"><MessageCircle size={32} /><strong>No posts yet</strong><span>{isMember ? "Start the first conversation." : "Come back later for new stories."}</span></div>
           ) : feed.map((post) => (
             <article className="bb-community-post" key={post.id}>
               <header>
@@ -506,25 +506,25 @@ function CommunityDetailView({
                 <div><strong>{post.author.fullName}</strong><span>@{post.author.username} · {relativeTime(post.createdAt)}</span></div>
               </header>
               <p>{post.content}</p>
-              {post.mediaUrls.length > 0 && <img className="bb-community-post-media" src={post.mediaUrls[0]} alt="Nội dung bài viết" />}
+              {post.mediaUrls.length > 0 && <img className="bb-community-post-media" src={post.mediaUrls[0]} alt="Post content" />}
               <footer>
                 <span><Heart size={17} /> {post.likesCount}</span>
-                <button type="button" onClick={() => onComments(post.id)}><MessageCircle size={17} /> {post.commentsCount} bình luận</button>
+                <button type="button" onClick={() => onComments(post.id)}><MessageCircle size={17} /> {post.commentsCount} comments</button>
               </footer>
             </article>
           ))}
         </div>
 
         <aside className="bb-community-members-panel">
-          <h2>Thành viên nổi bật</h2>
+          <h2>Featured members</h2>
           <div className="bb-community-owner-row">
             <img src={selected.owner.profile?.avatarUrl || fallbackAvatar} alt="" />
-            <div><strong>{selected.owner.profile?.fullName || "Người dùng BeeBuddy"}</strong><span>Chủ cộng đồng</span></div>
+            <div><strong>{selected.owner.profile?.fullName || "BeeBuddy user"}</strong><span>Community owner</span></div>
           </div>
           {selected.members.filter((member) => member.userId !== selected.ownerId).slice(0, 8).map((member) => (
             <div className="bb-community-owner-row" key={member.id}>
               <img src={member.user.profile?.avatarUrl || fallbackAvatar} alt="" />
-              <div><strong>{member.user.profile?.fullName || "Người dùng BeeBuddy"}</strong><span>{member.role === "MODERATOR" ? "Điều hành viên" : "Thành viên"}</span></div>
+              <div><strong>{member.user.profile?.fullName || "BeeBuddy user"}</strong><span>{member.role === "MODERATOR" ? "Moderator" : "Member"}</span></div>
             </div>
           ))}
         </aside>
@@ -564,7 +564,7 @@ function CommunityManagementModal({ communityId, currentUserId, onClose, onUpdat
     setName(management.name); setDescription(management.description || ""); setVisibility(management.visibility); setJoinPolicy(management.joinPolicy);
     setStatus(management.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE");
   }, [communityId]);
-  useEffect(() => { void load().catch((cause) => setError(cause instanceof Error ? cause.message : "Không thể tải trang quản lý")); }, [load]);
+  useEffect(() => { void load().catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load community management")); }, [load]);
 
   const saveSettings = async (event: FormEvent) => {
     event.preventDefault(); setPending("settings"); setError(""); setNotice("");
@@ -578,46 +578,46 @@ function CommunityManagementModal({ communityId, currentUserId, onClose, onUpdat
         ...(avatarAsset ? { avatarMediaId: avatarAsset.id } : {}),
         ...(coverAsset ? { coverMediaId: coverAsset.id } : {}),
       });
-      setAvatar(null); setCover(null); setNotice("Đã lưu cài đặt cộng đồng."); await load(); await onUpdated();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể cập nhật cộng đồng"); }
+      setAvatar(null); setCover(null); setNotice("Community settings saved."); await load(); await onUpdated();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update the community"); }
     finally { setPending(""); }
   };
 
   const memberAction = async (userId: string, action: "PROMOTE" | "DEMOTE" | "REMOVE" | "BAN" | "RESTORE") => {
-    if ((action === "REMOVE" || action === "BAN") && !window.confirm(action === "BAN" ? "Cấm thành viên này khỏi cộng đồng?" : "Xóa thành viên này khỏi cộng đồng?")) return;
+    if ((action === "REMOVE" || action === "BAN") && !window.confirm(action === "BAN" ? "Ban this member from the community?" : "Remove this member from the community?")) return;
     setPending(userId); setError("");
-    try { await communitiesApi.manageMember(communityId, userId, action); setNotice("Đã cập nhật thành viên."); await load(); await onUpdated(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể cập nhật thành viên"); }
+    try { await communitiesApi.manageMember(communityId, userId, action); setNotice("Member updated."); await load(); await onUpdated(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update the member"); }
     finally { setPending(""); }
   };
 
   const respondRequest = async (requestId: string, accept: boolean) => {
     setPending(requestId); setError("");
-    try { await communitiesApi.respondJoinRequest(communityId, requestId, accept); setNotice(accept ? "Đã duyệt thành viên." : "Đã từ chối yêu cầu."); await load(); await onUpdated(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể xử lý yêu cầu"); }
+    try { await communitiesApi.respondJoinRequest(communityId, requestId, accept); setNotice(accept ? "Member approved." : "Request declined."); await load(); await onUpdated(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to process the request"); }
     finally { setPending(""); }
   };
 
   const invite = async () => {
     if (!inviteeId) return; setPending("invite"); setError("");
-    try { await communitiesApi.invite(communityId, inviteeId); setNotice("Đã gửi lời mời tham gia."); setInviteeId(""); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể gửi lời mời"); }
+    try { await communitiesApi.invite(communityId, inviteeId); setNotice("Invitation sent."); setInviteeId(""); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to send the invitation"); }
     finally { setPending(""); }
   };
 
   const transfer = async (userId: string) => {
-    if (!window.confirm("Chuyển quyền sở hữu? Sau thao tác này bạn sẽ trở thành thành viên thường.")) return;
+    if (!window.confirm("Transfer ownership? You will become a regular member.")) return;
     setPending(userId); setError("");
     try { await communitiesApi.transferOwnership(communityId, userId); await onUpdated(); onClose(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể chuyển quyền"); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to transfer ownership"); }
     finally { setPending(""); }
   };
 
   const removeCommunity = async () => {
-    if (!window.confirm("Xóa cộng đồng này? Bài viết sẽ không còn xuất hiện và thao tác không thể hoàn tác trên giao diện.")) return;
+    if (!window.confirm("Delete this community? Its posts will be hidden, and this action cannot be undone here.")) return;
     setPending("delete"); setError("");
     try { await communitiesApi.remove(communityId); onDeleted(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Không thể xóa cộng đồng"); setPending(""); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to delete the community"); setPending(""); }
   };
 
   const invitedIds = new Set(data?.invites.map((invite) => invite.inviteeId) || []);
@@ -625,12 +625,12 @@ function CommunityManagementModal({ communityId, currentUserId, onClose, onUpdat
   const candidates = connections.map((connection) => connection.requesterId === currentUserId ? connection.addressee : connection.requester)
     .filter((person) => !memberIds.has(person.id) && !invitedIds.has(person.id));
 
-  return <div className="bb-community-modal-overlay" role="dialog" aria-modal="true" onMouseDown={onClose}><div className="bb-community-management-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><h2>Quản lý cộng đồng</h2><p>Cài đặt, thành viên, lời mời và yêu cầu tham gia.</p></div><button onClick={onClose}><X size={20} /></button></header>{error && <div className="bb-community-alert is-error">{error}</div>}{notice && <div className="bb-community-alert is-success">{notice}</div>}{!data ? <div className="bb-community-empty"><LoaderCircle className="bb-spin" /> Đang tải...</div> : <div className="bb-community-management-content">
-    {data.managerRole === "OWNER" && <form className="bb-community-manage-section" onSubmit={saveSettings}><h3><Settings size={18} /> Cài đặt chung</h3><div className="bb-community-form-grid"><label>Tên<input value={name} onChange={(event) => setName(event.target.value)} minLength={3} maxLength={100} /></label><label>Trạng thái<select value={status} onChange={(event) => setStatus(event.target.value as "ACTIVE" | "ARCHIVED")}><option value="ACTIVE">Hoạt động</option><option value="ARCHIVED">Lưu trữ</option></select></label><label>Quyền riêng tư<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="PUBLIC">Công khai</option><option value="PRIVATE">Riêng tư</option><option value="INVITE_ONLY">Chỉ lời mời</option></select></label><label>Cách tham gia<select value={joinPolicy} onChange={(event) => setJoinPolicy(event.target.value as CommunityJoinPolicy)}><option value="OPEN">Tự do</option><option value="APPROVAL">Cần duyệt</option><option value="INVITE_ONLY">Chỉ lời mời</option></select></label></div><label>Mô tả<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} /></label><div className="bb-community-form-grid"><label>Ảnh đại diện<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setAvatar(event.target.files?.[0] || null)} /></label><label>Ảnh bìa<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setCover(event.target.files?.[0] || null)} /></label></div><button className="bb-community-primary-btn" disabled={pending === "settings"}>{pending === "settings" ? "Đang lưu..." : "Lưu cài đặt"}</button></form>}
-    <section className="bb-community-manage-section"><h3><UserPlus size={18} /> Mời kết nối</h3><div className="bb-community-invite-row"><select value={inviteeId} onChange={(event) => setInviteeId(event.target.value)}><option value="">Chọn một người đã kết nối</option>{candidates.map((person) => <option key={person.id} value={person.id}>{person.profile?.fullName || person.profile?.username || "Thành viên BeeBuddy"}</option>)}</select><button disabled={!inviteeId || pending === "invite"} onClick={() => void invite()}>Gửi lời mời</button></div>{data.invites.length > 0 && <p className="bb-community-manage-note">{data.invites.length} lời mời đang chờ phản hồi.</p>}</section>
-    {data.joinRequests.length > 0 && <section className="bb-community-manage-section"><h3><Users size={18} /> Yêu cầu tham gia ({data.joinRequests.length})</h3>{data.joinRequests.map((request) => <div className="bb-community-manage-row" key={request.id}><img src={request.requester.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{request.requester.profile?.fullName || request.requester.email}</strong><span>{request.message || "Không kèm lời nhắn"}</span></div><button disabled={pending === request.id} onClick={() => void respondRequest(request.id, true)}>Duyệt</button><button className="is-danger" disabled={pending === request.id} onClick={() => void respondRequest(request.id, false)}>Từ chối</button></div>)}</section>}
-    <section className="bb-community-manage-section"><h3><Users size={18} /> Thành viên ({data.members.filter((member) => member.status === "ACTIVE").length})</h3>{data.members.map((member) => <div className="bb-community-manage-row" key={member.id}><img src={member.user.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{member.user.profile?.fullName || "Thành viên BeeBuddy"}</strong><span>{member.role} · {member.status}</span></div>{member.role !== "OWNER" && <>{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, member.role === "MODERATOR" ? "DEMOTE" : "PROMOTE")}>{member.role === "MODERATOR" ? "Hạ quyền" : "Điều hành viên"}</button>}{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void transfer(member.userId)}>Chuyển owner</button>}{member.status === "ACTIVE" ? <><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "REMOVE")}><UserMinus size={14} /> Xóa</button><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "BAN")}>Cấm</button></> : <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "RESTORE")}>Khôi phục</button>}</>}</div>)}</section>
-    {data.managerRole === "OWNER" && <section className="bb-community-manage-section is-danger-zone"><h3><Trash2 size={18} /> Vùng nguy hiểm</h3><p>Xóa mềm cộng đồng và ẩn toàn bộ nội dung khỏi người dùng.</p><button disabled={pending === "delete"} onClick={() => void removeCommunity()}>Xóa cộng đồng</button></section>}
+  return <div className="bb-community-modal-overlay" role="dialog" aria-modal="true" onMouseDown={onClose}><div className="bb-community-management-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><h2>Manage community</h2><p>Settings, members, invitations, and join requests.</p></div><button onClick={onClose}><X size={20} /></button></header>{error && <div className="bb-community-alert is-error">{error}</div>}{notice && <div className="bb-community-alert is-success">{notice}</div>}{!data ? <div className="bb-community-empty"><LoaderCircle className="bb-spin" /> Loading...</div> : <div className="bb-community-management-content">
+    {data.managerRole === "OWNER" && <form className="bb-community-manage-section" onSubmit={saveSettings}><h3><Settings size={18} /> General settings</h3><div className="bb-community-form-grid"><label>Name<input value={name} onChange={(event) => setName(event.target.value)} minLength={3} maxLength={100} /></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as "ACTIVE" | "ARCHIVED")}><option value="ACTIVE">Active</option><option value="ARCHIVED">Archived</option></select></label><label>Privacy<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="PUBLIC">Public</option><option value="PRIVATE">Private</option><option value="INVITE_ONLY">Invite only</option></select></label><label>How to join<select value={joinPolicy} onChange={(event) => setJoinPolicy(event.target.value as CommunityJoinPolicy)}><option value="OPEN">Open</option><option value="APPROVAL">Approval required</option><option value="INVITE_ONLY">Invite only</option></select></label></div><label>Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} /></label><div className="bb-community-form-grid"><label>Avatar<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setAvatar(event.target.files?.[0] || null)} /></label><label>Cover image<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setCover(event.target.files?.[0] || null)} /></label></div><button className="bb-community-primary-btn" disabled={pending === "settings"}>{pending === "settings" ? "Saving..." : "Save settings"}</button></form>}
+    <section className="bb-community-manage-section"><h3><UserPlus size={18} /> Invite a connection</h3><div className="bb-community-invite-row"><select value={inviteeId} onChange={(event) => setInviteeId(event.target.value)}><option value="">Select a connection</option>{candidates.map((person) => <option key={person.id} value={person.id}>{person.profile?.fullName || person.profile?.username || "Member BeeBuddy"}</option>)}</select><button disabled={!inviteeId || pending === "invite"} onClick={() => void invite()}>Send invitation</button></div>{data.invites.length > 0 && <p className="bb-community-manage-note">{data.invites.length} invitations awaiting a response.</p>}</section>
+    {data.joinRequests.length > 0 && <section className="bb-community-manage-section"><h3><Users size={18} /> Join requests ({data.joinRequests.length})</h3>{data.joinRequests.map((request) => <div className="bb-community-manage-row" key={request.id}><img src={request.requester.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{request.requester.profile?.fullName || request.requester.email}</strong><span>{request.message || "No message"}</span></div><button disabled={pending === request.id} onClick={() => void respondRequest(request.id, true)}>Approve</button><button className="is-danger" disabled={pending === request.id} onClick={() => void respondRequest(request.id, false)}>Decline</button></div>)}</section>}
+    <section className="bb-community-manage-section"><h3><Users size={18} /> Member ({data.members.filter((member) => member.status === "ACTIVE").length})</h3>{data.members.map((member) => <div className="bb-community-manage-row" key={member.id}><img src={member.user.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{member.user.profile?.fullName || "Member BeeBuddy"}</strong><span>{member.role} · {member.status}</span></div>{member.role !== "OWNER" && <>{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, member.role === "MODERATOR" ? "DEMOTE" : "PROMOTE")}>{member.role === "MODERATOR" ? "Demote" : "Moderator"}</button>}{data.managerRole === "OWNER" && member.status === "ACTIVE" && <button disabled={pending === member.userId} onClick={() => void transfer(member.userId)}>Transfer ownership</button>}{member.status === "ACTIVE" ? <><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "REMOVE")}><UserMinus size={14} /> Remove</button><button className="is-danger" disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "BAN")}>Ban</button></> : <button disabled={pending === member.userId} onClick={() => void memberAction(member.userId, "RESTORE")}>Restore</button>}</>}</div>)}</section>
+    {data.managerRole === "OWNER" && <section className="bb-community-manage-section is-danger-zone"><h3><Trash2 size={18} /> Danger zone</h3><p>Soft-delete this community and hide all its content from users.</p><button disabled={pending === "delete"} onClick={() => void removeCommunity()}>Delete community</button></section>}
   </div>}</div></div>;
 }
 
@@ -657,7 +657,7 @@ function CreateCommunityModal({
       const community = await communitiesApi.create({ name: name.trim(), description: description.trim() || undefined, visibility, joinPolicy });
       await onCreated(community);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tạo cộng đồng");
+      setError(err instanceof Error ? err.message : "Unable to create the community");
     } finally {
       setSubmitting(false);
     }
@@ -666,15 +666,15 @@ function CreateCommunityModal({
   return (
     <div className="bb-community-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="create-community-title" onMouseDown={onClose}>
       <form className="bb-community-modal" onSubmit={handleSubmit} onMouseDown={(event) => event.stopPropagation()}>
-        <div className="bb-community-modal-head"><div><h2 id="create-community-title">Tạo cộng đồng mới</h2><p>Xây một không gian có mục đích rõ ràng ngay từ đầu.</p></div><button type="button" onClick={onClose} aria-label="Đóng"><X size={20} /></button></div>
+        <div className="bb-community-modal-head"><div><h2 id="create-community-title">Create a new community</h2><p>Build a space with a clear purpose from the start.</p></div><button type="button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
         {error && <div className="bb-community-alert is-error">{error}</div>}
-        <label>Tên cộng đồng<input value={name} onChange={(event) => setName(event.target.value)} minLength={3} maxLength={100} required placeholder="Ví dụ: Chạy bộ mỗi sáng" /></label>
-        <label>Mô tả<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} placeholder="Cộng đồng này dành cho ai và cùng làm gì?" /></label>
+        <label>Community name<input value={name} onChange={(event) => setName(event.target.value)} minLength={3} maxLength={100} required placeholder="For example: Morning runners" /></label>
+        <label>Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} placeholder="Who is this community for, and what will you do together?" /></label>
         <div className="bb-community-form-grid">
-          <label>Quyền riêng tư<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="PUBLIC">Công khai</option><option value="PRIVATE">Riêng tư</option><option value="INVITE_ONLY">Chỉ lời mời</option></select></label>
-          <label>Cách tham gia<select value={joinPolicy} onChange={(event) => setJoinPolicy(event.target.value as CommunityJoinPolicy)}><option value="OPEN">Tự do tham gia</option><option value="APPROVAL">Cần phê duyệt</option><option value="INVITE_ONLY">Chỉ qua lời mời</option></select></label>
+          <label>Privacy<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="PUBLIC">Public</option><option value="PRIVATE">Private</option><option value="INVITE_ONLY">Invite only</option></select></label>
+          <label>How to join<select value={joinPolicy} onChange={(event) => setJoinPolicy(event.target.value as CommunityJoinPolicy)}><option value="OPEN">Open to all</option><option value="APPROVAL">Approval required</option><option value="INVITE_ONLY">By invitation only</option></select></label>
         </div>
-        <div className="bb-community-modal-actions"><button type="button" onClick={onClose}>Hủy</button><button type="submit" disabled={name.trim().length < 3 || submitting}>{submitting ? <><LoaderCircle className="bb-spin" size={17} /> Đang tạo</> : "Tạo cộng đồng"}</button></div>
+        <div className="bb-community-modal-actions"><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={name.trim().length < 3 || submitting}>{submitting ? <><LoaderCircle className="bb-spin" size={17} /> Creating</> : "Create community"}</button></div>
       </form>
     </div>
   );

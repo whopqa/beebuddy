@@ -145,7 +145,7 @@ export class MatchingService {
             reporterId: userId,
             targetUserId: rec.candidateUserId,
             source: "USER",
-            reason: typeof reasons?.reason === "string" ? reasons.reason.slice(0, 1000) : "Báo cáo từ matching feedback",
+            reason: typeof reasons?.reason === "string" ? reasons.reason.slice(0, 1000) : "Report from matching feedback",
             reasonCode: "MATCHING_FEEDBACK",
           },
         });

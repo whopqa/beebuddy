@@ -11,6 +11,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
   },
   notification: { create: vi.fn() },
+  notificationPreference: { findUnique: vi.fn() },
   outboxEvent: { create: vi.fn() },
   $transaction: vi.fn(),
 }));
@@ -27,6 +28,7 @@ describe("ConnectionsService", () => {
     prismaMock.userBlock.findFirst.mockResolvedValue(null);
     prismaMock.connection.findUnique.mockResolvedValue(null);
     prismaMock.notification.create.mockResolvedValue({ id: "notification-1", recipientId: "user-b", type: "CONNECTION_REQUEST" });
+    prismaMock.notificationPreference.findUnique.mockResolvedValue(null);
     prismaMock.outboxEvent.create.mockResolvedValue({ id: "outbox-1" });
   });
 

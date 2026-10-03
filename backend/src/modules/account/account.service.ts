@@ -396,7 +396,7 @@ export class AccountService {
 
   public static async getSettings(userId: string) {
     let settings = await prisma.userSetting.findUnique({ where: { userId } });
-    if (!settings) settings = await prisma.userSetting.create({ data: { userId } });
+    if (!settings) settings = await prisma.userSetting.create({ data: { userId, language: "en" } });
     return settings;
   }
 

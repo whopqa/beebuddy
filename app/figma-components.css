@@ -1542,20 +1542,30 @@
    8. Notifications (Figma 436:531, 465:1907, 470:546)
    -------------------------------------------------------------------------- */
 .bb-notifications-canvas {
-  max-width: 900px;
+  width: 100%;
+  max-width: none;
+  min-height: calc(100vh - 74px);
+  margin: 0;
+  padding: 48px clamp(24px, 2.8vw, 48px) 80px;
+  background: #f7f8fa;
+}
+
+.bb-notif-container {
+  width: 100%;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 40px 24px 80px;
 }
 
 .bb-notif-page-header {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 .bb-notif-page-title {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   color: #111827;
-  margin: 0 0 4px;
+  margin: 0 0 7px;
+  letter-spacing: -0.02em;
 }
 
 .bb-notif-page-sub {
@@ -1566,16 +1576,16 @@
 
 .bb-notif-filter-tabs {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 28px;
   border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .bb-notif-tab-item {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid transparent;
+  position: relative;
+  padding: 12px 0 14px;
+  border: 0;
   background: transparent;
   font-size: 13px;
   font-weight: 600;
@@ -1585,55 +1595,115 @@
 }
 
 .bb-notif-tab-item:hover {
-  color: #111827;
-  background: #f3f4f6;
+  color: #ff7300;
+  background: transparent;
 }
 
 .bb-notif-tab-item.is-active {
-  background: #ffedd5;
-  color: #c2410c;
+  background: transparent;
+  color: #ff7300;
   font-weight: 700;
 }
 
+.bb-notif-tab-item.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #ff7300;
+}
+
 .bb-notif-get-started-card {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+  background: #ffffff;
+  border: 1px solid #dfe3e8;
   border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  overflow: hidden;
 }
 
 .bb-notif-gs-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 24px;
+  padding: 26px 24px 18px;
 }
 
 .bb-notif-gs-header h3 {
   font-size: 16px;
   font-weight: 800;
-  color: #9a3412;
+  color: #111827;
+  margin: 0 0 5px;
+}
+
+.bb-notif-gs-header p,
+.bb-notif-check-item p {
   margin: 0;
+  color: #7b8494;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bb-notif-step-badge {
+  flex: 0 0 auto;
+  min-width: 76px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #ff7300;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .bb-notif-checklist {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: 1fr;
 }
 
 .bb-notif-check-item {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 12px 14px;
+  min-height: 70px;
+  padding: 16px 24px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
+  border-top: 1px solid #edf0f3;
   font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  color: #111827;
+}
+
+.bb-notif-check-item strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bb-check-circle,
+.bb-circle-num {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bb-check-circle {
+  background: #ff7300;
+  color: #ffffff;
+}
+
+.bb-circle-num {
+  border: 1px solid #cbd2da;
+  color: #98a1af;
+  background: #ffffff;
 }
 
 .bb-notif-items-card {
@@ -1645,12 +1715,14 @@
 
 .bb-notif-row {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  align-items: center;
+  gap: 22px;
+  min-height: 120px;
+  padding: 20px 54px 20px 22px;
+  border-bottom: 1px solid #edf0f3;
   position: relative;
   transition: background 0.15s ease;
+  cursor: pointer;
 }
 
 .bb-notif-row:last-child {
@@ -1662,7 +1734,12 @@
 }
 
 .bb-notif-row.is-unread {
-  background: #fffbeb;
+  background: #ffffff;
+}
+
+.bb-notif-row:focus-visible {
+  outline: 2px solid #ff9a2e;
+  outline-offset: -3px;
 }
 
 .bb-notif-unread-dot {
@@ -1676,10 +1753,10 @@
 }
 
 .bb-notif-row-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 70px;
+  height: 70px;
+  border-radius: 0;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -1689,14 +1766,19 @@
 
 .bb-notif-row-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 400;
   color: #111827;
-  margin: 0 0 2px;
+  margin: 0 0 5px;
+}
+
+.bb-notif-row-title strong {
+  font-weight: 800;
+  margin-right: 6px;
 }
 
 .bb-notif-row-desc {
   font-size: 13px;
-  color: #4b5563;
+  color: #5f6978;
   margin: 0 0 6px;
   line-height: 1.45;
 }
@@ -1704,6 +1786,29 @@
 .bb-notif-row-time {
   font-size: 12px;
   color: #9ca3af;
+}
+
+@media (max-width: 680px) {
+  .bb-notifications-canvas {
+    padding: 30px 16px 56px;
+  }
+
+  .bb-notif-gs-header,
+  .bb-notif-check-item {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .bb-notif-row {
+    min-height: 104px;
+    gap: 14px;
+    padding: 16px 38px 16px 14px;
+  }
+
+  .bb-notif-row-avatar {
+    width: 56px;
+    height: 56px;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -2200,7 +2305,8 @@
 .bb-settings-toggle.is-on { background: linear-gradient(90deg, #ff7d00, #ffc400); }
 .bb-settings-toggle span { display: block; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0002; transition: transform .18s ease; }
 .bb-settings-toggle.is-on span { transform: translateX(27px); }
-.bb-settings-toggle:disabled { opacity: .6; cursor: wait; }
+.bb-settings-toggle:disabled { opacity: .6; cursor: not-allowed; }
+.bb-settings-toggle.is-loading:disabled { cursor: progress; }
 
 .bb-settings-interest-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 0 8px 31px; }
 .bb-settings-interest-chips button { border: 1px solid #ffcf91; border-radius: 999px; background: #fffaf2; color: #ad5d00; padding: 3px 10px; font-size: 12px; cursor: pointer; }

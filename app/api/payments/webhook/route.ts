@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
     });
     const payload = await upstream.json().catch(() => ({
       success: false,
-      error: `Backend trả về dữ liệu không hợp lệ (HTTP ${upstream.status})`,
+      error: `The backend returned invalid data (HTTP ${upstream.status})`,
     }));
     return NextResponse.json(payload, { status: upstream.status });
   } catch {
-    return NextResponse.json({ success: false, error: "Không thể kết nối BeeBuddy API" }, { status: 503 });
+    return NextResponse.json({ success: false, error: "Unable to connect to the BeeBuddy API" }, { status: 503 });
   }
 }

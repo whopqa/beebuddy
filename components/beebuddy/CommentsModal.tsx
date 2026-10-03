@@ -8,13 +8,13 @@ import { postsApi, type PostComment } from "@/lib/posts-client";
 function relativeTime(value: string) {
   const elapsed = Date.now() - new Date(value).getTime();
   const minutes = Math.max(0, Math.floor(elapsed / 60_000));
-  if (minutes < 1) return "Vừa xong";
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  if (days < 7) return `${days} days ago`;
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 }
 
 export default function CommentsModal({
@@ -22,7 +22,7 @@ export default function CommentsModal({
   postId,
   isLoggedIn,
   onClose,
-  title = "Bình luận",
+  title = "Comments",
   onApprovedComment,
   showReportAction = true,
 }: {
@@ -82,21 +82,21 @@ export default function CommentsModal({
       if (result.warning) setNotice(result.warning);
       if (result.comment.status === "APPROVED") onApprovedComment?.(postId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể gửi bình luận");
+      setError(err instanceof Error ? err.message : "Unable to post the comment");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleReport = async (commentId: string) => {
-    const reason = window.prompt("Lý do báo cáo bình luận:", "Nội dung không phù hợp")?.trim();
+    const reason = window.prompt("Reason for reporting this comment:", "Inappropriate content")?.trim();
     if (!reason) return;
     setError("");
     try {
       await postsApi.reportComment(commentId, reason);
-      setNotice("BeeBuddy đã nhận báo cáo và sẽ xem xét bình luận này.");
+      setNotice("BeeBuddy received your report and will review this comment.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể gửi báo cáo");
+      setError(err instanceof Error ? err.message : "Unable to send the report");
     }
   };
 
@@ -116,7 +116,7 @@ export default function CommentsModal({
             type="button"
             onClick={onClose}
             className="bb-comments-close-btn"
-            aria-label="Đóng bình luận"
+            aria-label="Close comments"
           >
             <X size={18} />
           </button>
@@ -126,11 +126,11 @@ export default function CommentsModal({
 
         <div className="bb-comments-list-wrap" aria-live="polite">
           {loading ? (
-            <div className="bb-comments-state"><LoaderCircle className="bb-spin" size={22} />Đang tải bình luận...</div>
+            <div className="bb-comments-state"><LoaderCircle className="bb-spin" size={22} />Loading comments...</div>
           ) : error && comments.length === 0 ? (
             <div className="bb-comments-state is-error"><AlertCircle size={20} />{error}</div>
           ) : comments.length === 0 ? (
-            <div className="bb-comments-state">Chưa có bình luận. Hãy bắt đầu cuộc trò chuyện!</div>
+            <div className="bb-comments-state">No comments yet. Start the conversation!</div>
           ) : comments.map((comment) => (
             <div key={comment.id} className="bb-comment-row">
               <img
@@ -146,11 +146,11 @@ export default function CommentsModal({
                 <p className="bb-comment-body-text">{comment.content}</p>
                 <div className="bb-comment-footer-row">
                   {comment.status === "FLAGGED" && (
-                    <span className="bb-comment-review-badge">Đang chờ kiểm duyệt</span>
+                    <span className="bb-comment-review-badge">Pending review</span>
                   )}
                   {isLoggedIn && showReportAction && (
                     <button type="button" className="bb-comment-report-btn" onClick={() => handleReport(comment.id)}>
-                      <Flag size={12} /> Báo cáo
+                      <Flag size={12} /> Report
                     </button>
                   )}
                 </div>
@@ -169,7 +169,7 @@ export default function CommentsModal({
           <form onSubmit={handlePost} className="bb-comments-composer-row">
             <input
               type="text"
-              placeholder="Viết bình luận..."
+              placeholder="Write a comment..."
               value={newComment}
               onChange={(event) => setNewComment(event.target.value)}
               className="bb-comments-composer-input"
@@ -177,12 +177,12 @@ export default function CommentsModal({
               disabled={submitting}
             />
             <button type="submit" className="bb-comments-post-btn" disabled={!newComment.trim() || submitting}>
-              {submitting ? "Đang gửi" : "Đăng"}
+              {submitting ? "Posting" : "Post"}
             </button>
           </form>
         ) : (
           <div className="bb-comments-login-prompt">
-            <Link href="/login">Đăng nhập</Link> để tham gia bình luận.
+            <Link href="/login">Sign in</Link> to join the conversation.
           </div>
         )}
       </div>

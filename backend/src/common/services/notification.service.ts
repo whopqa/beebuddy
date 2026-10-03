@@ -1,5 +1,6 @@
 import { createCipheriv, createHash, randomBytes } from "crypto";
 import {
+  NotificationChannel,
   NotificationType,
   OutboxEventType,
   Prisma,
@@ -28,6 +29,17 @@ function encryptPushToken(token: string) {
 export class NotificationService {
   static async create(tx: Prisma.TransactionClient, input: NotificationInput) {
     if (input.recipientId === input.actorId) return null;
+    const preference = await tx.notificationPreference.findUnique({
+      where: {
+        userId_type_channel: {
+          userId: input.recipientId,
+          type: input.type,
+          channel: NotificationChannel.IN_APP,
+        },
+      },
+      select: { enabled: true },
+    });
+    if (preference?.enabled === false) return null;
     const notification = await tx.notification.create({
       data: {
         recipientId: input.recipientId,

@@ -9,6 +9,15 @@ function toResponse(result: Awaited<ReturnType<typeof forwardAuthenticatedReques
   return response;
 }
 
+export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
+  const query = request.nextUrl.searchParams.toString();
+  return toResponse(await forwardAuthenticatedRequest(`${endpoint(params)}${query ? `?${query}` : ""}`));
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { path: string[] } }) {
+  return toResponse(await forwardAuthenticatedRequest(endpoint(params), { method: "PUT", body: await request.text() }));
+}
+
 export async function POST(request: NextRequest, { params }: { params: { path: string[] } }) {
   return toResponse(await forwardAuthenticatedRequest(endpoint(params), { method: "POST", body: await request.text() }));
 }

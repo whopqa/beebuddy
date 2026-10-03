@@ -291,7 +291,7 @@ export class PaymentsService {
         paymentLinkId: paymentLink.paymentLinkId,
         qrCode: paymentLink.qrCode,
         expiresAt: new Date((Math.floor(Date.now() / 1000) + ENV.PAYOS.PAYMENT_LINK_TTL_MINUTES * 60) * 1000),
-        instructions: "Mở trang thanh toán PayOS và quét VietQR bằng ứng dụng ngân hàng để hoàn tất.",
+        instructions: "Open the PayOS checkout page and scan the VietQR code with your banking app to complete payment.",
       };
     } catch (error) {
       await prisma.payment.updateMany({
@@ -345,7 +345,7 @@ export class PaymentsService {
       webhookEvent.processingStatus === WebhookProcessingStatus.PROCESSED
       || webhookEvent.processingStatus === WebhookProcessingStatus.IGNORED
     ) {
-      return { success: true, message: "Webhook đã được tiếp nhận trước đó" };
+      return { success: true, message: "Webhook already received" };
     }
 
     const payment = await prisma.payment.findUnique({ where: { orderCode: payload.data.orderCode } });
@@ -356,7 +356,7 @@ export class PaymentsService {
         where: { id: webhookEvent.id },
         data: { processingStatus: WebhookProcessingStatus.IGNORED, processedAt: new Date() },
       });
-      return { success: true, message: "Webhook hợp lệ không thuộc đơn hàng BeeBuddy" };
+      return { success: true, message: "Valid webhook for an unrelated order" };
     }
 
     if (payment.status === PaymentStatus.COMPLETED) {
@@ -368,7 +368,7 @@ export class PaymentsService {
           processedAt: new Date(),
         },
       });
-      return { success: true, message: "Đơn hàng đã được thanh toán trước đó" };
+      return { success: true, message: "Order already paid" };
     }
     if (payment.status !== PaymentStatus.PENDING) {
       throw new AppError("Đơn thanh toán không còn ở trạng thái chờ", 409);
@@ -399,7 +399,7 @@ export class PaymentsService {
       orderCode: payment.orderCode,
       tier: payment.tier,
       expiresAt: completed.expiresAt,
-      message: `Tài khoản đã được nâng cấp lên ${payment.tier} thành công`,
+      message: `Account successfully upgraded to ${payment.tier}`,
     };
   }
 

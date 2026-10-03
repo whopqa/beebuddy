@@ -278,7 +278,7 @@ export class PostsService {
         createdAt: post.createdAt,
         author: {
           id: post.author.id,
-          fullName: post.author.profile?.fullName || "Người dùng BeeBuddy",
+          fullName: post.author.profile?.fullName || "BeeBuddy member",
           username: post.author.profile?.username || "beebuddy_user",
           avatarUrl: post.author.profile?.avatarUrl || null,
           location: post.author.profile?.location || null,
@@ -332,7 +332,7 @@ export class PostsService {
             postId: post.id,
             moderationCaseId: moderationCase.id,
             source: ReportSource.RULE,
-            reason: `Hệ thống tự động gắn cờ: ${filterResult.reason}`,
+            reason: `Automatically flagged by the system: ${filterResult.reason}`,
             reasonCode: "BADWORD_RULE",
             status: ReportStatus.OPEN,
           },
@@ -340,7 +340,7 @@ export class PostsService {
       }
       return {
         postId: post.id,
-        warning: filterResult.isClean ? null : "Bài viết đã được chuyển vào hàng đợi kiểm duyệt.",
+        warning: filterResult.isClean ? null : "Your post was sent to the moderation queue.",
       };
     });
   }
@@ -397,13 +397,13 @@ export class PostsService {
               postId: post.id,
               moderationCaseId: moderationCase.id,
               source: ReportSource.RULE,
-              reason: `Hệ thống tự động gắn cờ: ${filterResult.reason}`,
+              reason: `Automatically flagged by the system: ${filterResult.reason}`,
               reasonCode: "BADWORD_RULE",
             },
           });
         }
       }
-      return { postId: post.id, warning: filterResult.isClean ? null : "Bài viết đang chờ kiểm duyệt." };
+      return { postId: post.id, warning: filterResult.isClean ? null : "Your post is awaiting moderation." };
     });
   }
 
@@ -545,13 +545,13 @@ export class PostsService {
           data: {
             postId: post.id,
             source: ReportSource.RULE,
-            reason: `Hệ thống tự động gắn cờ: ${filterResult.reason}`,
+            reason: `Automatically flagged by the system: ${filterResult.reason}`,
             reasonCode: "BADWORD_RULE",
             status: ReportStatus.OPEN,
           },
         });
       }
-      return { post, warning: filterResult.isClean ? null : "Bài viết đã được chuyển vào hàng đợi kiểm duyệt." };
+      return { post, warning: filterResult.isClean ? null : "Your post was sent to the moderation queue." };
     });
   }
 
@@ -593,7 +593,7 @@ export class PostsService {
       createdAt: c.createdAt,
       author: {
         id: c.author.id,
-        fullName: c.author.profile?.fullName || "Ẩn danh",
+        fullName: c.author.profile?.fullName || "Anonymous",
         username: c.author.profile?.username,
         avatarUrl: c.author.profile?.avatarUrl,
         tier: c.author.tier,
@@ -651,7 +651,7 @@ export class PostsService {
         data: {
           commentId: comment.id,
           source: ReportSource.RULE,
-          reason: `Hệ thống tự động gắn cờ: ${flagReason}`,
+          reason: `Automatically flagged by the system: ${flagReason}`,
           reasonCode: "BADWORD_RULE",
           status: ReportStatus.OPEN,
         },
@@ -668,7 +668,7 @@ export class PostsService {
         createdAt: comment.createdAt,
         author: {
           id: comment.author.id,
-          fullName: comment.author.profile?.fullName || "Ẩn danh",
+          fullName: comment.author.profile?.fullName || "Anonymous",
           username: comment.author.profile?.username,
           avatarUrl: comment.author.profile?.avatarUrl,
           tier: comment.author.tier,
@@ -676,7 +676,7 @@ export class PostsService {
       },
       warning:
         status === CommentStatus.FLAGGED
-          ? "Bình luận của bạn chứa từ ngữ không phù hợp và đang được chuyển vào hàng đợi kiểm duyệt của Quản trị viên."
+          ? "Your comment contains inappropriate language and was sent to the moderation queue."
           : null,
     };
   }

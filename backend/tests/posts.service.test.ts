@@ -231,7 +231,7 @@ describe("PostsService", () => {
     });
 
     expect(result.comment.status).toBe(CommentStatus.FLAGGED);
-    expect(result.warning).toContain("kiểm duyệt");
+    expect(result.warning).toContain("moderation queue");
     expect(prismaMock.report.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         commentId: "comment-1",

@@ -74,7 +74,7 @@ export class BadwordsFilter {
       return {
         isClean: false,
         violatedWords,
-        reason: `Nội dung chứa từ ngữ không phù hợp (${violatedWords.slice(0, 3).join(", ")})`,
+        reason: `Content contains inappropriate language (${violatedWords.slice(0, 3).join(", ")})`,
       };
     }
 

@@ -24,7 +24,7 @@ async function request<T>(path: string) {
   const response = await fetch(`/api/search${path}`, { cache: "no-store" });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Không thể tìm kiếm lúc này");
+    throw new Error(body.error || body.message || "Search is unavailable right now");
   }
   return body.data;
 }

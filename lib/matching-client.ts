@@ -54,11 +54,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       cache: "no-store",
     });
   } catch {
-    throw new Error("Không kết nối được máy chủ. Hãy kiểm tra backend đang chạy.");
+    throw new Error("Unable to connect to the server. Check that the backend is running.");
   }
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Yêu cầu không thành công");
+    throw new Error(body.error || body.message || "Request failed");
   }
   return body.data;
 }

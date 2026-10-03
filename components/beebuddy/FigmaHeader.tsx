@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Bell, Search } from "lucide-react";
 import { webAuth } from "@/lib/auth-client";
 import type { WebUser } from "@/lib/auth-types";
-import { notificationsApi } from "@/lib/notifications-client";
+import { NOTIFICATION_PREFERENCES_CHANGED_EVENT, notificationsApi } from "@/lib/notifications-client";
 
 export default function FigmaHeader({ authenticated = false, designHome = false }: { authenticated?: boolean; designHome?: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,19 +24,29 @@ export default function FigmaHeader({ authenticated = false, designHome = false 
 
   useEffect(() => {
     let active = true;
+    const refreshUnreadCount = () => {
+      void notificationsApi.list(undefined, 1, true)
+        .then((page) => { if (active) setUnreadCount(page.unreadCount); })
+        .catch(() => undefined);
+    };
+    window.addEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, refreshUnreadCount);
     webAuth.me()
       .then((currentUser) => {
         if (!active) return;
         setUser(currentUser);
         setIsAuth(true);
-        void notificationsApi.list(undefined, 1, true).then((page) => setUnreadCount(page.unreadCount)).catch(() => undefined);
+        refreshUnreadCount();
       })
       .catch(() => {
         if (!active) return;
         setUser(null);
         setIsAuth(false);
+        setUnreadCount(0);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      window.removeEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, refreshUnreadCount);
+    };
   }, []);
 
   const homePath = isAuth ? "/home" : "/";

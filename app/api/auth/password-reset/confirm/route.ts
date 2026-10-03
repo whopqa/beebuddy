@@ -3,7 +3,7 @@ import { clearAuthCookies, forwardAuthRequest } from "@/lib/server/auth-proxy";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ success: false, error: "Yêu cầu không hợp lệ" }, { status: 400 });
+  if (!body) return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
   const { upstream, payload } = await forwardAuthRequest("/auth/password-reset/confirm", body);
   const response = NextResponse.json(payload, { status: upstream?.status ?? 503 });
   if (upstream?.ok) clearAuthCookies(response);

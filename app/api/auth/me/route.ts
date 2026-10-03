@@ -18,7 +18,7 @@ export async function GET() {
   const refreshToken = cookieStore.get(REFRESH_COOKIE)?.value;
 
   if (!accessToken && !refreshToken) {
-    return NextResponse.json({ success: false, error: "Chưa đăng nhập" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Not signed in" }, { status: 401 });
   }
 
   try {
@@ -43,14 +43,14 @@ export async function GET() {
       }
     }
 
-    if (!meResponse) throw new Error("Không có phiên đăng nhập");
-    const body = (await meResponse.json().catch(() => ({ success: false, error: "Phản hồi không hợp lệ" }))) as ApiEnvelope<WebUser>;
+    if (!meResponse) throw new Error("No sign-in session");
+    const body = (await meResponse.json().catch(() => ({ success: false, error: "Invalid response" }))) as ApiEnvelope<WebUser>;
     const response = NextResponse.json(body, { status: meResponse.status });
 
     if (meResponse.ok && refreshedTokens) setAuthCookies(response, refreshedTokens);
     if (!meResponse.ok) clearAuthCookies(response);
     return response;
   } catch {
-    return NextResponse.json({ success: false, error: "Không thể kết nối BeeBuddy API" }, { status: 503 });
+    return NextResponse.json({ success: false, error: "Unable to connect to the BeeBuddy API" }, { status: 503 });
   }
 }

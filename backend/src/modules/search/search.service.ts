@@ -111,9 +111,9 @@ export class SearchService {
         userId: p.userId,
         maskedName: this.maskName(p.fullName),
         avatarUrl: p.avatarUrl,
-        location: canShow(ProfileSection.PLACES) ? p.location || "Việt Nam" : "Việt Nam",
+        location: canShow(ProfileSection.PLACES) ? p.location || "Vietnam" : "Vietnam",
         matchingInterests: canShow(ProfileSection.INTERESTS) ? p.interests.slice(0, 3) : [],
-        connectionGoal: canShow(ProfileSection.GOALS) ? p.connectionGoal || "Tìm bạn đồng hành" : "Tìm bạn đồng hành",
+        connectionGoal: canShow(ProfileSection.GOALS) ? p.connectionGoal || "Find a companion" : "Find a companion",
         role: canShow(ProfileSection.OCCUPATION) ? p.occupation || p.industry || "BeeBuddy member" : "BeeBuddy member",
       };
     });
@@ -125,8 +125,8 @@ export class SearchService {
       previewUsers: previewProfiles,
       limitNotice:
         totalMatches > 3
-          ? `Hệ thống tìm thấy ${totalMatches} người có cùng thói quen/sở thích này. Để xem danh sách đầy đủ và gửi lời mời kết nối, vui lòng tải ứng dụng BeeBuddy trên điện thoại!`
-          : "Tải ứng dụng BeeBuddy trên điện thoại để bắt đầu kết nối và trò chuyện!",
+          ? `We found ${totalMatches} people with similar habits or interests. Download the BeeBuddy mobile app to view the full list and send connection requests!`
+          : "Download the BeeBuddy mobile app to start connecting and chatting!",
       downloadAppUrl: "https://beebuddy.vn/download",
     };
   }
@@ -135,14 +135,14 @@ export class SearchService {
     return [
       "Board games",
       "Running",
-      "Chạy bộ",
-      "Đọc sách",
+      "Hiking",
+      "Reading",
       "Coding",
-      "Cà phê",
-      "Cầu lông",
-      "Học tiếng Anh",
-      "Nhiếp ảnh",
-      "Du lịch bụi",
+      "Coffee",
+      "Badminton",
+      "Learning English",
+      "Photography",
+      "Backpacking",
     ];
   }
 }

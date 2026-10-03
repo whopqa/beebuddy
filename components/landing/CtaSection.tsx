@@ -25,15 +25,15 @@ export default function CtaSection() {
 
       if (res.ok && data.success) {
         setStatus("success");
-        setFeedbackMsg(data.message || "Cảm ơn bạn đã đăng ký! Chúng tôi sẽ liên hệ sớm.");
+        setFeedbackMsg(data.message || "Thanks for signing up! We'll be in touch soon.");
         setFormData({ name: "", email: "", phone: "", message: "" });
       } else {
         setStatus("error");
-        setFeedbackMsg(data.error || "Có lỗi xảy ra, vui lòng thử lại.");
+        setFeedbackMsg(data.error || "Something went wrong. Please try again.");
       }
     } catch {
       setStatus("error");
-      setFeedbackMsg("Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại mạng.");
+      setFeedbackMsg("Could not connect to the server. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -50,23 +50,23 @@ export default function CtaSection() {
             {/* Left Column: Heading & Value */}
             <div className="space-y-6">
               <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                Sẵn sàng đồng hành cùng bạn
+                Ready to get started
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-                Đăng ký trải nghiệm sớm dự án EXE201
+                Sign up for early access to EXE201
               </h2>
               <p className="text-slate-300 text-base leading-relaxed">
-                Hãy để lại thông tin liên hệ để nhận thông báo mới nhất khi sản phẩm ra mắt và nhận ưu đãi dành riêng cho người dùng đầu tiên.
+                Leave your contact information for launch updates and offers for early users.
               </p>
 
               <div className="pt-2 space-y-3 text-sm text-slate-300">
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0" />
-                  <span>Cập nhật lộ trình phát triển và bản dùng thử độc quyền</span>
+                  <span>Development updates and exclusive previews</span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0" />
-                  <span>Hỗ trợ kỹ thuật và giải đáp từ đội ngũ sáng lập</span>
+                  <span>Technical support and answers from the founding team</span>
                 </div>
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function CtaSection() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-xs font-medium text-slate-200 mb-1">
-                    Họ và tên *
+                    Full name *
                   </label>
                   <input
                     id="name"
@@ -84,7 +84,7 @@ export default function CtaSection() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nguyễn Văn A"
+                    placeholder="Alex Morgan"
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white/90 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
@@ -107,7 +107,7 @@ export default function CtaSection() {
 
                   <div>
                     <label htmlFor="phone" className="block text-xs font-medium text-slate-200 mb-1">
-                      Số điện thoại
+                      Phone number
                     </label>
                     <input
                       id="phone"
@@ -122,14 +122,14 @@ export default function CtaSection() {
 
                 <div>
                   <label htmlFor="message" className="block text-xs font-medium text-slate-200 mb-1">
-                    Lời nhắn / Nhu cầu của bạn
+                    Your message / needs
                   </label>
                   <textarea
                     id="message"
                     rows={3}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Chia sẻ thêm về kỳ vọng hoặc câu hỏi dành cho dự án..."
+                    placeholder="Share your expectations or questions about the project..."
                     className="w-full px-3.5 py-2.5 rounded-lg bg-white/90 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   ></textarea>
                 </div>
@@ -156,12 +156,12 @@ export default function CtaSection() {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang xử lý...
+                      Processing...
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      Gửi thông tin đăng ký
+                      Submit registration
                     </>
                   )}
                 </button>

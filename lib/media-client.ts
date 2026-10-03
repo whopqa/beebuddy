@@ -10,8 +10,8 @@ export type UploadedImage = {
 };
 
 export async function uploadImage(file: File, purpose: UploadedImage["purpose"]): Promise<UploadedImage> {
-  if (!file.type.startsWith("image/")) throw new Error("Vui lòng chọn một file ảnh");
-  if (file.size > 4 * 1024 * 1024) throw new Error("Ảnh không được vượt quá 4 MB");
+  if (!file.type.startsWith("image/")) throw new Error("Please select an image file");
+  if (file.size > 4 * 1024 * 1024) throw new Error("Images must be smaller than 4 MB");
 
   const response = await fetch(`/api/media/images?purpose=${encodeURIComponent(purpose)}`, {
     method: "POST",
@@ -20,7 +20,7 @@ export async function uploadImage(file: File, purpose: UploadedImage["purpose"])
   });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<UploadedImage>;
   if (!response.ok || !body.success || !body.data) {
-    throw new Error(body.error || body.message || "Upload ảnh không thành công");
+    throw new Error(body.error || body.message || "Image upload failed");
   }
   return body.data;
 }

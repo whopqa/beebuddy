@@ -8,7 +8,7 @@ export async function GET() {
   const result = await forwardAuthenticatedStream("/conversations/events");
   if (!result.upstream?.body) {
     const response = NextResponse.json(
-      { success: false, error: result.status === 401 ? "Chưa đăng nhập" : "Không thể mở kết nối realtime" },
+      { success: false, error: result.status === 401 ? "Not signed in" : "Unable to open the real-time connection" },
       { status: result.status }
     );
     if (result.refreshedTokens) setAuthCookies(response, result.refreshedTokens);

@@ -53,7 +53,7 @@ import {
   type PaymentStatus as PaymentStatusRecord,
   type SubscriptionPlan,
 } from "@/lib/payments-client";
-import { notificationsApi, type AppNotification, type NotificationType } from "@/lib/notifications-client";
+import { NOTIFICATION_PREFERENCES_CHANGED_EVENT, notificationsApi, type AppNotification, type NotificationType } from "@/lib/notifications-client";
 import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
 import { connectionsApi, type Connection } from "@/lib/connections-client";
 import { GoogleSignInButton, googleSignInConfigured } from "@/components/auth/GoogleSignInButton";
@@ -479,6 +479,58 @@ function StartYourJourney() {
 /* ==========================================================================
    3. NOTIFICATIONS (Figma Frame 436:531, 465:1907, 470:546)
    ========================================================================== */
+type NotificationVisualKind = "invite" | "mention" | "file" | "task";
+
+const notificationVisuals: Record<NotificationVisualKind, { image: string; alt: string }> = {
+  invite: {
+    image: "/assets/home/InviteToJoin.png",
+    alt: "Buzzy sleeping — invitation notification",
+  },
+  mention: {
+    image: "/assets/home/MentionYouInTheComment.png",
+    alt: "Buzzy smiling — mention notification",
+  },
+  file: {
+    image: "/assets/home/ShareAFileWithYou.png",
+    alt: "Buzzy using a laptop — shared file notification",
+  },
+  task: {
+    image: "/assets/home/AssignedYouATask.png",
+    alt: "Buzzy winking — assigned task notification",
+  },
+};
+
+function notificationPayloadLabel(item: AppNotification) {
+  return [
+    item.payload.kind,
+    item.payload.category,
+    item.payload.action,
+    item.payload.eventType,
+    item.payload.notificationType,
+    item.entityType,
+  ]
+    .filter(value => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+}
+
+function notificationVisualKind(item: AppNotification): NotificationVisualKind {
+  const label = notificationPayloadLabel(item);
+
+  if (item.payload.mention === true || label.includes("mention") || label.includes("comment")) return "mention";
+  if (label.includes("file") || label.includes("attachment") || label.includes("upload")) return "file";
+  if (label.includes("task") || label.includes("assign") || label.includes("todo")) return "task";
+  if (
+    item.type === "COMMUNITY_INVITE"
+    || item.type === "COMMUNITY_JOIN_APPROVED"
+    || item.type === "CONNECTION_REQUEST"
+    || item.type === "CONNECTION_ACCEPTED"
+  ) return "invite";
+  if (item.type === "MESSAGE") return "mention";
+
+  return "task";
+}
+
 function Notifications() {
   const [activeTab, setActiveTab] = useState<"all" | "unread" | "mentions">("all");
 
@@ -520,7 +572,11 @@ function Notifications() {
           : "/notifications";
     if (destination !== "/notifications") window.location.href = destination;
   };
-  const visibleItems = items.filter(item => activeTab === "unread" ? !item.readAt : activeTab === "mentions" ? item.payload.mention === true : true);
+  const visibleItems = items.filter(item => activeTab === "unread"
+    ? !item.readAt
+    : activeTab === "mentions"
+      ? notificationVisualKind(item) === "mention"
+      : true);
 
   return (
     <main className="bb-canvas bb-notifications-canvas">
@@ -528,7 +584,7 @@ function Notifications() {
         <header className="bb-notif-page-header">
           <h1 className="bb-notif-page-title">Notifications</h1>
           <p className="bb-notif-page-sub">
-            {activeTab === "mentions" ? `${visibleItems.length} mentions` : `${unreadCount} unread notifications`}
+            {activeTab === "mentions" ? `${visibleItems.length} mentions` : `You have ${unreadCount} unread messages`}
           </p>
         </header>
 
@@ -577,19 +633,19 @@ function Notifications() {
                 </div>
               </div>
 
-              <div className="bb-notif-check-item">
-                <span className="bb-circle-num">2</span>
+              <div className="bb-notif-check-item is-checked">
+                <span className="bb-check-circle">✓</span>
                 <div>
-                  <strong>Invite friends</strong>
-                  <p>Share BeeBuddy with your friends</p>
+                  <strong>Invite teammates</strong>
+                  <p>Share the workspace link</p>
                 </div>
               </div>
 
               <div className="bb-notif-check-item">
                 <span className="bb-circle-num">3</span>
                 <div>
-                  <strong>Explore your community</strong>
-                  <p>Find people who share your interests</p>
+                  <strong>Create your first project</strong>
+                  <p>Start organizing your work</p>
                 </div>
               </div>
             </div>
@@ -601,41 +657,70 @@ function Notifications() {
           {loading && <p className="bb-notif-row">Loading notifications...</p>}
           {error && <p className="bb-notif-row form-error" role="alert">{error}</p>}
           {!loading && !error && visibleItems.length === 0 && <p className="bb-notif-row">No notifications yet.</p>}
-          {visibleItems.map(item => (
-            <NotificationItem key={item.id}
-              avatar={item.actor?.profile?.avatarUrl || "/assets/home/figma-buzzy.png"}
-              title={<span><strong>{item.actor?.profile?.fullName || "BeeBuddy"}</strong> {notificationTitle(item)}</span>}
-              desc={String(item.payload.message || item.payload.content || "You have a new update.")}
-              time={formatRelativeTime(item.createdAt)} unread={!item.readAt}
-              onRead={() => void openNotification(item)}
-            />
-          ))}
+          {visibleItems.map(item => {
+            const kind = notificationVisualKind(item);
+            const visual = notificationVisuals[kind];
+            return (
+              <NotificationItem key={item.id}
+                image={visual.image}
+                imageAlt={visual.alt}
+                kind={kind}
+                title={<span><strong>{item.actor?.profile?.fullName || notificationActorFallback(kind)}</strong> {notificationTitle(item, kind)}</span>}
+                desc={notificationDescription(item, kind)}
+                time={formatRelativeTime(item.createdAt)} unread={!item.readAt}
+                onRead={() => void openNotification(item)}
+              />
+            );
+          })}
         </div>
       </div>
     </main>
   );
 }
 
-function notificationTitle(item: AppNotification) {
+function notificationActorFallback(kind: NotificationVisualKind) {
+  if (kind === "file") return "System";
+  if (kind === "task") return "TaskBot";
+  return "BeeBuddy";
+}
+
+function notificationTitle(item: AppNotification, kind: NotificationVisualKind) {
+  if (kind === "mention") return "mentioned you in a comment";
+  if (kind === "file") return "shared a file with you";
+  if (kind === "task") return "assigned you a task";
+
   switch (item.type) {
     case "CONNECTION_REQUEST": return "sent you a connection request";
     case "CONNECTION_ACCEPTED": return "accepted your connection request";
-    case "COMMUNITY_INVITE": return "invited you to a community";
+    case "COMMUNITY_INVITE": return `invited you to join ${String(item.payload.communityName || item.payload.teamName || "a community")}`;
     case "COMMUNITY_JOIN_APPROVED": return "approved your community request";
-    case "MESSAGE": return "sent you a message";
     default: return "has an update for you";
   }
 }
 
+function notificationDescription(item: AppNotification, kind: NotificationVisualKind) {
+  const supplied = item.payload.message || item.payload.content || item.payload.description;
+  if (typeof supplied === "string" && supplied.trim()) return supplied;
+
+  if (kind === "invite") return "Join the workspace to collaborate on new projects.";
+  if (kind === "mention") return "Someone mentioned you in a conversation.";
+  if (kind === "file") return `${String(item.payload.fileName || "A new file")} has been uploaded to the shared drive.`;
+  return `New task: “${String(item.payload.taskName || "Review your assigned task")}” has been added to your board.`;
+}
+
 function NotificationItem({
-  avatar,
+  image,
+  imageAlt,
+  kind,
   title,
   desc,
   time,
   unread = false,
   onRead,
 }: {
-  avatar: string;
+  image: string;
+  imageAlt: string;
+  kind: NotificationVisualKind;
   title: React.ReactNode;
   desc: string;
   time: string;
@@ -643,8 +728,8 @@ function NotificationItem({
   onRead?: () => void;
 }) {
   return (
-    <div className={`bb-notif-row ${unread ? "is-unread" : ""}`} role="button" tabIndex={0} onClick={onRead} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onRead?.(); } }}>
-      <img src={avatar} alt="" className="bb-notif-row-avatar" />
+    <div className={`bb-notif-row bb-notif-kind-${kind} ${unread ? "is-unread" : ""}`} role="button" tabIndex={0} onClick={onRead} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onRead?.(); } }}>
+      <img src={image} alt={imageAlt} className="bb-notif-row-avatar" />
       <div className="bb-notif-row-body">
         <div className="bb-notif-row-title">{title}</div>
         <p className="bb-notif-row-desc">{desc}</p>
@@ -662,7 +747,7 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [settings, setSettings] = useState<AccountSettings>({
     profileVisibility: "PUBLIC",
     emailNotification: true,
-    language: "vi",
+    language: "en",
     theme: "system",
     travelStyles: ["Backpack & Trek", "Foodie & Cafes"],
   });
@@ -671,15 +756,17 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [notice, setNotice] = useState("");
   const [locationVisible, setLocationVisible] = useState(true);
   const [notificationEnabled, setNotificationEnabled] = useState<Partial<Record<NotificationType, boolean>>>({});
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const [preferencesError, setPreferencesError] = useState("");
   const [addingInterest, setAddingInterest] = useState(false);
   const [interestDraft, setInterestDraft] = useState("");
   const authenticated = isLoggedIn || Boolean(profile);
 
   const notificationRows: Array<{ type: NotificationType; title: string; description: string; icon: typeof Bell }> = [
-    { type: "COMMUNITY_JOIN_APPROVED", title: "Community Updates", description: "News, stories and community highlights", icon: Globe },
-    { type: "COMMUNITY_INVITE", title: "Buddy Events", description: "Invites, reminders and event updates", icon: CalendarDays },
+    { type: "COMMUNITY_JOIN_APPROVED", title: "Community Join Approvals", description: "Updates when your request to join a community is approved", icon: Globe },
+    { type: "COMMUNITY_INVITE", title: "Community Invitations", description: "Invitations to join a community", icon: CalendarDays },
     { type: "MESSAGE", title: "Messages", description: "Direct messages and chat notifications", icon: MessageSquare },
-    { type: "SYSTEM", title: "Product News", description: "New features, tips and announcements", icon: Tag },
+    { type: "SYSTEM", title: "System Updates", description: "BeeBuddy announcements when available", icon: Tag },
   ];
 
   useEffect(() => {
@@ -688,17 +775,23 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     Promise.all([accountApi.settings(), accountApi.profile()])
       .then(([nextSettings, nextProfile]) => {
         if (!active) return;
-        setSettings(nextSettings);
+        setSettings({ ...nextSettings, language: "en" });
         setProfile(nextProfile);
       })
       .catch(() => undefined);
     accountApi.profilePrivacy().then((rules) => {
       if (active) setLocationVisible(rules.find((rule) => rule.section === "PLACES")?.audience !== "ONLY_ME");
     }).catch(() => undefined);
+    setPreferencesLoading(true);
+    setPreferencesError("");
     notificationsApi.preferences().then((preferences) => {
       if (!active) return;
       setNotificationEnabled(Object.fromEntries(preferences.filter((item) => item.channel === "IN_APP").map((item) => [item.type, item.enabled])));
-    }).catch(() => undefined);
+    }).catch(() => {
+      if (active) setPreferencesError("Unable to load notification preferences. Refresh to try again.");
+    }).finally(() => {
+      if (active) setPreferencesLoading(false);
+    });
     return () => { active = false; };
   }, [isLoggedIn]);
 
@@ -734,12 +827,13 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   };
 
   const toggleNotification = async (type: NotificationType) => {
-    if (!authenticated || saving) return;
+    if (!authenticated || saving || preferencesLoading || preferencesError) return;
     setSaving(true);
     setNotice("");
     try {
       const preference = await notificationsApi.setPreference(type, !(notificationEnabled[type] ?? true));
       setNotificationEnabled((current) => ({ ...current, [type]: preference.enabled }));
+      window.dispatchEvent(new Event(NOTIFICATION_PREFERENCES_CHANGED_EVENT));
       setNotice("Saved");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to save notification preference");
@@ -861,11 +955,11 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 <div className="bb-settings-control-copy"><strong>Show My Location</strong><small>Allow others to find you nearby</small></div>
                 <button type="button" className={`bb-settings-toggle ${locationVisible ? "is-on" : ""}`} role="switch" aria-label="Show My Location" aria-checked={locationVisible} disabled={saving} onClick={() => void toggleLocation()}><span /></button>
               </div>
-              <div className="bb-settings-notification-heading"><Bell size={19} aria-hidden="true" /><div><h2>Notification Preferences</h2><p>Choose what updates you&apos;d like to receive.</p></div></div>
+              <div className="bb-settings-notification-heading"><Bell size={19} aria-hidden="true" /><div><h2>Notification Preferences</h2><p role={preferencesError ? "alert" : undefined}>{preferencesLoading ? "Loading preferences..." : preferencesError || "Choose which updates appear in BeeBuddy."}</p></div></div>
               {notificationRows.map(({ type, title, description, icon: Icon }) => <div className="bb-settings-control-row bb-settings-notification-row" key={type}>
                 <Icon size={19} aria-hidden="true" />
                 <div className="bb-settings-control-copy"><strong>{title}</strong><small>{description}</small></div>
-                <button type="button" className={`bb-settings-toggle ${(notificationEnabled[type] ?? true) ? "is-on" : ""}`} role="switch" aria-label={title} aria-checked={notificationEnabled[type] ?? true} disabled={saving} onClick={() => void toggleNotification(type)}><span /></button>
+                <button type="button" className={`bb-settings-toggle ${(notificationEnabled[type] ?? true) ? "is-on" : ""} ${preferencesLoading || saving ? "is-loading" : ""}`} role="switch" aria-label={title} aria-checked={notificationEnabled[type] ?? true} disabled={saving || preferencesLoading || Boolean(preferencesError)} onClick={() => void toggleNotification(type)}><span /></button>
               </div>)}
             </section>
           </>
@@ -882,10 +976,9 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             <div className="bb-pref-item-row">
               <div className="bb-pref-item-info">
                 <strong>Language</strong>
-                <p>Select your preferred language</p>
+                <p>BeeBuddy currently displays in English</p>
               </div>
-              <select className="bb-pref-select" value={settings.language} onChange={(event) => void saveSettings({ ...settings, language: event.target.value })}>
-                <option value="vi">Tiếng Việt</option>
+              <select className="bb-pref-select" value="en" disabled>
                 <option value="en">English</option>
               </select>
             </div>
@@ -1021,11 +1114,11 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
     setError("");
     try {
       const split = (value: string) => Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean)));
-      if (!draft.fullName.trim()) throw new Error("Vui lòng nhập họ tên.");
+      if (!draft.fullName.trim()) throw new Error("Please enter your full name.");
       const colors = split(draft.favoriteColors);
-      if (colors.some((color) => !/^#[0-9a-fA-F]{6}$/.test(color))) throw new Error("Màu yêu thích phải có dạng #RRGGBB.");
+      if (colors.some((color) => !/^#[0-9a-fA-F]{6}$/.test(color))) throw new Error("Favorite colors must use the #RRGGBB format.");
       const links = split(draft.socialLinks);
-      if (links.some((link) => { try { return !["https:", "http:"].includes(new URL(link).protocol); } catch { return true; } })) throw new Error("Liên kết xã hội phải là URL http/https hợp lệ.");
+      if (links.some((link) => { try { return !["https:", "http:"].includes(new URL(link).protocol); } catch { return true; } })) throw new Error("Social links must be valid HTTP or HTTPS URLs.");
       const uploadedAvatar = avatarFile ? await uploadImage(avatarFile, "avatar") : null;
       const uploadedGallery = await Promise.all(galleryFiles.map((file) => uploadImage(file, "profile")));
       const updated = await accountApi.updateProfile({
@@ -1434,7 +1527,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const findPlan = (name: string) => plans.find(plan => plan.tier === tierFor(name));
   const formatPrice = (name: string) => {
     const plan = findPlan(name);
-    return plan ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(plan.priceVND) : name === "Hive Pro" ? "Coming soon" : "Loading...";
+    return plan ? new Intl.NumberFormat("en-US", { style: "currency", currency: "VND" }).format(plan.priceVND) : name === "Hive Pro" ? "Coming soon" : "Loading...";
   };
   const currentName = profile?.user.tier === "PRO" ? "Buddy+" : profile?.user.tier === "VIP" ? "Explorer" : "Free";
   const renewal = profile?.user.tierExpiresAt ? new Date(profile.user.tierExpiresAt).toLocaleDateString() : "No renewal";
@@ -2571,13 +2664,13 @@ function HelpSupport({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 function formatRelativeTime(value: string) {
   const elapsed = Date.now() - new Date(value).getTime();
   const minutes = Math.max(0, Math.floor(elapsed / 60_000));
-  if (minutes < 1) return "Vừa xong";
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  if (days < 7) return `${days} days ago`;
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 }
 
 function SearchPreviewGrid({
@@ -2603,15 +2696,15 @@ function SearchPreviewGrid({
   connectionError: string;
   onConnect: (targetId: string) => void;
 }) {
-  if (loading) return <div className="bb-search-preview-state"><span className="bb-feed-loader" />Đang tìm trong cộng đồng...</div>;
+  if (loading) return <div className="bb-search-preview-state"><span className="bb-feed-loader" />Searching the community...</div>;
   if (error) return <div className="bb-search-preview-state is-error">{error}</div>;
-  if (!result) return <div className="bb-search-preview-state">Nhập một sở thích hoặc thói quen để tìm người có điểm chung.</div>;
-  if (result.totalMatches === 0) return <div className="bb-search-preview-state">Chưa tìm thấy hồ sơ phù hợp với bộ lọc hiện tại.</div>;
+  if (!result) return <div className="bb-search-preview-state">Enter an interest or habit to find people you have something in common with.</div>;
+  if (result.totalMatches === 0) return <div className="bb-search-preview-state">No profiles match your current filters.</div>;
 
   return (
     <>
       <div className="bb-search-result-summary" role="status">
-        Tìm thấy <strong>{result.totalMatches}</strong> người phù hợp · Đang hiển thị <strong>{result.previewUsers.length}</strong>/{Math.min(3, result.totalMatches)} hồ sơ giới hạn
+        Found <strong>{result.totalMatches}</strong> matches · Showing <strong>{result.previewUsers.length}</strong>/{Math.min(3, result.totalMatches)} preview profiles
       </div>
       {connectionError && <div className="bb-search-preview-state is-error" role="alert">{connectionError}</div>}
       <div className={gridClassName}>
@@ -2676,7 +2769,7 @@ function ConnectLoginModal({ onClose, onAuthenticated }: { onClose: () => void; 
       const result = await webAuth.login(email.trim(), password);
       await onAuthenticated(result.user);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập.");
+      setError(cause instanceof Error ? cause.message : "Unable to sign in.");
     } finally { setLoading(false); }
   };
 
@@ -2691,26 +2784,26 @@ function ConnectLoginModal({ onClose, onAuthenticated }: { onClose: () => void; 
       });
       await onAuthenticated(result.user);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập bằng Google.");
+      setError(cause instanceof Error ? cause.message : "Unable to sign in with Google.");
     } finally { setLoading(false); }
   };
 
   return (
     <div className="bb-connect-login-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="bb-connect-login-modal" role="dialog" aria-modal="true" aria-labelledby="bb-connect-login-title">
-        <button type="button" className="bb-connect-login-close" aria-label="Đóng" onClick={onClose}>×</button>
-        <h2 id="bb-connect-login-title">Đăng nhập để kết nối</h2>
-        <p>Đăng nhập BeeBuddy để gửi lời mời kết bạn cho thành viên bạn đã chọn.</p>
+        <button type="button" className="bb-connect-login-close" aria-label="Close" onClick={onClose}>×</button>
+        <h2 id="bb-connect-login-title">Sign in to connect</h2>
+        <p>Sign in to BeeBuddy to send a connection request to this member.</p>
         <form onSubmit={(event) => void submit(event)}>
           <label htmlFor="bb-connect-email">Email</label>
           <input id="bb-connect-email" type="email" autoComplete="email" required autoFocus value={email} onChange={(event) => setEmail(event.target.value)} />
-          <label htmlFor="bb-connect-password">Mật khẩu</label>
+          <label htmlFor="bb-connect-password">Password</label>
           <input id="bb-connect-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
           {error && <p className="bb-connect-login-error" role="alert">{error}</p>}
-          <button type="submit" className="bb-connect-login-submit" disabled={loading}>{loading ? "Đang đăng nhập..." : "Đăng nhập và gửi lời mời"}</button>
+          <button type="submit" className="bb-connect-login-submit" disabled={loading}>{loading ? "Signing in..." : "Sign in and send request"}</button>
         </form>
         {googleSignInConfigured && <div className="bb-connect-login-google"><GoogleSignInButton mode="login" disabled={loading} onCredential={googleSignIn} onError={setError} /></div>}
-        <div className="bb-connect-login-links"><Link href="/forgot-password">Quên mật khẩu?</Link><Link href="/signup">Tạo tài khoản</Link></div>
+        <div className="bb-connect-login-links"><Link href="/forgot-password">Forgot password?</Link><Link href="/signup">Create account</Link></div>
       </section>
     </div>
   );
@@ -2873,7 +2966,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
       setFeedPage(feed.page);
       setFeedTotalPages(feed.totalPages);
     } catch (error) {
-      setFeedError(error instanceof Error ? error.message : "Không thể tải bảng tin");
+      setFeedError(error instanceof Error ? error.message : "Unable to load the feed.");
     } finally {
       setFeedLoading(false);
     }
@@ -2912,7 +3005,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
       const connection = await connectionsApi.request(targetId);
       setConnections((current) => ({ ...current, [targetId]: connection }));
     } catch (cause) {
-      setConnectionError(cause instanceof Error ? cause.message : "Không thể gửi lời mời kết bạn.");
+      setConnectionError(cause instanceof Error ? cause.message : "Unable to send the connection request.");
     } finally {
       setConnectingUserId(null);
     }
@@ -3025,8 +3118,8 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
                 <h2 className="bb-find-people-title">Find your people</h2>
                 <p className="bb-find-people-stats">
                   {searchResult
-                    ? `${searchResult.totalMatches} người phù hợp • hiển thị tối đa 3 hồ sơ`
-                    : "Đang tải hồ sơ cộng đồng..."}
+                    ? `${searchResult.totalMatches} matches • showing up to 3 profiles`
+                    : "Loading community profiles..."}
                 </p>
               </div>
               <button
@@ -3169,7 +3262,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
                   <Search size={14} className="text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm thói quen..."
+                    placeholder="Search habits..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     className="bb-discover-tag-input"
@@ -3211,20 +3304,20 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
 
               <div className="bb-buzzing-posts-list">
                 {feedLoading && feedPosts.length === 0 && (
-                  <div className="bb-feed-state-card"><span className="bb-feed-loader" />Đang tải bảng tin...</div>
+                  <div className="bb-feed-state-card"><span className="bb-feed-loader" />Loading feed...</div>
                 )}
 
                 {feedError && (
                   <div className="bb-feed-state-card is-error">
                     <p>{feedError}</p>
-                    <button type="button" onClick={() => void loadFeed(1)}>Thử lại</button>
+                    <button type="button" onClick={() => void loadFeed(1)}>Try again</button>
                   </div>
                 )}
 
                 {!feedLoading && !feedError && feedPosts.length === 0 && (
                   <div className="bb-feed-state-card">
-                    <strong>{sharedPostId ? "Bài viết không khả dụng" : "Chưa có bài viết công khai"}</strong>
-                    <p>{sharedPostId ? "Bài viết đã bị xóa hoặc bạn không có quyền xem." : "Các bài viết phù hợp với quyền xem của bạn sẽ xuất hiện tại đây."}</p>
+                    <strong>{sharedPostId ? "Post unavailable" : "No public posts yet"}</strong>
+                    <p>{sharedPostId ? "This post was deleted or you do not have permission to view it." : "Posts you can view will appear here."}</p>
                   </div>
                 )}
 
@@ -3260,7 +3353,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
                           /\.(mp4|webm|ogg)(\?.*)?$/i.test(url) ? (
                             <video key={url} src={url} controls preload="metadata" className="bb-post-media" />
                           ) : (
-                            <img key={url} src={url} alt="Nội dung đính kèm bài viết" className="bb-post-media" />
+                            <img key={url} src={url} alt="Post attachment" className="bb-post-media" />
                           )
                         )}
                       </div>
@@ -3273,19 +3366,19 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
                       <button
                         type="button"
                         className="bb-post-action-btn"
-                        onClick={() => openComments(post.id, `Bình luận bài viết của ${post.author.fullName}`)}
+                        onClick={() => openComments(post.id, `Comments on ${post.author.fullName}'s post`)}
                       >
-                        <MessageSquare size={16} /><span>{post.commentsCount} bình luận</span>
+                        <MessageSquare size={16} /><span>{post.commentsCount} comments</span>
                       </button>
                       <button
                         type="button"
                         className="bb-post-action-btn"
                         onClick={async () => {
                           await navigator.clipboard?.writeText?.(`${window.location.origin}/community?post=${post.id}`);
-                          alert("Đã sao chép liên kết bài viết!");
+                          alert("Post link copied!");
                         }}
                       >
-                        <Share2 size={16} /><span>Chia sẻ</span>
+                        <Share2 size={16} /><span>Share</span>
                       </button>
                     </div>
                   </article>
@@ -3299,7 +3392,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
                   disabled={feedLoading}
                   onClick={() => void loadFeed(feedPage + 1, true)}
                 >
-                  {feedLoading ? "Đang tải..." : "Xem thêm bài viết"}
+                  {feedLoading ? "Loading..." : "View more posts"}
                 </button>
               )}
             </section>

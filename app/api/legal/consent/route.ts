@@ -18,6 +18,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(await upstream.json(), { status: upstream.status });
   } catch {
-    return NextResponse.json({ success: false, error: "Không thể ghi nhận lựa chọn cookie" }, { status: 503 });
+    return NextResponse.json({ success: false, error: "Unable to save your cookie preferences" }, { status: 503 });
   }
 }

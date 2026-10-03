@@ -11,27 +11,27 @@ const fallbackAvatar = "/assets/home/avatar-01.png";
 function relativeTime(value: string) {
   const elapsed = Date.now() - new Date(value).getTime();
   const minutes = Math.max(0, Math.floor(elapsed / 60_000));
-  if (minutes < 1) return "Vừa xong";
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  if (days < 7) return `${days} days ago`;
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
 }
 
 function notificationCopy(item: AppNotification) {
   const actor = item.actor?.profile?.fullName || "BeeBuddy";
   switch (item.type) {
-    case "CONNECTION_REQUEST": return { title: `${actor} muốn kết nối với bạn`, detail: "Xem lời mời và phản hồi khi bạn sẵn sàng.", href: "/discover" };
-    case "CONNECTION_ACCEPTED": return { title: `${actor} đã chấp nhận lời mời kết nối`, detail: "Hai bạn có thể bắt đầu trò chuyện.", href: "/discover" };
-    case "COMMUNITY_INVITE": return { title: `${actor} đã mời bạn vào một cộng đồng`, detail: "Mở cộng đồng để xem thông tin lời mời.", href: "/community" };
-    case "COMMUNITY_JOIN_APPROVED": return { title: "Yêu cầu tham gia cộng đồng đã được duyệt", detail: "Bạn có thể đăng bài và tham gia thảo luận ngay bây giờ.", href: "/community" };
+    case "CONNECTION_REQUEST": return { title: `${actor} wants to connect with you`, detail: "View the request and respond when you're ready.", href: "/discover" };
+    case "CONNECTION_ACCEPTED": return { title: `${actor} accepted your connection request`, detail: "You can start chatting now.", href: "/discover" };
+    case "COMMUNITY_INVITE": return { title: `${actor} invited you to a community`, detail: "Open the community to view the invitation.", href: "/community" };
+    case "COMMUNITY_JOIN_APPROVED": return { title: "Your community join request was approved", detail: "You can now post and join discussions.", href: "/community" };
     case "MESSAGE": {
       const conversationId = typeof item.payload.conversationId === "string" ? item.payload.conversationId : "";
-      return { title: `${actor} đã gửi cho bạn một tin nhắn`, detail: "Mở hộp thư để xem cuộc trò chuyện.", href: conversationId ? `/messages?conversation=${encodeURIComponent(conversationId)}` : "/messages" };
+      return { title: `${actor} sent you a message`, detail: "Open messages to view the conversation.", href: conversationId ? `/messages?conversation=${encodeURIComponent(conversationId)}` : "/messages" };
     }
-    default: return { title: "Thông báo từ BeeBuddy", detail: "Có một cập nhật mới dành cho tài khoản của bạn.", href: "/notifications" };
+    default: return { title: "BeeBuddy notification", detail: "There's a new update for your account.", href: "/notifications" };
   }
 }
 
@@ -61,7 +61,7 @@ export default function NotificationsHub() {
       setUnreadCount(page.unreadCount);
       setNextCursor(page.nextCursor);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải thông báo");
+      setError(cause instanceof Error ? cause.message : "Unable to load notifications");
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -103,21 +103,21 @@ export default function NotificationsHub() {
       setUnreadCount(0);
       setItems((current) => unreadOnly ? [] : current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đánh dấu đã đọc");
+      setError(cause instanceof Error ? cause.message : "Unable to mark as read");
     }
   };
 
-  if (authenticated === null) return <div className="bb-live-notif-state"><LoaderCircle className="bb-spin" size={28} /> Đang tải thông báo...</div>;
-  if (!authenticated) return <main className="bb-live-notif-guest"><Bell size={40} /><h1>Thông báo của bạn</h1><p>Đăng nhập để xem lời mời kết nối, tin nhắn và cập nhật cộng đồng.</p><Link href="/login">Đăng nhập</Link></main>;
+  if (authenticated === null) return <div className="bb-live-notif-state"><LoaderCircle className="bb-spin" size={28} /> Loading notifications...</div>;
+  if (!authenticated) return <main className="bb-live-notif-guest"><Bell size={40} /><h1>Your notifications</h1><p>Sign in to see connection requests, messages, and community updates.</p><Link href="/login">Sign in</Link></main>;
 
   return (
     <main className="bb-live-notif-page">
       <section className="bb-live-notif-shell">
-        <header className="bb-live-notif-header"><div><span>Hoạt động gần đây</span><h1>Thông báo</h1><p>{unreadCount ? `Bạn có ${unreadCount} thông báo chưa đọc.` : "Bạn đã xem hết các thông báo mới."}</p></div>{unreadCount > 0 && <button type="button" onClick={() => void markAllRead()}><CheckCheck size={17} /> Đánh dấu tất cả đã đọc</button>}</header>
-        <div className="bb-live-notif-tabs"><button className={!unreadOnly ? "is-active" : ""} onClick={() => chooseFilter(false)}>Tất cả</button><button className={unreadOnly ? "is-active" : ""} onClick={() => chooseFilter(true)}>Chưa đọc {unreadCount > 0 && <span>{unreadCount}</span>}</button></div>
+        <header className="bb-live-notif-header"><div><span>Recent activity</span><h1>Notifications</h1><p>{unreadCount ? `You have ${unreadCount} unread notifications.` : "You're all caught up."}</p></div>{unreadCount > 0 && <button type="button" onClick={() => void markAllRead()}><CheckCheck size={17} /> Mark all as read</button>}</header>
+        <div className="bb-live-notif-tabs"><button className={!unreadOnly ? "is-active" : ""} onClick={() => chooseFilter(false)}>All</button><button className={unreadOnly ? "is-active" : ""} onClick={() => chooseFilter(true)}>Unread {unreadCount > 0 && <span>{unreadCount}</span>}</button></div>
         {error && <div className="bb-match-alert is-error">{error}</div>}
-        {loading ? <div className="bb-live-notif-state"><LoaderCircle className="bb-spin" size={26} /> Đang tải...</div> : items.length === 0 ? <div className="bb-live-notif-state"><Bell size={34} /><strong>{unreadOnly ? "Không còn thông báo chưa đọc" : "Chưa có thông báo nào"}</strong><span>Các hoạt động mới sẽ xuất hiện tại đây.</span></div> : <div className="bb-live-notif-list">{items.map((item) => { const copy = notificationCopy(item); return <Link key={item.id} href={copy.href} className={`bb-live-notif-row ${!item.readAt ? "is-unread" : ""}`} onClick={() => void markRead(item)}><div className="bb-live-notif-avatar">{item.actor?.profile?.avatarUrl ? <img src={item.actor.profile.avatarUrl} alt="" /> : <NotificationIcon type={item.type} />}</div><div><strong>{copy.title}</strong><p>{copy.detail}</p><time>{relativeTime(item.createdAt)}</time></div>{!item.readAt && <i aria-label="Chưa đọc" />}</Link>; })}</div>}
-        {nextCursor && <button className="bb-live-notif-more" disabled={loadingMore} onClick={() => void load(unreadOnly, nextCursor)}>{loadingMore ? <LoaderCircle className="bb-spin" size={17} /> : null} Xem thêm</button>}
+        {loading ? <div className="bb-live-notif-state"><LoaderCircle className="bb-spin" size={26} /> Loading...</div> : items.length === 0 ? <div className="bb-live-notif-state"><Bell size={34} /><strong>{unreadOnly ? "No unread notifications" : "No notifications yet"}</strong><span>New activity will appear here.</span></div> : <div className="bb-live-notif-list">{items.map((item) => { const copy = notificationCopy(item); return <Link key={item.id} href={copy.href} className={`bb-live-notif-row ${!item.readAt ? "is-unread" : ""}`} onClick={() => void markRead(item)}><div className="bb-live-notif-avatar">{item.actor?.profile?.avatarUrl ? <img src={item.actor.profile.avatarUrl} alt="" /> : <NotificationIcon type={item.type} />}</div><div><strong>{copy.title}</strong><p>{copy.detail}</p><time>{relativeTime(item.createdAt)}</time></div>{!item.readAt && <i aria-label="Unread" />}</Link>; })}</div>}
+        {nextCursor && <button className="bb-live-notif-more" disabled={loadingMore} onClick={() => void load(unreadOnly, nextCursor)}>{loadingMore ? <LoaderCircle className="bb-spin" size={17} /> : null} View more</button>}
       </section>
     </main>
   );

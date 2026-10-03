@@ -5,11 +5,11 @@ import { forwardAuthRequest, setAuthCookies } from "@/lib/server/auth-proxy";
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {
-    return NextResponse.json({ success: false, error: "Origin không hợp lệ" }, { status: 403 });
+    return NextResponse.json({ success: false, error: "Invalid origin" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ success: false, error: "Google credential không hợp lệ" }, { status: 400 });
+  if (!body) return NextResponse.json({ success: false, error: "Invalid Google credential" }, { status: 400 });
 
   const { upstream, payload } = await forwardAuthRequest("/auth/google", body);
   const response = NextResponse.json(payload, { status: upstream?.status ?? 503 });

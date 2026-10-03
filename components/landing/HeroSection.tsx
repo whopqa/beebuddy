@@ -15,20 +15,20 @@ export default function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200/60 shadow-sm animate-fade-in">
             <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
-            Dự án Khởi Nghiệp Đổi Mới Sáng Tạo EXE201
+            EXE201 Innovative Startup Project
           </div>
 
           {/* Heading */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-            Giải pháp công nghệ đột phá cho{" "}
+            Breakthrough technology for a{" "}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 bg-clip-text text-transparent">
-              tương lai số hóa
+              digital future
             </span>
           </h1>
 
           {/* Description */}
           <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto">
-            Nền tảng tối ưu hóa quy trình, nâng cao trải nghiệm người dùng và tạo ra giá trị bền vững cho thị trường mục tiêu. Thiết kế hiện đại, sẵn sàng mở rộng.
+            A platform that streamlines workflows, improves user experience, and creates lasting value for its target market. Modern by design and ready to scale.
           </p>
 
           {/* CTA Buttons */}
@@ -37,7 +37,7 @@ export default function HeroSection() {
               href="#contact"
               className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all group"
             >
-              <span>Đăng ký nhận thông tin sớm</span>
+              <span>Get early updates</span>
               <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
@@ -45,7 +45,7 @@ export default function HeroSection() {
               className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 text-base font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-sm transition-all"
             >
               <Play className="w-4 h-4 mr-2 text-slate-500 fill-slate-500" />
-              <span>Khám phá tính năng</span>
+              <span>Explore features</span>
             </Link>
           </div>
 
@@ -53,15 +53,15 @@ export default function HeroSection() {
           <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm text-slate-500">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Giao diện chuẩn Figma</span>
+              <span>Figma-ready interface</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Tốc độ phản hồi cực nhanh</span>
+              <span>Fast response times</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Bảo mật & Tối ưu SEO</span>
+              <span>Security and SEO optimized</span>
             </div>
           </div>
         </div>
@@ -84,29 +84,29 @@ export default function HeroSection() {
             <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/70">
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-400">Người dùng tương tác</span>
+                  <span className="text-sm font-medium text-slate-400">Engaged users</span>
                   <TrendingUp className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div className="mt-4">
                   <div className="text-3xl font-bold text-white">12,480+</div>
-                  <span className="text-xs text-emerald-400 font-medium">+24.5% so với tháng trước</span>
+                  <span className="text-xs text-emerald-400 font-medium">+24.5% from last month</span>
                 </div>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-400">Tỉ lệ hoàn tất tác vụ</span>
+                  <span className="text-sm font-medium text-slate-400">Task completion rate</span>
                   <Zap className="w-5 h-5 text-blue-400" />
                 </div>
                 <div className="mt-4">
                   <div className="text-3xl font-bold text-white">99.2%</div>
-                  <span className="text-xs text-blue-400 font-medium">Tối ưu hóa hành trình UI/UX</span>
+                  <span className="text-xs text-blue-400 font-medium">Optimized user journey</span>
                 </div>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-400">Độ tin cậy hệ thống</span>
+                  <span className="text-sm font-medium text-slate-400">System reliability</span>
                   <ShieldCheck className="w-5 h-5 text-indigo-400" />
                 </div>
                 <div className="mt-4">
@@ -118,8 +118,8 @@ export default function HeroSection() {
               {/* Wide section inside mockup */}
               <div className="md:col-span-3 p-6 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <div className="text-base font-semibold text-white">Khung thiết kế chuẩn hóa từ Figma for VS Code</div>
-                  <p className="text-xs text-slate-400">Bạn có thể dễ dàng thay đổi nội dung khung này thành ảnh chụp hoặc component chi tiết trích xuất từ Figma.</p>
+                  <div className="text-base font-semibold text-white">A standardized Figma design frame for VS Code</div>
+                  <p className="text-xs text-slate-400">Replace this frame with a screenshot or a detailed component exported from Figma.</p>
                 </div>
                 <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1.5 rounded-lg whitespace-nowrap">
                   Figma Component Ready

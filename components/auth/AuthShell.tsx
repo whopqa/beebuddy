@@ -62,7 +62,7 @@ export default function AuthShell({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(deliveryFailed
-    ? "Tài khoản đã được tạo nhưng chưa gửi được mã xác minh. Vui lòng thử Gửi lại mã sau khi kiểm tra cấu hình email."
+    ? "Your account was created, but the verification code could not be sent. Check the email configuration, then try resending the code."
     : "");
   const [notice, setNotice] = useState("");
   const [developmentActionUrl, setDevelopmentActionUrl] = useState("");
@@ -80,28 +80,28 @@ export default function AuthShell({
 
   useEffect(() => {
     if (mode === "login" && new URLSearchParams(window.location.search).get("passwordChanged") === "1") {
-      setNotice("Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.");
+      setNotice("Password changed successfully. Please sign in with your new password.");
     }
   }, [mode]);
 
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setNotice("");
-    if (mode === "verify" && (!form.email || code.join("").length !== 6)) return setError("Vui lòng nhập email và mã xác minh gồm 6 chữ số.");
+    if (mode === "verify" && (!form.email || code.join("").length !== 6)) return setError("Enter your email and six-digit verification code.");
     if (mode === "signup" && !form.name.trim()) return setError("Please enter your name.");
     if (["login", "signup", "forgot"].includes(mode) && !form.email) return setError("Please enter your email address.");
     if (mode === "login" && !form.password) return setError("Please enter your password.");
-    if (mode === "signup" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số.");
+    if (mode === "signup" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Password must be at least 8 characters and include a letter and a number.");
     if (mode === "signup" && form.password !== form.confirm) return setError("Passwords do not match.");
     if (mode === "signup" && (!acceptTerms || !acceptPrivacy)) {
       setShowSignupConsents(true);
-      return setError("Vui lòng xác nhận Điều khoản sử dụng và Chính sách quyền riêng tư để đăng ký.");
+      return setError("Please agree to the Terms of Use and Privacy Policy to sign up.");
     }
-    if (mode === "change" && (!form.oldPassword || form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu mới cần ít nhất 8 ký tự, gồm chữ và số.");
+    if (mode === "change" && (!form.oldPassword || form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("New password must be at least 8 characters and include a letter and a number.");
     if (mode === "change" && form.oldPassword === form.password) return setError("New password must be different from the old password.");
-    if (mode === "reset" && !resetToken) return setError("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã thiếu token.");
-    if (mode === "reset" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Mật khẩu cần ít nhất 8 ký tự, gồm chữ và số.");
-    if (mode === "reset" && form.password !== form.confirm) return setError("Mật khẩu xác nhận không khớp.");
+    if (mode === "reset" && !resetToken) return setError("This password reset link is invalid or missing a token.");
+    if (mode === "reset" && (form.password.length < 8 || !/[A-Za-zÀ-ỹ]/.test(form.password) || !/\d/.test(form.password))) return setError("Password must be at least 8 characters and include a letter and a number.");
+    if (mode === "reset" && form.password !== form.confirm) return setError("Passwords do not match.");
     setLoading(true);
     try {
       if (mode === "login") {
@@ -143,7 +143,7 @@ export default function AuthShell({
         router.push("/login");
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập");
+      setError(cause instanceof Error ? cause.message : "Unable to sign in.");
     } finally {
       setLoading(false);
     }
@@ -154,10 +154,10 @@ export default function AuthShell({
     try {
       const result = await webAuth.requestEmailVerification(form.email.trim());
       setNotice(result.developmentCode
-        ? `${result.message} Mã local development: ${result.developmentCode}`
+        ? `${result.message} Local development code: ${result.developmentCode}`
         : result.message);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể gửi lại mã xác minh");
+      setError(cause instanceof Error ? cause.message : "Unable to resend the verification code.");
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function AuthShell({
     setError(""); setNotice("");
     if (mode === "signup" && (!acceptTerms || !acceptPrivacy)) {
       setShowSignupConsents(true);
-      setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư trước khi đăng ký bằng Google.");
+      setError("Please agree to the Terms of Use and Privacy Policy before signing up with Google.");
       return;
     }
     setLoading(true);
@@ -180,7 +180,7 @@ export default function AuthShell({
       router.replace(result.user.role === "ADMIN" ? "/admin" : "/home");
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập bằng Google");
+      setError(cause instanceof Error ? cause.message : "Unable to sign in with Google.");
     } finally {
       setLoading(false);
     }
@@ -294,7 +294,7 @@ export default function AuthShell({
                         className="bb-figma-checkbox"
                       />
                       <span>
-                        Tôi đã đọc và đồng ý với <Link href="/terms" target="_blank">Điều khoản sử dụng</Link>.
+                        I have read and agree to the <Link href="/terms" target="_blank">Terms of Use</Link>.
                       </span>
                     </label>
                     <label className="bb-signup-consent-row">
@@ -305,7 +305,7 @@ export default function AuthShell({
                         className="bb-figma-checkbox"
                       />
                       <span>
-                        Tôi đồng ý với <Link href="/privacy" target="_blank">Chính sách quyền riêng tư</Link>.
+                        I agree to the <Link href="/privacy" target="_blank">Privacy Policy</Link>.
                       </span>
                     </label>
                   </div>}
@@ -367,20 +367,20 @@ export default function AuthShell({
               )}
 
               {error && <p className="form-error" role="alert">{error}</p>}
-              {mode === "login" && error.includes("Email chưa được xác minh") && (
+              {mode === "login" && error.includes("Email has not been verified") && (
                 <p className="form-notice">
                   <Link
                     href={`/verify-code?email=${encodeURIComponent(form.email.trim())}`}
                     className="auth-switch-link"
                   >
-                    Nhập hoặc gửi lại mã xác minh
+                    Enter or resend a verification code
                   </Link>
                 </p>
               )}
               {notice && <p className="form-notice" role="status">{notice}</p>}
               {developmentActionUrl && (
                 <p className="form-notice">
-                  Local development: <Link href={developmentActionUrl} className="auth-switch-link">mở liên kết đặt lại mật khẩu</Link>.
+                  Local development: <Link href={developmentActionUrl} className="auth-switch-link">open the password reset link</Link>.
                 </p>
               )}
 
@@ -395,7 +395,7 @@ export default function AuthShell({
                   disabled={loading || !form.email.trim()}
                   style={{ border: 0, background: "transparent", cursor: "pointer", alignSelf: "center" }}
                 >
-                  Gửi lại mã xác minh
+                  Resend verification code
                 </button>
               )}
             </form>
@@ -406,7 +406,7 @@ export default function AuthShell({
                 <div className="bb-social-stack">
                   {mode === "login" && (
                     <p className="bb-social-legal-copy">
-                      Bằng cách tiếp tục với Google, bạn đồng ý với <Link href="/terms" target="_blank">Điều khoản sử dụng</Link> và <Link href="/privacy" target="_blank">Chính sách quyền riêng tư</Link> của BeeBuddy.
+                      By continuing with Google, you agree to BeeBuddy&apos;s <Link href="/terms" target="_blank">Terms of Use</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.
                     </p>
                   )}
                   {googleSignInConfigured ? <GoogleSignInButton

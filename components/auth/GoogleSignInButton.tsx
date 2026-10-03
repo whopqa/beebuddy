@@ -33,7 +33,7 @@ export function GoogleSignInButton({
       cancel_on_tap_outside: true,
       callback: (response) => {
         if (!response.credential) {
-          onError("Google không trả về credential hợp lệ");
+          onError("Google did not return a valid credential.");
           return;
         }
         void callbackRef.current(response.credential);
@@ -46,7 +46,7 @@ export function GoogleSignInButton({
       text: mode === "signup" ? "signup_with" : "continue_with",
       shape: "rectangular",
       width: Math.min(Math.max(containerRef.current.clientWidth, 240), 400),
-      locale: "vi",
+      locale: "en",
     });
   }, [mode, onError]);
 
@@ -65,7 +65,7 @@ export function GoogleSignInButton({
         strategy="afterInteractive"
         onLoad={() => setScriptReady(true)}
         onReady={() => setScriptReady(true)}
-        onError={() => onError("Không tải được Google Sign-In. Hãy kiểm tra kết nối mạng.")}
+        onError={() => onError("Unable to load Google Sign-In. Check your internet connection.")}
       />
       <div
         className="bb-google-signin-wrapper"

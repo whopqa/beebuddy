@@ -61,7 +61,7 @@ export class AuthService {
   private static getTokenExpiry(token: string) {
     const decoded = jwt.decode(token);
     if (!decoded || typeof decoded === "string" || typeof decoded.exp !== "number") {
-      throw new Error("Không xác định được thời hạn refresh token");
+      throw new Error("Unable to determine the refresh token lifetime");
     }
     return new Date(decoded.exp * 1000);
   }
@@ -129,7 +129,7 @@ export class AuthService {
       typeof decoded.id !== "string" ||
       typeof decoded.sessionId !== "string"
     ) {
-      throw new Error("Refresh token không có session hợp lệ");
+      throw new Error("Refresh token has no valid session");
     }
 
     return decoded as RefreshTokenPayload;
@@ -148,7 +148,7 @@ export class AuthService {
     const cooldownMs = ENV.EMAIL.RESEND_COOLDOWN_SECONDS * 1000;
     if (latest && Date.now() - latest.createdAt.getTime() < cooldownMs) {
       const waitSeconds = Math.ceil((cooldownMs - (Date.now() - latest.createdAt.getTime())) / 1000);
-      throw new Error(`Vui lòng chờ ${waitSeconds} giây trước khi yêu cầu mã mới`);
+      throw new Error(`Please wait ${waitSeconds} seconds before requesting a new code`);
     }
   }
 
@@ -214,13 +214,13 @@ export class AuthService {
     platform?: string;
   }) {
     if (!data.acceptTerms || !data.acceptPrivacy) {
-      throw new Error("Bạn phải đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư");
+      throw new Error("You must agree to the Terms of Use and Privacy Policy");
     }
 
     const normalizedEmail = data.email.toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
-      throw new Error("Email này đã được đăng ký trong hệ thống");
+      throw new Error("This email address is already registered");
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -236,7 +236,7 @@ export class AuthService {
       const termsDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.TERMS);
       const privacyDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.PRIVACY);
       if (!termsDocument || !privacyDocument) {
-        throw new Error("Chưa cấu hình đủ tài liệu TERMS/PRIVACY đang hiệu lực");
+        throw new Error("Active Terms and Privacy documents are not fully configured");
       }
       const consentedAt = new Date();
 
@@ -260,7 +260,7 @@ export class AuthService {
               username: normalizedEmail.split("@")[0] + "_" + Math.floor(Math.random() * 1000),
             },
           },
-          settings: { create: {} },
+          settings: { create: { language: "en" } },
           visibilityRules: { create: DEFAULT_PROFILE_VISIBILITY },
           consents: {
             create: [
@@ -294,7 +294,7 @@ export class AuthService {
         where: { tier: SubscriptionTier.FREE, isActive: true },
         orderBy: { version: "desc" },
       });
-      if (!freePlan) throw new Error("Chưa cấu hình gói FREE đang hoạt động");
+      if (!freePlan) throw new Error("No active FREE plan is configured");
       const now = new Date();
       await tx.subscription.create({
         data: {
@@ -323,7 +323,7 @@ export class AuthService {
         verificationSent = true;
         developmentCode = delivery.developmentCode;
       } catch (error) {
-        console.error("Không thể gửi email xác minh sau khi đăng ký:", error);
+        console.error("Unable to send verification email after sign-up:", error);
       }
     }
 
@@ -359,18 +359,18 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+      throw new Error("Incorrect account or password");
     }
     if (user.isBanned) {
-      throw new Error(`Tài khoản của bạn đã bị khóa: ${user.banReason || "Vi phạm chính sách"}`);
+      throw new Error(`Your account has been banned: ${user.banReason || "Policy violation"}`);
     }
     const emailIdentity = user.authIdentities?.[0];
     const passwordHash = emailIdentity?.passwordHash || user.passwordHash;
     if (!passwordHash || !(await bcrypt.compare(data.password, passwordHash))) {
-      throw new Error("Tài khoản hoặc mật khẩu không chính xác");
+      throw new Error("Incorrect account or password");
     }
     if (!user.isVerified && !this.isDemoEmailVerificationBypassActive()) {
-      throw new Error("Email chưa được xác minh. Vui lòng xác minh email trước khi đăng nhập");
+      throw new Error("Email has not been verified. Please verify it before signing in");
     }
 
     if (emailIdentity) {
@@ -423,7 +423,7 @@ export class AuthService {
   ) {
     const google = await GoogleIdentityService.verifyCredential(data.credential);
     if (!google.googleIsAuthoritativeForEmail) {
-      throw new Error("BeeBuddy chỉ hỗ trợ Google Sign-In với Gmail hoặc Google Workspace đã xác minh");
+      throw new Error("BeeBuddy supports Google Sign-In only with a verified Gmail or Google Workspace account");
     }
 
     const existingIdentity = await prisma.authIdentity.findUnique({
@@ -438,10 +438,10 @@ export class AuthService {
 
     if (existingIdentity) {
       if (existingIdentity.user.isBanned) {
-        throw new Error(`Tài khoản của bạn đã bị khóa: ${existingIdentity.user.banReason || "Vi phạm chính sách"}`);
+        throw new Error(`Your account has been banned: ${existingIdentity.user.banReason || "Policy violation"}`);
       }
       if (existingIdentity.user.email.toLowerCase() !== google.email) {
-        throw new Error("Email Google không còn khớp với tài khoản BeeBuddy đã liên kết");
+        throw new Error("Your Google email no longer matches the linked BeeBuddy account");
       }
 
       const sessionId = randomUUID();
@@ -486,10 +486,10 @@ export class AuthService {
 
     if (existingUser) {
       if (existingUser.isBanned) {
-        throw new Error(`Tài khoản của bạn đã bị khóa: ${existingUser.banReason || "Vi phạm chính sách"}`);
+        throw new Error(`Your account has been banned: ${existingUser.banReason || "Policy violation"}`);
       }
       if (existingUser.authIdentities.length > 0) {
-        throw new Error("Tài khoản này đã liên kết với một Google Account khác");
+        throw new Error("This account is linked to another Google account");
       }
 
       const sessionId = randomUUID();
@@ -537,7 +537,7 @@ export class AuthService {
     }
 
     if (!data.acceptTerms || !data.acceptPrivacy) {
-      throw new Error("Bạn phải đồng ý Điều khoản sử dụng và Chính sách quyền riêng tư để tạo tài khoản bằng Google");
+      throw new Error("You must agree to the Terms of Use and Privacy Policy to create an account with Google");
     }
 
     const { user, tokens } = await prisma.$transaction(async (tx) => {
@@ -552,7 +552,7 @@ export class AuthService {
       const termsDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.TERMS);
       const privacyDocument = legalDocuments.find((doc) => doc.type === LegalDocumentType.PRIVACY);
       if (!termsDocument || !privacyDocument) {
-        throw new Error("Chưa cấu hình đủ tài liệu TERMS/PRIVACY đang hiệu lực");
+        throw new Error("Active Terms and Privacy documents are not fully configured");
       }
       const consentedAt = new Date();
       const createdUser = await tx.user.create({
@@ -575,7 +575,7 @@ export class AuthService {
               avatarUrl: google.avatarUrl,
             },
           },
-          settings: { create: {} },
+          settings: { create: { language: "en" } },
           visibilityRules: { create: DEFAULT_PROFILE_VISIBILITY },
           consents: {
             create: [
@@ -609,7 +609,7 @@ export class AuthService {
         where: { tier: SubscriptionTier.FREE, isActive: true },
         orderBy: { version: "desc" },
       });
-      if (!freePlan) throw new Error("Chưa cấu hình gói FREE đang hoạt động");
+      if (!freePlan) throw new Error("No active FREE plan is configured");
       const now = new Date();
       await tx.subscription.create({
         data: {
@@ -652,7 +652,7 @@ export class AuthService {
 
     const genericResult = {
       requested: true,
-      message: "Nếu tài khoản tồn tại và chưa được xác minh, hệ thống sẽ gửi mã mới đến email khi dịch vụ email hoạt động.",
+      message: "If the account exists and is unverified, a new code will be emailed when email delivery is available.",
     };
     if (!user || user.isVerified) return genericResult;
 
@@ -660,11 +660,11 @@ export class AuthService {
       const delivery = await this.issueEmailVerification({
         userId: user.id,
         email: user.email,
-        fullName: user.profile?.fullName || "bạn",
+        fullName: user.profile?.fullName || "friend",
       });
       return { ...genericResult, ...delivery };
     } catch (error) {
-      console.error("Không thể gửi lại mã xác minh:", error);
+      console.error("Unable to resend the verification code:", error);
       return genericResult;
     }
   }
@@ -675,8 +675,8 @@ export class AuthService {
   ) {
     const normalizedEmail = data.email.toLowerCase().trim();
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
-    if (user.isVerified) throw new Error("Email này đã được xác minh");
+    if (!user) throw new Error("Verification code is invalid or expired");
+    if (user.isVerified) throw new Error("This email address is already verified");
 
     const tokenHash = this.verificationCodeHash(user.id, data.code);
     const token = await prisma.oneTimeToken.findFirst({
@@ -703,11 +703,11 @@ export class AuthService {
           data: { attemptCount: { increment: 1 } },
         });
       }
-      throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
+      throw new Error("Verification code is invalid or expired");
     }
     if (token.expiresAt <= new Date() || token.attemptCount >= 5) {
       await prisma.oneTimeToken.update({ where: { id: token.id }, data: { consumedAt: new Date() } });
-      throw new Error("Mã xác minh không hợp lệ hoặc đã hết hạn");
+      throw new Error("Verification code is invalid or expired");
     }
 
     const sessionId = randomUUID();
@@ -722,7 +722,7 @@ export class AuthService {
         },
         data: { consumedAt: new Date() },
       });
-      if (consumed.count !== 1) throw new Error("Mã xác minh đã được sử dụng");
+      if (consumed.count !== 1) throw new Error("Verification code has already been used");
 
       await tx.user.update({ where: { id: user.id }, data: { isVerified: true } });
       await tx.authIdentity.updateMany({
@@ -762,7 +762,7 @@ export class AuthService {
     });
     const genericResult = {
       requested: true,
-      message: "Nếu email đã đăng ký, chúng tôi đã gửi liên kết đặt lại mật khẩu.",
+      message: "If this email is registered, we have sent a password reset link.",
     };
     if (!user || user.isBanned) return genericResult;
 
@@ -789,7 +789,7 @@ export class AuthService {
       try {
         await AuthEmailService.sendPasswordReset({
           email: user.email,
-          fullName: user.profile?.fullName || "bạn",
+          fullName: user.profile?.fullName || "friend",
           resetUrl,
         });
       } catch (error) {
@@ -804,7 +804,7 @@ export class AuthService {
           : {}),
       };
     } catch (error) {
-      console.error("Không thể gửi yêu cầu đặt lại mật khẩu:", error);
+      console.error("Unable to send the password reset email:", error);
       return genericResult;
     }
   }
@@ -831,12 +831,12 @@ export class AuthService {
       token.expiresAt <= new Date() ||
       token.user.isBanned
     ) {
-      throw new Error("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+      throw new Error("Password reset link is invalid or expired");
     }
 
     const currentPasswordHash = token.user.authIdentities?.[0]?.passwordHash || token.user.passwordHash;
     if (currentPasswordHash && await bcrypt.compare(data.newPassword, currentPasswordHash)) {
-      throw new Error("Mật khẩu mới phải khác mật khẩu hiện tại");
+      throw new Error("New password must differ from your current password");
     }
 
     const passwordHash = await bcrypt.hash(data.newPassword, 10);
@@ -845,7 +845,7 @@ export class AuthService {
         where: { id: token.id, consumedAt: null, expiresAt: { gt: new Date() } },
         data: { consumedAt: new Date() },
       });
-      if (consumed.count !== 1) throw new Error("Liên kết đặt lại mật khẩu đã được sử dụng");
+      if (consumed.count !== 1) throw new Error("Password reset link has already been used");
 
       await tx.user.update({
         where: { id: token.userId },
@@ -899,7 +899,7 @@ export class AuthService {
         session.user.isBanned ||
         (!session.user.isVerified && !this.isDemoEmailVerificationBypassActive())
       ) {
-        throw new Error("Refresh session không còn hiệu lực");
+        throw new Error("Refresh session is no longer valid");
       }
 
       const replacementId = randomUUID();
@@ -928,7 +928,7 @@ export class AuthService {
         });
 
         if (revoked.count !== 1) {
-          throw new Error("Refresh token đã được sử dụng hoặc thu hồi");
+          throw new Error("Refresh token has been used or revoked");
         }
 
         await tx.userSession.create({
@@ -943,7 +943,7 @@ export class AuthService {
 
       return replacementTokens;
     } catch {
-      throw new Error("Refresh token không hợp lệ hoặc đã hết hạn");
+      throw new Error("Refresh token is invalid or expired");
     }
   }
 
@@ -973,7 +973,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return {

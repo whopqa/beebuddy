@@ -41,7 +41,7 @@ export async function forwardAuthRequest(endpoint: string, body: unknown) {
     });
     const payload = await upstream.json().catch(() => ({
       success: false,
-      error: `Backend trả về dữ liệu không hợp lệ (HTTP ${upstream.status})`,
+      error: `The backend returned invalid data (HTTP ${upstream.status})`,
     }));
     return { upstream, payload };
   } catch {
@@ -49,8 +49,8 @@ export async function forwardAuthRequest(endpoint: string, body: unknown) {
       upstream: null,
       payload: {
         success: false,
-        message: "Backend chưa chạy hoặc BACKEND_API_URL không đúng.",
-        error: "Không thể kết nối BeeBuddy API",
+        message: "The backend is not running or BACKEND_API_URL is incorrect.",
+        error: "Unable to connect to the BeeBuddy API",
       },
     };
   }
@@ -63,7 +63,7 @@ export async function forwardAuthenticatedRequest(endpoint: string, init: Reques
   let refreshedTokens: { accessToken: string; refreshToken: string } | null = null;
 
   if (!accessToken && !refreshToken) {
-    return { status: 401, payload: { success: false, error: "Chưa đăng nhập" }, refreshedTokens };
+    return { status: 401, payload: { success: false, error: "Not signed in" }, refreshedTokens };
   }
 
   const call = (token: string) =>
@@ -99,11 +99,11 @@ export async function forwardAuthenticatedRequest(endpoint: string, init: Reques
       }
     }
 
-    if (!upstream) return { status: 401, payload: { success: false, error: "Phiên đăng nhập không hợp lệ" }, refreshedTokens };
-    const payload = await upstream.json().catch(() => ({ success: false, error: "Backend trả về dữ liệu không hợp lệ" }));
+    if (!upstream) return { status: 401, payload: { success: false, error: "Invalid sign-in session" }, refreshedTokens };
+    const payload = await upstream.json().catch(() => ({ success: false, error: "The backend returned invalid data" }));
     return { status: upstream.status, payload, refreshedTokens };
   } catch {
-    return { status: 503, payload: { success: false, error: "Không thể kết nối BeeBuddy API" }, refreshedTokens };
+    return { status: 503, payload: { success: false, error: "Unable to connect to the BeeBuddy API" }, refreshedTokens };
   }
 }
 
@@ -190,13 +190,13 @@ export async function forwardOptionalAuthenticatedRequest(endpoint: string, init
 
     const payload = await upstream.json().catch(() => ({
       success: false,
-      error: "Backend trả về dữ liệu không hợp lệ",
+      error: "The backend returned invalid data",
     }));
     return { status: upstream.status, payload, refreshedTokens };
   } catch {
     return {
       status: 503,
-      payload: { success: false, error: "Không thể kết nối BeeBuddy API" },
+      payload: { success: false, error: "Unable to connect to the BeeBuddy API" },
       refreshedTokens,
     };
   }

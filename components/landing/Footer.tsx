@@ -14,10 +14,10 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-sm">
-            <Link href="#features" className="hover:text-white transition-colors">Tính năng</Link>
-            <Link href="#solution" className="hover:text-white transition-colors">Giải pháp</Link>
-            <Link href="#about" className="hover:text-white transition-colors">Về dự án</Link>
-            <Link href="#contact" className="hover:text-white transition-colors">Liên hệ</Link>
+            <Link href="#features" className="hover:text-white transition-colors">Features</Link>
+            <Link href="#solution" className="hover:text-white transition-colors">Solutions</Link>
+            <Link href="#about" className="hover:text-white transition-colors">About</Link>
+            <Link href="#contact" className="hover:text-white transition-colors">Contact</Link>
           </div>
 
           <div className="flex items-center gap-4 text-slate-400">
@@ -34,8 +34,8 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} EXE201 Startup Project. Tất cả các quyền được bảo lưu.</p>
-          <p>Xây dựng trên nền tảng Next.js 14, Tailwind CSS & Figma Design System.</p>
+          <p>© {new Date().getFullYear()} EXE201 Startup Project. All rights reserved.</p>
+          <p>Built with Next.js 14, Tailwind CSS, and the Figma Design System.</p>
         </div>
       </div>
     </footer>

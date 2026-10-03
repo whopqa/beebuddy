@@ -46,7 +46,7 @@ describe("AuthService.login", () => {
     await expect(AuthService.login({
       email: "member@beebuddy.vn",
       password: "wrong-password",
-    })).rejects.toThrow("Tài khoản hoặc mật khẩu không chính xác");
+    })).rejects.toThrow("Incorrect account or password");
   });
 
   it("rejects a banned account even when the password is correct", async () => {
@@ -54,7 +54,7 @@ describe("AuthService.login", () => {
     await expect(AuthService.login({
       email: "member@beebuddy.vn",
       password: "correct-password",
-    })).rejects.toThrow(/đã bị khóa/);
+    })).rejects.toThrow(/has been banned/);
   });
 
   it("allows an unverified account only during the temporary demo window", async () => {
@@ -62,7 +62,7 @@ describe("AuthService.login", () => {
     await expect(AuthService.login({
       email: "member@beebuddy.vn",
       password: "correct-password",
-    })).rejects.toThrow(/chưa được xác minh/);
+    })).rejects.toThrow(/has not been verified/);
 
     ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = new Date(Date.now() + 60_000);
     vi.spyOn(prisma.authIdentity, "update").mockResolvedValue({} as never);
@@ -74,13 +74,13 @@ describe("AuthService.login", () => {
     await expect(AuthService.login({
       email: "member@beebuddy.vn",
       password: "wrong-password",
-    })).rejects.toThrow(/không chính xác/);
+    })).rejects.toThrow(/Incorrect account or password/);
 
     ENV.DEMO_SKIP_EMAIL_VERIFICATION_UNTIL = new Date(Date.now() - 60_000);
     await expect(AuthService.login({
       email: "member@beebuddy.vn",
       password: "correct-password",
-    })).rejects.toThrow(/chưa được xác minh/);
+    })).rejects.toThrow(/has not been verified/);
   });
 
   it("creates a revocable session and stores only the refresh token hash", async () => {
@@ -198,7 +198,7 @@ describe("AuthService.register", () => {
       fullName: "New User",
       acceptTerms: false,
       acceptPrivacy: true,
-    })).rejects.toThrow(/phải đồng ý/);
+    })).rejects.toThrow(/must agree/);
   });
 });
 
@@ -343,7 +343,7 @@ describe("AuthService refresh sessions", () => {
     }));
 
     await expect(AuthService.refreshToken(login.refreshToken)).rejects.toThrow(
-      /không hợp lệ hoặc đã hết hạn/
+      /invalid or expired/
     );
   });
 
@@ -498,7 +498,7 @@ describe("AuthService password reset", () => {
     await expect(AuthService.confirmPasswordReset({
       token: rawToken,
       newPassword: "AnotherPassword123",
-    })).rejects.toThrow(/đã được sử dụng/);
+    })).rejects.toThrow(/already been used/);
     expect(updateUser).not.toHaveBeenCalled();
   });
 });

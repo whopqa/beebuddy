@@ -135,7 +135,7 @@ export class AdminService {
         banReason: u.banReason,
         isVerified: u.isVerified,
         createdAt: u.createdAt,
-        fullName: u.profile?.fullName || "Chưa đặt tên",
+        fullName: u.profile?.fullName || "Unnamed user",
         username: u.profile?.username,
         avatarUrl: u.profile?.avatarUrl,
         location: u.profile?.location,
@@ -230,7 +230,7 @@ export class AdminService {
         where: { id: userId },
         data: { tier, tierExpiresAt: tier === SubscriptionTier.FREE ? null : newExpiry },
       });
-      await tx.moderationLog.create({ data: { adminId, action: "ADJUST_TIER", targetType: "USER", targetId: userId, note: `Admin cập nhật gói cước sang ${tier}` } });
+      await tx.moderationLog.create({ data: { adminId, action: "ADJUST_TIER", targetType: "USER", targetId: userId, note: `Admin changed the plan to ${tier}` } });
       await tx.auditLog.create({
         data: {
           actorType: AuditActorType.ADMIN,
@@ -369,7 +369,7 @@ export class AdminService {
       const caseIds = reports.flatMap((report) => report.moderationCaseId ? [report.moderationCaseId] : []);
       if (caseIds.length) {
         await tx.moderationCase.updateMany({ where: { id: { in: caseIds } }, data: { status: action === "APPROVE" ? ModerationCaseStatus.DISMISSED : ModerationCaseStatus.RESOLVED, resolvedAt: now } });
-        await tx.moderationDecision.createMany({ data: caseIds.map((caseId) => ({ caseId, actorId: adminId, action: action === "APPROVE" ? "APPROVE_COMMENT" : "HIDE_COMMENT", reason: "Quyết định kiểm duyệt thủ công" })) });
+        await tx.moderationDecision.createMany({ data: caseIds.map((caseId) => ({ caseId, actorId: adminId, action: action === "APPROVE" ? "APPROVE_COMMENT" : "HIDE_COMMENT", reason: "Manual moderation decision" })) });
       }
       const auditAction = action === "APPROVE" ? "APPROVE_COMMENT" : "HIDE_COMMENT";
       await tx.moderationLog.create({ data: { adminId, action: auditAction, targetType: "COMMENT", targetId: commentId } });
@@ -430,7 +430,7 @@ export class AdminService {
       const caseIds = reports.flatMap((report) => report.moderationCaseId ? [report.moderationCaseId] : []);
       if (caseIds.length) {
         await tx.moderationCase.updateMany({ where: { id: { in: caseIds } }, data: { status: action === "APPROVE" ? ModerationCaseStatus.DISMISSED : ModerationCaseStatus.RESOLVED, resolvedAt: now } });
-        await tx.moderationDecision.createMany({ data: caseIds.map((caseId) => ({ caseId, actorId: adminId, action: action === "APPROVE" ? "APPROVE_POST" : "HIDE_POST", reason: "Quyết định kiểm duyệt thủ công" })) });
+        await tx.moderationDecision.createMany({ data: caseIds.map((caseId) => ({ caseId, actorId: adminId, action: action === "APPROVE" ? "APPROVE_POST" : "HIDE_POST", reason: "Manual moderation decision" })) });
       }
       const auditAction = action === "APPROVE" ? "APPROVE_POST" : "HIDE_POST";
       await tx.moderationLog.create({ data: { adminId, action: auditAction, targetType: "POST", targetId: postId } });
@@ -474,7 +474,7 @@ export class AdminService {
       const updated = await tx.report.update({ where: { id: reportId }, data: { status, resolvedAt: now, details: note?.trim() || report.details } });
       if (report.moderationCaseId) {
         await tx.moderationCase.update({ where: { id: report.moderationCaseId }, data: { status: action === "RESOLVE" ? ModerationCaseStatus.RESOLVED : ModerationCaseStatus.DISMISSED, resolvedAt: now } });
-        await tx.moderationDecision.create({ data: { caseId: report.moderationCaseId, actorId: adminId, action: `${action}_REPORT`, reason: note?.trim() || "Admin xử lý báo cáo" } });
+        await tx.moderationDecision.create({ data: { caseId: report.moderationCaseId, actorId: adminId, action: `${action}_REPORT`, reason: note?.trim() || "Admin resolved the report" } });
       }
       await tx.auditLog.create({ data: { actorType: AuditActorType.ADMIN, actorUserId: adminId, action: `${action}_REPORT`, targetType: "REPORT", targetId: reportId, beforeData: { status: report.status }, afterData: { status } } });
       return updated;

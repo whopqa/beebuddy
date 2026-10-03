@@ -20,10 +20,10 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <Link href="#features" className="hover:text-blue-600 transition-colors">Tính năng</Link>
-          <Link href="#solution" className="hover:text-blue-600 transition-colors">Giải pháp</Link>
-          <Link href="#about" className="hover:text-blue-600 transition-colors">Về dự án</Link>
-          <Link href="#contact" className="hover:text-blue-600 transition-colors">Liên hệ</Link>
+          <Link href="#features" className="hover:text-blue-600 transition-colors">Features</Link>
+          <Link href="#solution" className="hover:text-blue-600 transition-colors">Solutions</Link>
+          <Link href="#about" className="hover:text-blue-600 transition-colors">About</Link>
+          <Link href="#contact" className="hover:text-blue-600 transition-colors">Contact</Link>
         </nav>
 
         {/* CTA Button */}
@@ -32,7 +32,7 @@ export default function Navbar() {
             href="#contact"
             className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm hover:shadow-md transition-all group"
           >
-            <span>Trải nghiệm ngay</span>
+            <span>Try it now</span>
             <ArrowRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -55,28 +55,28 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600"
           >
-            Tính năng
+            Features
           </Link>
           <Link
             href="#solution"
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600"
           >
-            Giải pháp
+            Solutions
           </Link>
           <Link
             href="#about"
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600"
           >
-            Về dự án
+            About
           </Link>
           <Link
             href="#contact"
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600"
           >
-            Liên hệ
+            Contact
           </Link>
           <div className="pt-2">
             <Link
@@ -84,7 +84,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow"
             >
-              Trải nghiệm ngay
+              Try it now
             </Link>
           </div>
         </div>

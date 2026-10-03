@@ -14,23 +14,23 @@ function relativeTime(value?: string | null) {
   if (!value) return "";
   const elapsed = Date.now() - new Date(value).getTime();
   const minutes = Math.max(0, Math.floor(elapsed / 60_000));
-  if (minutes < 1) return "Vừa xong";
-  if (minutes < 60) return `${minutes} phút`;
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ`;
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date(value));
+  if (hours < 24) return `${hours} hr`;
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "2-digit" }).format(new Date(value));
 }
 
 function conversationIdentity(item: ConversationListItem, userId: string) {
-  if (item.conversation.type === "GROUP") return { name: item.conversation.title || "Nhóm BeeBuddy", avatar: fallbackAvatar, subtitle: `${item.conversation.members.length} thành viên` };
+  if (item.conversation.type === "GROUP") return { name: item.conversation.title || "BeeBuddy group", avatar: fallbackAvatar, subtitle: `${item.conversation.members.length} members` };
   const other = item.conversation.members.find((member) => member.userId !== userId)?.user;
-  return { name: other?.profile?.fullName || "Thành viên BeeBuddy", avatar: other?.profile?.avatarUrl || fallbackAvatar, subtitle: other?.profile?.username ? `@${other.profile.username}` : "Kết nối BeeBuddy" };
+  return { name: other?.profile?.fullName || "BeeBuddy member", avatar: other?.profile?.avatarUrl || fallbackAvatar, subtitle: other?.profile?.username ? `@${other.profile.username}` : "BeeBuddy connection" };
 }
 
 function lastMessagePreview(message: Message | undefined, fallback: string) {
   if (!message) return fallback;
   if (message.body) return message.body;
-  if (message.type === "IMAGE") return "Đã gửi ảnh";
+  if (message.type === "IMAGE") return "Sent an image";
   return `[${message.type}]`;
 }
 
@@ -79,7 +79,7 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
           setSelectedId(initialConversationId);
         }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải hộp thư");
+        setError(cause instanceof Error ? cause.message : "Unable to load messages");
       } finally {
         if (active) { setLoading(false); setAuthResolved(true); }
       }
@@ -98,7 +98,7 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
         setItems((current) => current.map((item) => item.conversationId === conversationId ? { ...item, unreadCount: 0 } : item));
       }
     } catch (cause) {
-      if (!quiet) setError(cause instanceof Error ? cause.message : "Không thể tải tin nhắn");
+      if (!quiet) setError(cause instanceof Error ? cause.message : "Unable to load the conversation");
     } finally {
       if (!quiet) setMessageLoading(false);
     }
@@ -168,7 +168,7 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
   const chooseImages = (files: File[]) => {
     const next = files.slice(0, 4);
     if (next.some((file) => !file.type.startsWith("image/") || file.size > 4 * 1024 * 1024)) {
-      setError("Mỗi file phải là ảnh JPEG/PNG/WebP/GIF và không vượt quá 4 MB.");
+      setError("Each file must be a JPEG, PNG, WebP, or GIF image smaller than 4 MB.");
       return;
     }
     setError("");
@@ -193,48 +193,48 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
       setPendingImages([]);
       await loadList();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể gửi tin nhắn");
+      setError(cause instanceof Error ? cause.message : "Unable to send the message");
     } finally {
       setSending(false);
     }
   };
 
-  if (!authResolved) return <div className="bb-message-page-state"><LoaderCircle className="bb-spin" size={28} /> Đang mở hộp thư...</div>;
-  if (!user) return <main className="bb-message-guest"><MessageCircle size={42} /><h1>Tin nhắn BeeBuddy</h1><p>Đăng nhập để trò chuyện với những người bạn đã kết nối.</p><Link href="/login">Đăng nhập</Link></main>;
+  if (!authResolved) return <div className="bb-message-page-state"><LoaderCircle className="bb-spin" size={28} /> Opening messages...</div>;
+  if (!user) return <main className="bb-message-guest"><MessageCircle size={42} /><h1>BeeBuddy messages</h1><p>Sign in to chat with your connections.</p><Link href="/login">Sign in</Link></main>;
 
   return (
     <main className="bb-message-page">
       <section className="bb-message-shell">
         <aside className={`bb-message-sidebar ${selected ? "has-mobile-selection" : ""}`}>
-          <header><div><span>BeeBuddy</span><h1>Tin nhắn</h1></div><button title="Làm mới" onClick={() => void loadList()}><RefreshCw size={18} /></button></header>
-          <label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm cuộc trò chuyện..." /></label>
-          {loading ? <div className="bb-message-list-state"><LoaderCircle className="bb-spin" size={22} /></div> : filtered.length === 0 ? <div className="bb-message-list-state"><Users size={27} /><span>Chưa có cuộc trò chuyện.</span><Link href="/discover">Tìm người kết nối</Link></div> : <div className="bb-message-conversation-list">{filtered.map((item) => { const info = conversationIdentity(item, user.id); const last = item.conversation.messages[0]; return <button key={item.id} className={item.conversationId === selectedId ? "is-active" : ""} onClick={() => setSelectedId(item.conversationId)}><img src={info.avatar} alt="" /><div><strong>{info.name}</strong><span>{lastMessagePreview(last, info.subtitle)}</span></div><aside><time>{relativeTime(last?.createdAt || item.conversation.lastMessageAt)}</time>{item.unreadCount > 0 && <b>{item.unreadCount}</b>}</aside></button>; })}</div>}
+          <header><div><span>BeeBuddy</span><h1>Messages</h1></div><button title="Refresh" onClick={() => void loadList()}><RefreshCw size={18} /></button></header>
+          <label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations..." /></label>
+          {loading ? <div className="bb-message-list-state"><LoaderCircle className="bb-spin" size={22} /></div> : filtered.length === 0 ? <div className="bb-message-list-state"><Users size={27} /><span>No conversations yet.</span><Link href="/discover">Find connections</Link></div> : <div className="bb-message-conversation-list">{filtered.map((item) => { const info = conversationIdentity(item, user.id); const last = item.conversation.messages[0]; return <button key={item.id} className={item.conversationId === selectedId ? "is-active" : ""} onClick={() => setSelectedId(item.conversationId)}><img src={info.avatar} alt="" /><div><strong>{info.name}</strong><span>{lastMessagePreview(last, info.subtitle)}</span></div><aside><time>{relativeTime(last?.createdAt || item.conversation.lastMessageAt)}</time>{item.unreadCount > 0 && <b>{item.unreadCount}</b>}</aside></button>; })}</div>}
         </aside>
 
         <section className={`bb-message-thread ${selected ? "has-selection" : ""}`}>
           {!selected || !identity ? (
-            <div className="bb-message-empty-thread"><MessageCircle size={43} /><h2>Chọn một cuộc trò chuyện</h2><p>Tin nhắn chỉ khả dụng giữa những người đã kết nối.</p></div>
+            <div className="bb-message-empty-thread"><MessageCircle size={43} /><h2>Select a conversation</h2><p>Messaging is available only between connected members.</p></div>
           ) : (
             <>
-              <header><button className="bb-message-mobile-back" onClick={() => setSelectedId(null)}><ArrowLeft size={19} /></button><img src={identity.avatar} alt="" /><div><strong>{identity.name}</strong><span>{identity.subtitle}</span></div><span className={`bb-message-live-status is-${realtimeStatus.toLowerCase()}`}><i />{realtimeStatus === "CONNECTED" ? "Realtime" : realtimeStatus === "RECONNECTING" ? "Đang kết nối lại" : "Đang kết nối"}</span></header>
+              <header><button className="bb-message-mobile-back" onClick={() => setSelectedId(null)}><ArrowLeft size={19} /></button><img src={identity.avatar} alt="" /><div><strong>{identity.name}</strong><span>{identity.subtitle}</span></div><span className={`bb-message-live-status is-${realtimeStatus.toLowerCase()}`}><i />{realtimeStatus === "CONNECTED" ? "Realtime" : realtimeStatus === "RECONNECTING" ? "Reconnecting" : "Connecting"}</span></header>
               {error && <div className="bb-message-error" role="alert">{error}</div>}
               {selected.canMessage === false && (
                 <div className="bb-message-restriction" role="status">
                   <Users size={16} />
-                  <span>{selected.messagingRestriction === "BLOCKED" ? "Không thể tiếp tục trò chuyện do trạng thái chặn giữa hai tài khoản." : "Hai bạn cần kết nối lại và chấp nhận lời mời trước khi tiếp tục trò chuyện."}</span>
+                  <span>{selected.messagingRestriction === "BLOCKED" ? "You cannot continue this conversation because one account has blocked the other." : "Reconnect and accept the request before continuing this conversation."}</span>
                 </div>
               )}
               <div className="bb-message-scroll">
-                {messageLoading ? <div className="bb-message-list-state"><LoaderCircle className="bb-spin" size={23} /> Đang tải tin nhắn...</div> : messages.length === 0 ? <div className="bb-message-empty-thread"><MessageCircle size={34} /><h2>Bắt đầu một lời chào</h2><p>Hãy gửi tin nhắn đầu tiên để bắt đầu cuộc trò chuyện.</p></div> : messages.map((message) => {
+                {messageLoading ? <div className="bb-message-list-state"><LoaderCircle className="bb-spin" size={23} /> Loading messages...</div> : messages.length === 0 ? <div className="bb-message-empty-thread"><MessageCircle size={34} /><h2>Say hello</h2><p>Send the first message to start the conversation.</p></div> : messages.map((message) => {
                   const mine = message.senderUserId === user.id;
                   const readByOthers = (message.readByUserIds || []).filter((userId) => userId !== user.id);
                   return (
                     <div key={message.id} className={`bb-message-bubble-row ${mine ? "is-mine" : ""}`}>
                       {!mine && <img src={message.senderUser?.profile?.avatarUrl || identity.avatar} alt="" />}
                       <div>
-                        {message.attachments?.length ? <div className="bb-message-attachments">{message.attachments.map((attachment) => attachment.mediaAsset.sourceUrl ? <img key={attachment.id} src={attachment.mediaAsset.sourceUrl} alt="Ảnh trong tin nhắn" /> : null)}</div> : null}
+                        {message.attachments?.length ? <div className="bb-message-attachments">{message.attachments.map((attachment) => attachment.mediaAsset.sourceUrl ? <img key={attachment.id} src={attachment.mediaAsset.sourceUrl} alt="Message image" /> : null)}</div> : null}
                         {message.body && <p>{message.body}</p>}
-                        <time>{relativeTime(message.createdAt)}{mine ? readByOthers.length ? ` · Đã xem${selected.conversation.type === "GROUP" ? ` (${readByOthers.length})` : ""}` : " · Đã gửi" : ""}</time>
+                        <time>{relativeTime(message.createdAt)}{mine ? readByOthers.length ? ` · Seen${selected.conversation.type === "GROUP" ? ` (${readByOthers.length})` : ""}` : " · Sent" : ""}</time>
                       </div>
                     </div>
                   );
@@ -242,10 +242,10 @@ export default function MessagesHub({ initialUserId, initialConversationId }: { 
                 <div ref={endRef} />
               </div>
               {selected.canMessage !== false && <form className="bb-message-composer" onSubmit={send}>
-                {pendingPreviews.length > 0 && <div className="bb-message-pending-images">{pendingPreviews.map((url, index) => <div key={url}><img src={url} alt={`Ảnh chờ gửi ${index + 1}`} /><button type="button" onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Bỏ ảnh"><X size={14} /></button></div>)}</div>}
+                {pendingPreviews.length > 0 && <div className="bb-message-pending-images">{pendingPreviews.map((url, index) => <div key={url}><img src={url} alt={`Image ready to send ${index + 1}`} /><button type="button" onClick={() => setPendingImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Remove image"><X size={14} /></button></div>)}</div>}
                 <div className="bb-message-compose-row">
-                  <label className="bb-message-image-picker" title="Gửi ảnh"><ImagePlus size={20} /><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={(event) => chooseImages(Array.from(event.target.files || []))} /></label>
-                  <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={10000} rows={1} placeholder={pendingImages.length ? "Thêm lời nhắn..." : "Viết tin nhắn..."} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
+                  <label className="bb-message-image-picker" title="Send images"><ImagePlus size={20} /><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={(event) => chooseImages(Array.from(event.target.files || []))} /></label>
+                  <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={10000} rows={1} placeholder={pendingImages.length ? "Add a message..." : "Write a message..."} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
                   <button disabled={(!draft.trim() && pendingImages.length === 0) || sending}>{sending ? <LoaderCircle className="bb-spin" size={18} /> : <Send size={18} />}</button>
                 </div>
               </form>}

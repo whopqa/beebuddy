@@ -62,7 +62,7 @@ export const createApp = () => {
   app.use((req: Request, res: Response) => {
     res.status(404).json({
       success: false,
-      message: `Đường dẫn không tồn tại: ${req.method} ${req.originalUrl}`,
+      message: `Route not found: ${req.method} ${req.originalUrl}`,
     });
   });
 
@@ -71,7 +71,9 @@ export const createApp = () => {
     console.error("Unhandler error:", err);
     res.status(err.status || 500).json({
       success: false,
-      message: err.message || "Lỗi máy chủ nội bộ",
+      message: typeof err.message === "string" && !/[À-ỹĐđ]/u.test(err.message)
+        ? err.message
+        : "Internal server error",
     });
   });
 

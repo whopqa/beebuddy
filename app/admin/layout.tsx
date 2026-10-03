@@ -21,22 +21,22 @@ import type { WebUser } from "@/lib/auth-types";
 
 const navItems = [
   {
-    name: "Tổng quan (Dashboard)",
+    name: "Overview",
     href: "/admin",
     icon: LayoutDashboard,
   },
   {
-    name: "Quản lý Giao dịch & Gói",
+    name: "Payments and Plans",
     href: "/admin/payments",
     icon: CreditCard,
   },
   {
-    name: "Quản trị Người dùng & App",
+    name: "Users and App",
     href: "/admin/users",
     icon: Users,
   },
   {
-    name: "Kiểm duyệt & Từ cấm",
+    name: "Moderation and Blocked Words",
     href: "/admin/moderation",
     icon: ShieldAlert,
   },
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (checkingRole || !admin) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center text-sm font-semibold text-gray-600">
-        Đang kiểm tra quyền quản trị...
+        Checking admin access...
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {/* Navigation Links */}
           <nav className="p-4 space-y-1.5">
             <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-              Quản trị hệ thống
+              System administration
             </div>
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -160,7 +160,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             className="flex items-center justify-center gap-2 w-full py-2 px-3 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             <ArrowLeft size={14} />
-            <span>Quay lại Giao diện Web User</span>
+            <span>Back to the user site</span>
           </Link>
 
           <div className="flex items-center justify-between pt-2">
@@ -169,7 +169,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 AD
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-bold text-gray-900 truncate">{admin.profile?.fullName || "Quản Trị Viên"}</p>
+                <p className="text-xs font-bold text-gray-900 truncate">{admin.profile?.fullName || "Administrator"}</p>
                 <p className="text-[10px] text-gray-500 truncate">{admin.email}</p>
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               onClick={() => {
                 void webAuth.logout().finally(() => router.replace("/login"));
               }}
-              title="Đăng xuất"
+              title="Sign out"
               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
             >
               <LogOut size={16} />
@@ -200,7 +200,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="hidden md:flex items-center justify-between bg-white border-b border-gray-200 px-8 py-3.5 sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <h2 className="font-bold text-gray-800 text-base">
-              {navItems.find((item) => item.href === pathname)?.name || "Bảng Điều Khiển"}
+              {navItems.find((item) => item.href === pathname)?.name || "Dashboard"}
             </h2>
             <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
               PostgreSQL Connected

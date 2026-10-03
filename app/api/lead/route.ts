@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ success: false, error: "Dữ liệu không hợp lệ." }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Invalid data." }, { status: 400 });
   }
 
   const result = await forwardAuthRequest("/leads", body);

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export async function GET(_request: NextRequest, { params }: { params: { assetId: string } }) {
   const result = await forwardOptionalAuthenticatedBinary(`/media/${encodeURIComponent(params.assetId)}/content`);
   if (!result.upstream) {
-    return NextResponse.json({ success: false, error: "Không thể kết nối BeeBuddy API" }, { status: 503 });
+    return NextResponse.json({ success: false, error: "Unable to connect to the BeeBuddy API" }, { status: 503 });
   }
 
   const response = new NextResponse(result.upstream.body, {

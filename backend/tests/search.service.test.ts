@@ -74,7 +74,7 @@ describe("SearchService", () => {
     ]);
     const result = await SearchService.searchInterestsPreview("");
     expect(result.totalMatches).toBe(1);
-    expect(result.previewUsers[0]).toMatchObject({ location: "Việt Nam", role: "BeeBuddy member", connectionGoal: "Tìm bạn đồng hành" });
+    expect(result.previewUsers[0]).toMatchObject({ location: "Vietnam", role: "BeeBuddy member", connectionGoal: "Find a companion" });
     expect((await SearchService.searchInterestsPreview("", { availability: ["Weekends"] })).totalMatches).toBe(0);
   });
 });

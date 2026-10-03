@@ -44,7 +44,7 @@ export async function getSubscriptionPlans() {
   const response = await fetch("/api/payments/plans", { cache: "no-store" });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<SubscriptionPlan[]>;
   if (!response.ok || !body.success || !body.data) {
-    throw new Error(body.error || body.message || "Không thể tải bảng giá");
+    throw new Error(body.error || body.message || "Unable to load pricing");
   }
   return body.data;
 }
@@ -57,7 +57,7 @@ async function authenticatedRequest<T>(path: string, init?: RequestInit) {
   });
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error || body.message || "Không thể xử lý thanh toán");
+    throw new Error(body.error || body.message || "Unable to process the payment");
   }
   return body.data;
 }

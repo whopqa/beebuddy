@@ -320,11 +320,11 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
                 description="Grow a welcoming circle built around trust, connection, and belonging."
               />
             </div>
+          </div>
 
-            {/* Giant Vertical Artwork from Figma on Far Right */}
-            <div className="bb-services-vertical-art-wrap" aria-hidden="true">
-              <img src={homeAsset("services_vertical_art.png")} alt="" className="bb-services-vertical-img" />
-            </div>
+          {/* Keep the decorative artwork anchored to the full-width section, not the centered content. */}
+          <div className="bb-services-vertical-art-wrap" aria-hidden="true">
+            <img src={homeAsset("services_vertical_art.png")} alt="" className="bb-services-vertical-img" />
           </div>
 
           {/* Decorative Translucent Lens Circles */}
@@ -766,7 +766,7 @@ function InteractiveCommunityCard({
             <Link className="bb-community-members" href="/community">Members</Link>
           </div>
         )}
-        <Link className="bb-community-touch-link" href="/community" aria-label={`Xem cộng đồng ${tag}`} />
+        <Link className="bb-community-touch-link" href="/community" aria-label={`View ${tag} community`} />
       </div>
     </article>
   );

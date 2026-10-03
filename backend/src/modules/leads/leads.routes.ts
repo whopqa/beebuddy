@@ -12,7 +12,7 @@ const leadSchema = z.object({
   phone: z.string().trim().max(40).optional(),
   message: z.string().trim().max(2000).optional(),
 }).strict().refine((data) => data.kind === "newsletter" || Boolean(data.name), {
-  message: "Vui lòng nhập họ và tên của bạn.",
+  message: "Please enter your full name.",
   path: ["name"],
 });
 
@@ -22,8 +22,8 @@ router.post("/", async (req, res) => {
   try {
     const result = await LeadsService.submit(parsed.data);
     return sendSuccess(res, result, parsed.data.kind === "newsletter"
-      ? "Đăng ký nhận bản tin thành công."
-      : "Đăng ký thành công! BeeBuddy sẽ liên hệ với bạn.");
+      ? "Newsletter subscription successful."
+      : "Registration successful! BeeBuddy will contact you.");
   } catch (error) {
     return sendError(res, error, 500);
   }
