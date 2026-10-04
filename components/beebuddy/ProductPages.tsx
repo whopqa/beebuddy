@@ -56,9 +56,11 @@ import {
 import { NOTIFICATION_PREFERENCES_CHANGED_EVENT, notificationsApi, type AppNotification, type NotificationType } from "@/lib/notifications-client";
 import { searchApi, type SearchPreviewResult } from "@/lib/search-client";
 import { connectionsApi, type Connection } from "@/lib/connections-client";
-import { GoogleSignInButton, googleSignInConfigured } from "@/components/auth/GoogleSignInButton";
-import { getConsentSessionId } from "@/lib/cookie-consent";
 import { uploadImage } from "@/lib/media-client";
+import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
+
+const BEEBUDDY_FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61595002616954";
+const BEEBUDDY_TIKTOK_URL = "https://www.tiktok.com/@beebuddy.app";
 
 export type ProductView =
   | "get-started"
@@ -864,13 +866,13 @@ function Settings({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     <main className="bb-canvas bb-settings-canvas">
       {/* Floating social rail on left */}
       <aside className="bb-social-rail" aria-label="Social media">
-        <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+        <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
           <img src="/assets/ui/facebook.svg" alt="" />
         </a>
         <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
           <img src="/assets/ui/instagram.png" alt="" />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+        <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
           <img src="/assets/ui/tiktok.svg" alt="" />
         </a>
       </aside>
@@ -1155,13 +1157,13 @@ function AccountInfo({ isLoggedIn = false, editing = false }: { isLoggedIn?: boo
     <main className="bb-canvas bb-account-canvas">
       {/* Floating social rail on left */}
       <aside className="bb-social-rail" aria-label="Social media">
-        <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+        <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
           <img src="/assets/ui/facebook.svg" alt="" />
         </a>
         <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
           <img src="/assets/ui/instagram.png" alt="" />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+        <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
           <img src="/assets/ui/tiktok.svg" alt="" />
         </a>
       </aside>
@@ -1523,6 +1525,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const [paymentNotice, setPaymentNotice] = useState("");
+  const [authRequiredOpen, setAuthRequiredOpen] = useState(false);
   const tierFor = (name: string) => name === "Free" ? "FREE" : name === "Explorer" ? "VIP" : name === "Buddy+" ? "PRO" : null;
   const findPlan = (name: string) => plans.find(plan => plan.tier === tierFor(name));
   const formatPrice = (name: string) => {
@@ -1560,7 +1563,7 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     return () => { active = false; if (timer) window.clearTimeout(timer); };
   }, [isLoggedIn]);
   const subscribe = async () => {
-    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    if (!isLoggedIn) { setAuthRequiredOpen(true); return; }
     const tier = tierFor(selectedPlan);
     if (tier === "FREE") { window.location.href = "/home"; return; }
     if (!tier) { setError("This plan is not available yet."); return; }
@@ -1573,15 +1576,16 @@ function Billing({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
   return (
     <main className="bb-canvas bb-billing-canvas">
+      {authRequiredOpen && <AuthRequiredModal onClose={() => setAuthRequiredOpen(false)} />}
       {/* Floating social rail on left */}
       <aside className="bb-social-rail" aria-label="Social media">
-        <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+        <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
           <img src="/assets/ui/facebook.svg" alt="" />
         </a>
         <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
           <img src="/assets/ui/instagram.png" alt="" />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+        <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
           <img src="/assets/ui/tiktok.svg" alt="" />
         </a>
       </aside>
@@ -2238,13 +2242,13 @@ function Security({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     <main className="bb-canvas bb-security-canvas">
       {/* Floating social rail on left */}
       <aside className="bb-social-rail" aria-label="Social media">
-        <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+        <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
           <img src="/assets/ui/facebook.svg" alt="" />
         </a>
         <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
           <img src="/assets/ui/instagram.png" alt="" />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+        <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
           <img src="/assets/ui/tiktok.svg" alt="" />
         </a>
       </aside>
@@ -2506,13 +2510,13 @@ function HelpSupport({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     <main className="bb-canvas bb-help-canvas">
       {/* Floating social rail on left */}
       <aside className="bb-social-rail" aria-label="Social media">
-        <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+        <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
           <img src="/assets/ui/facebook.svg" alt="" />
         </a>
         <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
           <img src="/assets/ui/instagram.png" alt="" />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+        <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
           <img src="/assets/ui/tiktok.svg" alt="" />
         </a>
       </aside>
@@ -2749,66 +2753,6 @@ function SearchPreviewGrid({
 
 type DirectoryFilterKey = "skills" | "avail" | "interests";
 
-function ConnectLoginModal({ onClose, onAuthenticated }: { onClose: () => void; onAuthenticated: (user: WebUser) => Promise<void> }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onEscape);
-    return () => document.removeEventListener("keydown", onEscape);
-  }, [onClose]);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (loading) return;
-    setError(""); setLoading(true);
-    try {
-      const result = await webAuth.login(email.trim(), password);
-      await onAuthenticated(result.user);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to sign in.");
-    } finally { setLoading(false); }
-  };
-
-  const googleSignIn = async (credential: string) => {
-    if (loading) return;
-    setError(""); setLoading(true);
-    try {
-      const result = await webAuth.googleSignIn(credential, {
-        acceptTerms: true,
-        acceptPrivacy: true,
-        consentSessionId: getConsentSessionId(),
-      });
-      await onAuthenticated(result.user);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to sign in with Google.");
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="bb-connect-login-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="bb-connect-login-modal" role="dialog" aria-modal="true" aria-labelledby="bb-connect-login-title">
-        <button type="button" className="bb-connect-login-close" aria-label="Close" onClick={onClose}>×</button>
-        <h2 id="bb-connect-login-title">Sign in to connect</h2>
-        <p>Sign in to BeeBuddy to send a connection request to this member.</p>
-        <form onSubmit={(event) => void submit(event)}>
-          <label htmlFor="bb-connect-email">Email</label>
-          <input id="bb-connect-email" type="email" autoComplete="email" required autoFocus value={email} onChange={(event) => setEmail(event.target.value)} />
-          <label htmlFor="bb-connect-password">Password</label>
-          <input id="bb-connect-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
-          {error && <p className="bb-connect-login-error" role="alert">{error}</p>}
-          <button type="submit" className="bb-connect-login-submit" disabled={loading}>{loading ? "Signing in..." : "Sign in and send request"}</button>
-        </form>
-        {googleSignInConfigured && <div className="bb-connect-login-google"><GoogleSignInButton mode="login" disabled={loading} onCredential={googleSignIn} onError={setError} /></div>}
-        <div className="bb-connect-login-links"><Link href="/forgot-password">Forgot password?</Link><Link href="/signup">Create account</Link></div>
-      </section>
-    </div>
-  );
-}
-
 const directoryFilterOptions: Record<DirectoryFilterKey, string[]> = {
   skills: ["Design", "Development", "Marketing", "Writing", "Analytics", "Leadership"],
   avail: ["Full-time", "Part-time", "Weekdays", "Weekends", "Evenings", "Flexible"],
@@ -2889,7 +2833,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
   const [connections, setConnections] = useState<Record<string, Connection>>({});
   const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState("");
-  const [loginTargetId, setLoginTargetId] = useState<string | null>(null);
+  const [authRequiredOpen, setAuthRequiredOpen] = useState(false);
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [feedPage, setFeedPage] = useState(1);
   const [feedTotalPages, setFeedTotalPages] = useState(1);
@@ -3016,16 +2960,9 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
     let user = currentUser;
     if (!user) {
       try { user = await webAuth.me(); onAuthenticated(user); }
-      catch { setLoginTargetId(targetId); return; }
+      catch { setAuthRequiredOpen(true); return; }
     }
     await sendInvitation(targetId, user);
-  };
-
-  const completeModalLogin = async (user: WebUser) => {
-    onAuthenticated(user);
-    const targetId = loginTargetId;
-    setLoginTargetId(null);
-    if (targetId) await sendInvitation(targetId, user);
   };
 
   useEffect(() => {
@@ -3067,7 +3004,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
   };
 
   const toggleLike = async (post: FeedPost) => {
-    if (!isLoggedIn) { window.location.href = "/login"; return; }
+    if (!isLoggedIn) { setAuthRequiredOpen(true); return; }
     if (likingPost) return;
     setLikingPost(post.id); setFeedError("");
     try {
@@ -3085,7 +3022,7 @@ function CommunityDirectory({ isLoggedIn, currentUser, onAuthenticated }: { isLo
 
   return (
     <div className="bb-figma-community-page">
-      {loginTargetId && <ConnectLoginModal onClose={() => setLoginTargetId(null)} onAuthenticated={completeModalLogin} />}
+      {authRequiredOpen && <AuthRequiredModal onClose={() => setAuthRequiredOpen(false)} />}
       {isInviteOpen && (
         <InviteFriendsModal
           inviteLink={inviteLink}
@@ -3479,7 +3416,7 @@ function InviteFriendsModal({
           <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Open Instagram">
             <img src="/assets/ui/instagram.png" alt="" />
           </a>
-          <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="Open TikTok">
+          <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="Open BeeBuddy on TikTok">
             <img src="/assets/ui/tiktok.svg" alt="" />
           </a>
           <ChevronRight size={20} aria-hidden="true" />

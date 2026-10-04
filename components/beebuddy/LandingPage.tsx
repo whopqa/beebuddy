@@ -9,6 +9,8 @@ import { submitNewsletter } from "@/lib/lead-client";
 
 const homeAsset = (name: string) => `/assets/home/${name}`;
 const FIGMA_HOME_DURATION = 42.5;
+const BEEBUDDY_FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61595002616954";
+const BEEBUDDY_TIKTOK_URL = "https://www.tiktok.com/@beebuddy.app";
 
 const ringTransition: Transition = {
   opacity: { duration: FIGMA_HOME_DURATION, times: [0, 0.1059, 0.2118, 0.3176, 0.4235, 1], ease: ["easeInOut", "easeInOut", "easeInOut", "easeInOut", "linear"], repeat: Infinity },
@@ -69,13 +71,13 @@ export default function LandingPage({ authenticated = false }: { authenticated?:
       <main className="bb-canvas" id="top">
         {/* Floating Social Media Rail on Left */}
         <aside className="bb-social-rail" aria-label="Social media">
-          <a href="https://www.facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+          <a href={BEEBUDDY_FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on Facebook">
             <img src={homeAsset("intro-facebook.svg")} alt="" />
           </a>
           <a href="https://www.instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
             <img src={homeAsset("intro-instagram.png")} alt="" />
           </a>
-          <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok">
+          <a href={BEEBUDDY_TIKTOK_URL} target="_blank" rel="noreferrer" aria-label="BeeBuddy on TikTok">
             <img src={homeAsset("intro-tiktok.svg")} alt="" />
           </a>
         </aside>

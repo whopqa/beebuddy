@@ -8,6 +8,7 @@ import { connectionsApi, type Connection } from "@/lib/connections-client";
 import { uploadImage } from "@/lib/media-client";
 import { postsApi, type FeedPost, type PostVisibility } from "@/lib/posts-client";
 import CommentsModal from "./CommentsModal";
+import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
 
 const fallbackAvatar = "/assets/home/avatar-01.png";
 
@@ -49,6 +50,7 @@ export default function FeedHub() {
   const [retainedAssets, setRetainedAssets] = useState<Array<{ id: string; sourceUrl?: string | null }>>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [authRequiredOpen, setAuthRequiredOpen] = useState(false);
   const previews = useMemo(() => images.map((file) => URL.createObjectURL(file)), [images]);
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
 
@@ -103,21 +105,21 @@ export default function FeedHub() {
     finally { setPending(""); }
   };
   const toggleLike = async (post: FeedPost) => {
-    if (!user) { window.location.href = "/login"; return; }
+    if (!user) { setAuthRequiredOpen(true); return; }
     const next = !post.likedByCurrentUser;
     setPosts((rows) => rows.map((row) => row.id === post.id ? { ...row, likedByCurrentUser: next, likesCount: Math.max(0, row.likesCount + (next ? 1 : -1)) } : row));
     try { const result = await postsApi.setLike(post.id, next); setPosts((rows) => rows.map((row) => row.id === post.id ? { ...row, likedByCurrentUser: result.liked, likesCount: result.likesCount } : row)); }
     catch (cause) { setPosts((rows) => rows.map((row) => row.id === post.id ? post : row)); setError(cause instanceof Error ? cause.message : "Unable to update the like"); }
   };
   const report = async (post: FeedPost) => {
-    if (!user) { window.location.href = "/login"; return; }
+    if (!user) { setAuthRequiredOpen(true); return; }
     const reason = window.prompt("Reason for reporting this post:")?.trim(); if (!reason) return;
     try { await postsApi.reportPost(post.id, reason); setNotice("BeeBuddy received your report."); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to send the report"); }
   };
 
   const acceptedPeople = user ? connections.map((item) => otherPerson(item, user.id)) : [];
-  return <main className="bb-main-feed-page"><section className="bb-main-feed-hero"><div><span>BeeBuddy feed</span><h1>Share what matters</h1><p>Connect through stories, moments, and small daily steps.</p></div></section><section className="bb-main-feed-shell">
+  return <main className="bb-main-feed-page">{authRequiredOpen && <AuthRequiredModal onClose={() => setAuthRequiredOpen(false)} />}<section className="bb-main-feed-hero"><div><span>BeeBuddy feed</span><h1>Share what matters</h1><p>Connect through stories, moments, and small daily steps.</p></div></section><section className="bb-main-feed-shell">
     {(error || notice) && <div className={`bb-community-alert ${error ? "is-error" : "is-success"}`}>{error || notice}</div>}
     {authResolved && user && <form className="bb-main-feed-composer" onSubmit={submit}><header><img src={user.profile?.avatarUrl || fallbackAvatar} alt="" /><div><strong>{editingId ? "Edit post" : `What's on your mind, ${user.profile?.fullName?.split(" ").at(-1) || "friend"}?`}</strong><span>Up to 4 images, each smaller than 4 MB</span></div>{editingId && <button type="button" onClick={resetComposer}><X size={18} /></button>}</header><textarea maxLength={10000} value={content} onChange={(event) => setContent(event.target.value)} placeholder="Share your story..." />
       {(retainedAssets.length > 0 || previews.length > 0) && <div className="bb-main-feed-preview-grid">{retainedAssets.map((asset) => asset.sourceUrl && <div key={asset.id}><img src={asset.sourceUrl} alt="Existing image" /><button type="button" onClick={() => setRetainedAssets((rows) => rows.filter((row) => row.id !== asset.id))}><X size={14} /></button></div>)}{previews.map((url, index) => <div key={url}><img src={url} alt={`New image ${index + 1}`} /><button type="button" onClick={() => setImages((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}><X size={14} /></button></div>)}</div>}

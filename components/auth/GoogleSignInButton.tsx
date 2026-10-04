@@ -26,6 +26,12 @@ export function GoogleSignInButton({
 
   const renderButton = useCallback(() => {
     if (!clientId || !window.google?.accounts.id || !containerRef.current) return;
+
+    const buttonWidth = Math.min(
+      Math.max(Math.floor(containerRef.current.getBoundingClientRect().width), 240),
+      400,
+    );
+
     containerRef.current.replaceChildren();
     window.google.accounts.id.initialize({
       client_id: clientId,
@@ -45,7 +51,7 @@ export function GoogleSignInButton({
       size: "large",
       text: mode === "signup" ? "signup_with" : "continue_with",
       shape: "rectangular",
-      width: Math.min(Math.max(containerRef.current.clientWidth, 240), 400),
+      width: buttonWidth,
       locale: "en",
     });
   }, [mode, onError]);
@@ -61,7 +67,7 @@ export function GoogleSignInButton({
     <>
       <Script
         id="google-identity-services"
-        src="https://accounts.google.com/gsi/client?hl=vi"
+        src="https://accounts.google.com/gsi/client?hl=en"
         strategy="afterInteractive"
         onLoad={() => setScriptReady(true)}
         onReady={() => setScriptReady(true)}
@@ -72,7 +78,11 @@ export function GoogleSignInButton({
         aria-busy={!scriptReady || disabled}
         style={{ opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? "none" : "auto" }}
       >
-        <div ref={containerRef} />
+        <div className="bb-google-signin-visual" aria-hidden="true">
+          <img src="/assets/home/login-google.svg" alt="" />
+          <span>{mode === "signup" ? "Sign up with Google" : "Continue with Google"}</span>
+        </div>
+        <div className="bb-google-signin-trigger" ref={containerRef} />
       </div>
     </>
   );
